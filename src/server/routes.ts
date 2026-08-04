@@ -108,7 +108,8 @@ router.post('/api/products', async (req, res) => {
       tags: parsed.data.tags ?? [],
       additionalImages: parsed.data.additionalImages ?? [],
       colors: parsed.data.colors ?? [],
-      sizes: parsed.data.sizes ?? []
+      sizes: parsed.data.sizes ?? [],
+      serialNumbers: parsed.data.serialNumbers ?? []
     });
 
     const product = await prisma.product.create({ data: normalizedData });
@@ -133,7 +134,8 @@ router.put('/api/products/:id', async (req, res) => {
       tags: parsed.data.tags ?? [],
       additionalImages: parsed.data.additionalImages ?? [],
       colors: parsed.data.colors ?? [],
-      sizes: parsed.data.sizes ?? []
+      sizes: parsed.data.sizes ?? [],
+      serialNumbers: parsed.data.serialNumbers ?? []
     });
 
     const product = await prisma.product.update({
@@ -220,6 +222,40 @@ router.post('/api/customers', requireAuth, async (req, res) => {
     };
     const customer = await prisma.customer.create({ data: customerData });
     res.status(201).json(customer);
+  } catch (err) {
+    handleError(err, res);
+  }
+});
+
+router.get('/api/orders/track', async (req, res) => {
+  try {
+    const orderNumber = String(req.query.orderNumber || '').trim();
+    const email = String(req.query.email || '').trim().toLowerCase();
+
+    if (!orderNumber) {
+      throw new AppError('Order number is required', 400);
+    }
+
+    const order = await prisma.order.findFirst({
+      where: {
+        orderNumber: { equals: orderNumber, mode: 'insensitive' }
+      },
+      include: {
+        items: true,
+        customer: true,
+        shippingMethod: true
+      }
+    });
+
+    if (!order) {
+      throw new AppError('Order not found. Please check your order number.', 404);
+    }
+
+    if (email && order.customer?.email && order.customer.email.toLowerCase() !== email) {
+      throw new AppError('Email address does not match this order number.', 403);
+    }
+
+    res.json(order);
   } catch (err) {
     handleError(err, res);
   }

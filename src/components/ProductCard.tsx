@@ -9,6 +9,8 @@ interface ProductCardProps {
   isWishlisted: boolean;
   onToggleWishlist: (productId: string) => void;
   onBuyNow?: (product: Product) => void;
+  onToggleCompare?: (product: Product) => void;
+  isCompared?: boolean;
 }
 
 export default function ProductCard({
@@ -17,7 +19,9 @@ export default function ProductCard({
   onOpenDetails,
   isWishlisted,
   onToggleWishlist,
-  onBuyNow
+  onBuyNow,
+  onToggleCompare,
+  isCompared = false
 }: ProductCardProps) {
   
   const hasDiscount = product.discountPrice !== undefined && product.discountPrice < product.price;
@@ -59,20 +63,37 @@ export default function ProductCard({
           )}
         </div>
 
-        {/* Wishlist button */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleWishlist(product.id);
-          }}
-          className={`pointer-events-auto flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-400 dark:border-neutral-700 bg-white/95 dark:bg-neutral-900/95 transition-colors hover:bg-neutral-100 dark:hover:bg-neutral-800 ${
-            isWishlisted ? 'text-rose-600 dark:text-rose-400' : 'text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100'
-          }`}
-          title={isWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
-          id={`wishlist-btn-${product.id}`}
-        >
-          <Heart className={`h-4.5 w-4.5 ${isWishlisted ? 'fill-current' : ''}`} />
-        </button>
+        {/* Top Right Action Buttons: Wishlist & Compare */}
+        <div className="pointer-events-auto flex items-center gap-1.5">
+          {onToggleCompare && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleCompare(product);
+              }}
+              className={`flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-400 dark:border-neutral-700 bg-white/95 dark:bg-neutral-900/95 transition-colors ${
+                isCompared ? 'bg-blue-600 text-white font-black' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100'
+              }`}
+              title={isCompared ? "Remove from Comparison" : "Add to Compare"}
+            >
+              <span className="font-mono text-[10px] font-black">VS</span>
+            </button>
+          )}
+
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleWishlist(product.id);
+            }}
+            className={`flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-400 dark:border-neutral-700 bg-white/95 dark:bg-neutral-900/95 transition-colors ${
+              isWishlisted ? 'text-rose-600 dark:text-rose-400' : 'text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100'
+            }`}
+            title={isWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
+            id={`wishlist-btn-${product.id}`}
+          >
+            <Heart className={`h-4.5 w-4.5 ${isWishlisted ? 'fill-current' : ''}`} />
+          </button>
+        </div>
       </div>
 
       {/* Main Product Image Container */}

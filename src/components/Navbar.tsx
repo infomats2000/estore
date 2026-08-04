@@ -25,6 +25,10 @@ interface NavbarProps {
   isDarkMode: boolean;
   onToggleDarkMode: () => void;
   categories: string[];
+  onOpenTrackOrder?: () => void;
+  onOpenCompare?: () => void;
+  compareCount?: number;
+  onOpenPOS?: () => void;
 }
 
 export default function Navbar({
@@ -49,7 +53,11 @@ export default function Navbar({
   onSelectProduct,
   isDarkMode,
   onToggleDarkMode,
-  categories
+  categories,
+  onOpenTrackOrder,
+  onOpenCompare,
+  compareCount = 0,
+  onOpenPOS
 }: NavbarProps) {
   const allCategories = ['All', ...categories];
   const [showSearchMobile, setShowSearchMobile] = useState(false);
@@ -261,6 +269,48 @@ export default function Navbar({
                     {cartCount}
                   </span>
                 )}
+              </button>
+            )}
+
+            {/* Compare Button */}
+            {onOpenCompare && (
+              <button
+                type="button"
+                onClick={onOpenCompare}
+                className="relative flex items-center gap-1.5 border border-neutral-400 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 px-2.5 py-1.5 font-mono text-[10px] font-bold uppercase transition-all hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                title="Compare Products"
+              >
+                <span>COMPARE</span>
+                {compareCount > 0 && (
+                  <span className="flex h-4 min-w-[16px] items-center justify-center px-1 bg-blue-600 text-white font-mono text-[9px] font-black">
+                    {compareCount}
+                  </span>
+                )}
+              </button>
+            )}
+
+            {/* Track Order Button */}
+            {!isAdminMode && onOpenTrackOrder && (
+              <button
+                type="button"
+                onClick={onOpenTrackOrder}
+                className="hidden md:flex items-center gap-1.5 border border-neutral-400 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 px-2.5 py-1.5 font-mono text-[10px] font-bold uppercase transition-all hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                title="Live Order Tracking"
+              >
+                <Truck className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                <span>TRACK ORDER</span>
+              </button>
+            )}
+
+            {/* POS Register Quick Button */}
+            {isAdminMode && onOpenPOS && (
+              <button
+                type="button"
+                onClick={onOpenPOS}
+                className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1.5 font-mono text-[10px] font-black uppercase transition-all shadow-sm"
+                title="POS Retail Cash Register"
+              >
+                <span>POS REGISTER</span>
               </button>
             )}
 

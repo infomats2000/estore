@@ -6,6 +6,10 @@ import {
   Award, Cpu, DollarSign, Building2, Tag, X, SlidersHorizontal, Check,
   Laptop, Monitor, Mouse, Clock, Zap, CheckCircle2, Package
 } from 'lucide-react';
+import ProductCompareModal from './components/ProductCompareModal';
+import ExitIntentModal from './components/ExitIntentModal';
+import OrderTrackingModal from './components/OrderTrackingModal';
+import POSRegisterView from './components/POSRegisterView';
 
 import { Product, CartItem, Order, Coupon, CustomerProfile, Review, ReturnRequest, CustomerSegment, UpsellRule, FinanceTransaction, User, StoreSettings, DEFAULT_STORE_SETTINGS } from './types';
 import { INITIAL_PRODUCTS, INITIAL_REVIEWS, INITIAL_COUPONS } from './data/products';
@@ -426,6 +430,28 @@ export default function App() {
 
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   const [systemAlert, setSystemAlert] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
+
+  // NEW FEATURE STATES
+  const [compareList, setCompareList] = useState<Product[]>([]);
+  const [showCompareModal, setShowCompareModal] = useState(false);
+  const [showTrackOrderModal, setShowTrackOrderModal] = useState(false);
+  const [showPOSView, setShowPOSView] = useState(false);
+
+  const handleToggleCompare = (product: Product) => {
+    setCompareList(prev => {
+      const exists = prev.find(p => p.id === product.id);
+      if (exists) return prev.filter(p => p.id !== product.id);
+      if (prev.length >= 4) {
+        triggerAlert('You can compare up to 4 products at a time', 'error');
+        return prev;
+      }
+      return [...prev, product];
+    });
+  };
+
+  const handleRemoveFromCompare = (productId: string) => {
+    setCompareList(prev => prev.filter(p => p.id !== productId));
+  };
 
   // THEME TOGGLE STATE (LIGHT / DARK)
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
@@ -1330,6 +1356,10 @@ export default function App() {
           triggerAlert(`Theme switched to ${!isDarkMode ? 'Dark' : 'Light'} Mode`, 'success');
         }}
         categories={categories}
+        onOpenTrackOrder={() => setShowTrackOrderModal(true)}
+        onOpenCompare={() => setShowCompareModal(true)}
+        compareCount={compareList.length}
+        onOpenPOS={() => setShowPOSView(true)}
       />
 
       {/* CORE ROUTING SWITCH: CUSTOMER VIEW vs ADMIN VIEW */}
@@ -1543,6 +1573,8 @@ export default function App() {
                           onOpenDetails={handleViewProduct}
                           isWishlisted={customerProfile.wishlist.includes(prod.id)}
                           onToggleWishlist={handleToggleWishlist}
+                          onToggleCompare={handleToggleCompare}
+                          isCompared={compareList.some(p => p.id === prod.id)}
                           onBuyNow={(p) => {
                             const item: CartItem = {
                               id: 'direct-buy-' + Date.now(),
@@ -1950,6 +1982,80 @@ export default function App() {
             onHardReset={handleHardReset}
           />
         </Suspense>
+      )}
+
+      {/* Product Compare Modal */}
+      {showCompareModal && compareList.length > 0 && (
+        <ProductCompareModal
+          compareList={compareList}
+          onClose={() => setShowCompareModal(false)}
+          onRemoveFromCompare={handleRemoveFromCompare}
+          onAddToCart={(p) => handleAddToCart(p)}
+          onClearCompare={() => setCompareList([])}
+        />
+      )}
+
+      {/* Abandoned Cart Exit Intent Modal */}
+      {!isAdminMode && (
+        <ExitIntentModal
+          cart={cart}
+          onApplyCoupon={handleApplyCoupon}
+          onOpenCart={() => setIsCartOpen(true)}
+        />
+      )}
+
+      {/* Order Tracking Modal */}
+      {showTrackOrderModal && (
+        <OrderTrackingModal
+          onClose={() => setShowTrackOrderModal(false)}
+          storeSettings={storeSettings}
+        />
+      )}
+
+      {/* POS Register Full-Screen Overlay */}
+      {showPOSView && (
+        <div className="fixed inset-0 z-50 bg-white dark:bg-neutral-950 overflow-auto" id="pos-register-overlay">
+          <div className="flex items-center justify-between px-6 py-3 bg-neutral-900 text-white">
+            <span className="font-mono text-xs font-black uppercase tracking-widest">⚡ POS Cash Register</span>
+            <button
+              onClick={() => setShowPOSView(false)}
+              className="font-mono text-xs font-bold uppercase tracking-wider text-neutral-400 hover:text-white transition-colors px-4 py-2 border border-neutral-700 hover:border-white"
+              id="pos-close-btn"
+            >
+              ✕ Close POS
+            </button>
+          </div>
+          <POSRegisterView
+            products={products}
+            categories={categories}
+            storeSettings={storeSettings}
+            onCompleteSale={(items, total, method, notes) => {
+              handleAddPOSOrder({
+                id: 'POS-' + Date.now(),
+                customerId: 'WALK-IN',
+                customerName: 'Walk-in Customer',
+                customerEmail: '',
+                date: new Date().toISOString().split('T')[0],
+                status: 'Delivered',
+                paymentMethod: method,
+                items: items.map(i => ({
+                  productId: i.product.id,
+                  name: i.product.name,
+                  quantity: i.quantity,
+                  price: i.product.discountPrice || i.product.price,
+                  selectedColor: i.selectedColor,
+                  selectedSize: i.selectedSize
+                })),
+                subtotal: total,
+                tax: total * 0.08,
+                shipping: 0,
+                discount: 0,
+                total: total,
+                notes
+              });
+            }}
+          />
+        </div>
       )}
 
     </div>

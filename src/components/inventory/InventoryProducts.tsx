@@ -75,6 +75,7 @@ export default function InventoryProducts({
   const [newProdStorage, setNewProdStorage] = useState('');
   const [newProdWarranty, setNewProdWarranty] = useState('12 Months');
   const [newProdBarcode, setNewProdBarcode] = useState('');
+  const [newProdSerials, setNewProdSerials] = useState('');
   
   const [showAddNewCondition, setShowAddNewCondition] = useState(false);
   const [tempNewCondition, setTempNewCondition] = useState('');
@@ -937,10 +938,17 @@ export default function InventoryProducts({
                       )}
                     </div>
 
-                    {/* Barcode / Serial Number Input */}
-                    <div>
-                      <label className="font-mono text-[8px] uppercase tracking-widest text-neutral-700 dark:text-neutral-300 block mb-1 font-bold">Barcode / Serial #</label>
-                      <input type="text" placeholder="Scan barcode or auto-assign..." value={newProdBarcode} onChange={(e) => setNewProdBarcode(e.target.value)} className="w-full rounded-none border border-neutral-400 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-900 p-2.5 font-sans text-xs outline-none text-neutral-900 dark:text-neutral-100" />
+                    {/* Barcode & Serial Numbers Input */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="font-mono text-[8px] uppercase tracking-widest text-neutral-700 dark:text-neutral-300 block mb-1 font-bold">Barcode / SKU</label>
+                        <input type="text" placeholder="Scan barcode or auto-assign..." value={newProdBarcode} onChange={(e) => setNewProdBarcode(e.target.value)} className="w-full rounded-none border border-neutral-400 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-900 p-2.5 font-sans text-xs outline-none text-neutral-900 dark:text-neutral-100" />
+                      </div>
+
+                      <div>
+                        <label className="font-mono text-[8px] uppercase tracking-widest text-neutral-700 dark:text-neutral-300 block mb-1 font-bold">Hardware Serial Numbers (Comma Separated)</label>
+                        <input type="text" placeholder="e.g. SN-84920, SN-84921, SN-84922..." value={newProdSerials} onChange={(e) => setNewProdSerials(e.target.value)} className="w-full rounded-none border border-neutral-400 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-900 p-2.5 font-mono text-xs outline-none text-neutral-900 dark:text-neutral-100" />
+                      </div>
                     </div>
                   </div>
 

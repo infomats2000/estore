@@ -54,6 +54,7 @@ model Product {
   collection       String?
   colors           String         @default("[]")
   sizes            String         @default("[]")
+  serialNumbers    String         @default("[]")
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
   images           ProductImage[]
@@ -153,9 +154,10 @@ model OrderItem {
   name      String
   price     Float
   quantity  Int
-  color     String?
-  size      String?
-  image     String   @default("")
+  color        String?
+  size         String?
+  serialNumber String?
+  image        String   @default("")
   createdAt DateTime @default(now())
 
   @@index([orderId])

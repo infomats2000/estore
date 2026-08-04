@@ -11,6 +11,7 @@ import {
   printInvoiceDirect, 
   downloadInvoiceHtmlFile 
 } from '../utils/invoicePrinter';
+import { printWarrantyCertificate } from '../utils/warrantyPrinter';
 
 interface InvoiceModalProps {
   isOpen: boolean;
@@ -171,6 +172,21 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
               title="Print Tax Invoice (A4 / PDF)"
             >
               <Printer className="h-4 w-4" /> Print / Save PDF
+            </button>
+            <button
+              onClick={() => printWarrantyCertificate({
+                orderNumber: invoice.invoiceNumber,
+                customerName: invoice.customerName,
+                customerEmail: invoice.customerEmail,
+                purchaseDate: invoice.issueDate,
+                productName: invoice.items[0]?.description || 'Hardware Purchase',
+                warrantyPeriod: '12 Months Commercial Warranty',
+                storeSettings: currentSettings
+              })}
+              className="flex items-center gap-1.5 bg-emerald-700 hover:bg-emerald-600 text-white font-mono text-xs uppercase font-bold px-3 py-2 rounded-xl border border-emerald-600 transition-all cursor-pointer"
+              title="Print Warranty Certificate"
+            >
+              <ShieldCheck className="h-4 w-4 text-emerald-300" /> Warranty Cert
             </button>
             <button
               onClick={handleDownload}

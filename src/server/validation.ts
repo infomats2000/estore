@@ -16,6 +16,7 @@ export const productSchema = z.object({
   collection: z.string().optional(),
   colors: z.array(z.string()).optional(),
   sizes: z.array(z.string()).optional(),
+  serialNumbers: z.array(z.string()).optional(),
   costPrice: z.number().nonnegative().optional()
 });
 

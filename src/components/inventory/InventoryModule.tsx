@@ -5,7 +5,8 @@ import CategoriesManager from './CategoriesManager';
 import CollectionsManager from './CollectionsManager';
 import SuppliersManager from './SuppliersManager';
 import InventoryReports from './InventoryReports';
-import { Package, Layers, Sparkles, Truck, BarChart2 } from 'lucide-react';
+import ProfitReports from './ProfitReports';
+import { Package, Layers, Sparkles, Truck, BarChart2, TrendingUp } from 'lucide-react';
 
 interface InventoryModuleProps {
   products: Product[];
@@ -47,7 +48,7 @@ export default function InventoryModule({
   suppliers,
   setSuppliers
 }: InventoryModuleProps) {
-  const [activeSubTab, setActiveSubTab] = useState<'products' | 'categories' | 'collections' | 'suppliers' | 'reports'>('products');
+  const [activeSubTab, setActiveSubTab] = useState<'products' | 'categories' | 'collections' | 'suppliers' | 'reports' | 'profit'>('products');
 
   const navItems = [
     { id: 'products', label: 'Products', icon: Package },
@@ -55,6 +56,7 @@ export default function InventoryModule({
     { id: 'collections', label: 'Collections', icon: Sparkles },
     { id: 'suppliers', label: 'Suppliers', icon: Truck },
     { id: 'reports', label: 'Reports', icon: BarChart2 },
+    { id: 'profit', label: 'Profit & Margins', icon: TrendingUp },
   ] as const;
 
   return (
@@ -125,6 +127,12 @@ export default function InventoryModule({
             categories={categories}
             collections={collections}
             suppliers={suppliers}
+          />
+        )}
+        {activeSubTab === 'profit' && (
+          <ProfitReports
+            products={products}
+            categories={categories}
           />
         )}
       </div>
