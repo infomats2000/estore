@@ -10,7 +10,11 @@ export const INITIAL_PRODUCTS: Product[] = [
     price: 649,
     discountPrice: 499,
     image: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&w=800&q=80',
-    additionalImages: [],
+    additionalImages: [
+      'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1525547719571-a2d4ac8945e2?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1531297484001-80022131f5a1?auto=format&fit=crop&w=800&q=80'
+    ],
     rating: 4.7,
     reviewsCount: 18,
     stock: 7,
@@ -29,7 +33,10 @@ export const INITIAL_PRODUCTS: Product[] = [
     price: 699,
     discountPrice: 549,
     image: 'https://images.unsplash.com/photo-1517336714739-489689fd1ca8?auto=format&fit=crop&w=800&q=80',
-    additionalImages: [],
+    additionalImages: [
+      'https://images.unsplash.com/photo-1541807084-5c52b6b3adef?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?auto=format&fit=crop&w=800&q=80'
+    ],
     rating: 4.8,
     reviewsCount: 24,
     stock: 5,
@@ -48,7 +55,10 @@ export const INITIAL_PRODUCTS: Product[] = [
     price: 799,
     discountPrice: 599,
     image: 'https://images.unsplash.com/photo-1541807084-5c52b6b3adef?auto=format&fit=crop&w=800&q=80',
-    additionalImages: [],
+    additionalImages: [
+      'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1531297484001-80022131f5a1?auto=format&fit=crop&w=800&q=80'
+    ],
     rating: 4.6,
     reviewsCount: 15,
     stock: 4,
@@ -67,7 +77,10 @@ export const INITIAL_PRODUCTS: Product[] = [
     price: 1299,
     discountPrice: 999,
     image: 'https://images.unsplash.com/photo-1517336714739-489689fd1ca8?auto=format&fit=crop&w=800&q=80',
-    additionalImages: [],
+    additionalImages: [
+      'https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1541807084-5c52b6b3adef?auto=format&fit=crop&w=800&q=80'
+    ],
     rating: 4.9,
     reviewsCount: 29,
     stock: 3,
