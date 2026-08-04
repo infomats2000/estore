@@ -366,7 +366,103 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   productScreenSizes: ['13.3"', '14.0"', '15.6"', '16.0"', '27" 4K Monitor']
 };
 
+// ============================================================
+// ERP PHASE 1 — PURCHASE ORDERS
+// ============================================================
 
+export interface POLineItem {
+  id: string;
+  productId?: string;
+  productName: string;
+  sku?: string;
+  orderedQty: number;
+  receivedQty: number;
+  unitCost: number;
+  totalCost: number;
+}
 
+export interface PurchaseOrder {
+  id: string;
+  supplierId?: string;
+  supplierName: string;
+  status: 'Draft' | 'Sent' | 'Partially Received' | 'Received' | 'Cancelled';
+  items: POLineItem[];
+  subtotal: number;
+  freight: number;
+  duties: number;
+  total: number;
+  expectedDelivery: string;
+  notes?: string;
+  createdDate: string;
+  receivedDate?: string;
+  supplierInvoiceNumber?: string;
+  paymentStatus: 'Unpaid' | 'Paid' | 'Partial';
+  paymentDueDate?: string;
+}
 
+// ============================================================
+// ERP PHASE 1 — REPAIR / SERVICE JOB CARDS
+// ============================================================
+
+export interface RepairJobPart {
+  productId: string;
+  productName: string;
+  quantity: number;
+  unitCost: number;
+}
+
+export interface RepairJob {
+  id: string;
+  status: 'Intake' | 'Diagnosed' | 'Awaiting Parts' | 'In Progress' | 'QC' | 'Ready' | 'Collected' | 'Cancelled';
+  customerId?: string;
+  customerName: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  deviceType: string;
+  deviceBrand: string;
+  deviceModel: string;
+  serialNumber?: string;
+  fault: string;
+  diagnosis?: string;
+  technicianName?: string;
+  partsUsed: RepairJobPart[];
+  labourHours: number;
+  labourRatePerHour: number;
+  estimatedCost: number;
+  finalCost?: number;
+  isWarrantyJob: boolean;
+  intakeDate: string;
+  completedDate?: string;
+  collectedDate?: string;
+  notes?: string;
+  internalNotes?: string;
+}
+
+// ============================================================
+// ERP PHASE 1 — STOCK UNIT LIFECYCLE
+// ============================================================
+
+export interface StockUnitAuditEntry {
+  date: string;
+  action: string;
+  performedBy?: string;
+  notes?: string;
+}
+
+export interface StockUnit {
+  id: string;
+  serialNumber: string;
+  productId: string;
+  productName: string;
+  purchaseOrderId?: string;
+  status: 'In Stock' | 'Reserved' | 'Sold' | 'In Repair' | 'Returned' | 'Scrapped' | 'Write-Off';
+  grade?: 'A+' | 'A' | 'B' | 'C' | 'D';
+  costPrice: number;
+  saleOrderId?: string;
+  repairJobId?: string;
+  warrantyExpiryDate?: string;
+  notes?: string;
+  auditLog: StockUnitAuditEntry[];
+  receivedDate: string;
+}
 

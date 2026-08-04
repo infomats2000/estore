@@ -11,12 +11,15 @@ import {
   Users, MousePointerClick, Globe, Percent, Calendar, ArrowDownRight, BarChart3, Clock, Undo2,
   MessageSquare, Star, Search, Printer, SlidersHorizontal, RefreshCw, FileSpreadsheet, History, Check,
   Coins, Boxes, Truck, Building2, MapPin, Mail, Phone, Barcode, Receipt, BookOpen, Calculator,
-  PanelLeftClose, PanelLeftOpen, Upload, X, FileText, ArrowLeft
+  PanelLeftClose, PanelLeftOpen, Upload, X, FileText, ArrowLeft, Wrench, ClipboardList
 } from 'lucide-react';
 import { InvoiceModal } from './InvoiceModal';
 import { convertOrderToInvoice, printInvoiceDirect, downloadInvoiceHtmlFile, printHtmlContent } from '../utils/invoicePrinter';
 import { buildCustomInvoiceSyncPayload } from '../utils/customInvoice';
-import { Product, Order, Coupon, ReturnRequest, Review, CustomerSegment, UpsellRule, Supplier, SupplierOrder, Shipment, FinanceTransaction, User, Invoice, StoreSettings, CustomerProfile } from '../types';
+import { Product, Order, Coupon, ReturnRequest, Review, CustomerSegment, UpsellRule, Supplier, SupplierOrder, Shipment, FinanceTransaction, User, Invoice, StoreSettings, CustomerProfile, PurchaseOrder, RepairJob, StockUnit } from '../types';
+import RepairJobsManager from './repairs/RepairJobsManager';
+import PurchaseOrdersManager from './purchases/PurchaseOrdersManager';
+import StockUnitsManager from './stock/StockUnitsManager';
 
 const FinanceManager = lazy(() => import('./FinanceManager'));
 const UserManager = lazy(() => import('./UserManager'));
@@ -114,6 +117,20 @@ interface DashboardViewProps {
   onUpdateStoreSettings?: (settings: StoreSettings) => void;
   onShowAlert?: (message: string, type?: 'success' | 'info' | 'error') => void;
   storeSettings?: StoreSettings;
+  // ERP Phase 1
+  purchaseOrders?: PurchaseOrder[];
+  onAddPurchaseOrder?: (po: PurchaseOrder) => void;
+  onUpdatePurchaseOrder?: (po: PurchaseOrder) => void;
+  onDeletePurchaseOrder?: (id: string) => void;
+  onReceiveGRN?: (poId: string, receivedItems: { lineItemId: string; receivedQty: number }[]) => void;
+  repairJobs?: RepairJob[];
+  onAddRepairJob?: (job: RepairJob) => void;
+  onUpdateRepairJob?: (job: RepairJob) => void;
+  onDeleteRepairJob?: (id: string) => void;
+  onDeductPartsFromStock?: (productId: string, qty: number) => void;
+  stockUnits?: StockUnit[];
+  onAddStockUnit?: (unit: StockUnit) => void;
+  onUpdateStockUnit?: (unit: StockUnit) => void;
 }
 
 const COLORS = ['#0d6efd', '#198754', '#0dcaf0', '#ffc107', '#dc3545', '#6610f2', '#fd7e14', '#20c997', '#6f42c1'];
@@ -161,16 +178,30 @@ export default function DashboardView({
   onOpenSettings,
   onUpdateStoreSettings,
   onShowAlert,
-  storeSettings
+  storeSettings,
+  purchaseOrders = [],
+  onAddPurchaseOrder,
+  onUpdatePurchaseOrder,
+  onDeletePurchaseOrder,
+  onReceiveGRN,
+  repairJobs = [],
+  onAddRepairJob,
+  onUpdateRepairJob,
+  onDeleteRepairJob,
+  onDeductPartsFromStock,
+  stockUnits = [],
+  onAddStockUnit,
+  onUpdateStockUnit,
 }: DashboardViewProps) {
   
-  const [activeTab, setActiveTab] = useState<'metrics' | 'analytics' | 'inventory' | 'categories' | 'collections' | 'orders' | 'invoices' | 'customers' | 'returns' | 'coupons' | 'segments' | 'upsells' | 'reviews' | 'suppliers' | 'shipping' | 'pos' | 'finance' | 'users'>(() => {
+  const [activeTab, setActiveTab] = useState<'metrics' | 'analytics' | 'inventory' | 'categories' | 'collections' | 'orders' | 'invoices' | 'customers' | 'returns' | 'coupons' | 'segments' | 'upsells' | 'reviews' | 'suppliers' | 'shipping' | 'pos' | 'finance' | 'users' | 'repairs' | 'purchase-orders' | 'stock-units'>(() => {
     try {
       const hash = window.location.hash.replace('#', '');
       const validTabs = [
         'metrics', 'analytics', 'inventory', 'categories', 'collections', 'orders', 'invoices',
         'customers', 'returns', 'coupons', 'segments', 'upsells', 'reviews',
-        'suppliers', 'shipping', 'pos', 'finance', 'users'
+        'suppliers', 'shipping', 'pos', 'finance', 'users',
+        'repairs', 'purchase-orders', 'stock-units'
       ];
       if (hash && validTabs.includes(hash)) {
         return hash as any;
@@ -230,7 +261,8 @@ export default function DashboardView({
       const validTabs = [
         'metrics', 'analytics', 'inventory', 'categories', 'collections', 'orders', 'invoices',
         'customers', 'returns', 'coupons', 'segments', 'upsells', 'reviews',
-        'suppliers', 'shipping', 'pos', 'finance', 'users'
+        'suppliers', 'shipping', 'pos', 'finance', 'users',
+        'repairs', 'purchase-orders', 'stock-units'
       ];
       if (hash && validTabs.includes(hash)) {
         setActiveTab(hash as any);
@@ -1763,7 +1795,6 @@ export default function DashboardView({
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 text-left" id="dashboard-view-main">
       
-      {/* BOOTSTRAP 5 COLORFUL ADMIN BANNER */}
       {/* HORIZONTAL TOP NAVIGATION */}
       <div className="mb-8 space-y-4">
         {/* Store Operations Group */}
@@ -1786,6 +1817,9 @@ export default function DashboardView({
               { id: 'customers', label: 'Customers', count: customers.length, icon: Users, color: 'bg-[#706d6d] text-white shadow-black/10', activeBorder: 'border-[#706d6d]' },
               { id: 'returns', label: 'Returns', count: returns.length, icon: Undo2, color: 'bg-[#706d6d] text-white shadow-black/10', activeBorder: 'border-[#706d6d]' },
               { id: 'shipping', label: 'Shipping', count: shipments.length, icon: Truck, color: 'bg-[#706d6d] text-white shadow-black/10', activeBorder: 'border-[#706d6d]' },
+              { id: 'repairs', label: 'Repairs', count: repairJobs.length, icon: Wrench, color: 'bg-[#0d6efd] text-white shadow-blue-500/10', activeBorder: 'border-[#0d6efd]' },
+              { id: 'purchase-orders', label: 'Purchase Orders', count: purchaseOrders.length, icon: ClipboardList, color: 'bg-[#0d6efd] text-white shadow-blue-500/10', activeBorder: 'border-[#0d6efd]' },
+              { id: 'stock-units', label: 'Stock Units', count: stockUnits.length, icon: Barcode, color: 'bg-[#0d6efd] text-white shadow-blue-500/10', activeBorder: 'border-[#0d6efd]' },
             ].map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -5634,7 +5668,80 @@ export default function DashboardView({
             </div>
 
           </div>
+        </div>
+      )}
 
+      {/* REPAIR JOBS TAB */}
+      {activeTab === 'repairs' && (
+        <div className="space-y-6" id="dashboard-tab-repairs">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 shadow-lg">
+              <Wrench className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h2 className="font-black text-lg uppercase tracking-widest text-neutral-900">Service & Repair Jobs</h2>
+              <p className="text-xs text-neutral-500">Manage all customer repair tickets, job cards, and technician workflow</p>
+            </div>
+          </div>
+          <RepairJobsManager
+            repairJobs={repairJobs}
+            onAddRepairJob={onAddRepairJob || (() => {})}
+            onUpdateRepairJob={onUpdateRepairJob || (() => {})}
+            onDeleteRepairJob={onDeleteRepairJob || (() => {})}
+            products={products}
+            customers={customers}
+            storeSettings={storeSettings}
+            onShowAlert={onShowAlert}
+            onDeductPartsFromStock={onDeductPartsFromStock}
+          />
+        </div>
+      )}
+
+      {/* PURCHASE ORDERS TAB */}
+      {activeTab === 'purchase-orders' && (
+        <div className="space-y-6" id="dashboard-tab-purchase-orders">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 shadow-lg">
+              <ClipboardList className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h2 className="font-black text-lg uppercase tracking-widest text-neutral-900">Purchase Orders & GRN</h2>
+              <p className="text-xs text-neutral-500">Raise purchase orders, track deliveries, and reconcile supplier invoices</p>
+            </div>
+          </div>
+          <PurchaseOrdersManager
+            purchaseOrders={purchaseOrders}
+            onAddPurchaseOrder={onAddPurchaseOrder || (() => {})}
+            onUpdatePurchaseOrder={onUpdatePurchaseOrder || (() => {})}
+            onDeletePurchaseOrder={onDeletePurchaseOrder || (() => {})}
+            onReceiveGRN={onReceiveGRN || (() => {})}
+            products={products}
+            suppliers={suppliers}
+            storeSettings={storeSettings}
+            onShowAlert={onShowAlert}
+          />
+        </div>
+      )}
+
+      {/* STOCK UNITS TAB */}
+      {activeTab === 'stock-units' && (
+        <div className="space-y-6" id="dashboard-tab-stock-units">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 shadow-lg">
+              <Barcode className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h2 className="font-black text-lg uppercase tracking-widest text-neutral-900">Stock Unit Tracker</h2>
+              <p className="text-xs text-neutral-500">Full serialized unit lifecycle — from receipt to sale, repair, and write-off</p>
+            </div>
+          </div>
+          <StockUnitsManager
+            stockUnits={stockUnits}
+            onAddStockUnit={onAddStockUnit || (() => {})}
+            onUpdateStockUnit={onUpdateStockUnit || (() => {})}
+            products={products}
+            onShowAlert={onShowAlert}
+          />
         </div>
       )}
 

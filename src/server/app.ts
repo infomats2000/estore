@@ -44,6 +44,7 @@ app.use((req, _res, next) => {
 
 const { doubleCsrfProtection } = doubleCsrf({
   getSecret: () => process.env.JWT_SECRET || 'secret-key-change-me',
+  getSessionIdentifier: (req) => (req as any).cookies?.session || 'anonymous',
   cookieName: 'x-csrf-token',
   cookieOptions: {
     sameSite: 'lax',

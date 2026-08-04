@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Search, ShoppingCart, Plus, Minus, Trash2, Printer, Check, DollarSign, CreditCard, RotateCcw, X, Scan, Sparkles } from 'lucide-react';
-import { Product, StoreSettings, CartItem } from '../types';
+import { Product, StoreSettings, CartItem, Invoice } from '../types';
 import { convertOrderToInvoice, printInvoiceDirect } from '../utils/invoicePrinter';
 
 interface POSRegisterViewProps {
@@ -306,20 +306,36 @@ export default function POSRegisterView({
               )}
 
               <button
-                onClick={() => printCustomerInvoice({
-                  orderNumber: lastCompletedOrder.orderNumber,
-                  items: lastCompletedOrder.items,
-                  total: lastCompletedOrder.total,
-                  subtotal: lastCompletedOrder.total,
-                  tax: 0,
-                  shipping: 0,
-                  discount: 0,
-                  paymentMethod: lastCompletedOrder.paymentMethod,
-                  paymentStatus: 'Paid',
-                  createdAt: new Date().toLocaleDateString(),
-                  customerName: 'POS Counter Customer',
-                  storeSettings
-                })}
+                onClick={() => {
+                  const invoice: Invoice = {
+                    id: `INV-${lastCompletedOrder.orderNumber}`,
+                    invoiceNumber: lastCompletedOrder.orderNumber,
+                    issueDate: new Date().toISOString().split('T')[0],
+                    dueDate: new Date().toISOString().split('T')[0],
+                    status: 'Paid',
+                    type: 'Tax Invoice',
+                    customerName: 'POS Counter Customer',
+                    customerEmail: 'pos-customer@techseller.com.au',
+                    customerAddress: 'Counter POS Purchase',
+                    customerCity: storeSettings?.cityStateZip || 'Sydney NSW',
+                    items: lastCompletedOrder.items.map((it: any) => ({
+                      productId: it.id,
+                      description: it.name,
+                      quantity: it.quantity,
+                      unitPrice: it.price,
+                      taxRate: 10,
+                      total: it.price * it.quantity
+                    })),
+                    discount: 0,
+                    shipping: 0,
+                    subtotal: lastCompletedOrder.total / 1.1,
+                    tax: lastCompletedOrder.total - (lastCompletedOrder.total / 1.1),
+                    total: lastCompletedOrder.total,
+                    paymentMethod: lastCompletedOrder.paymentMethod,
+                    notes: `POS Terminal Sale Reference: ${lastCompletedOrder.orderNumber}`
+                  };
+                  printInvoiceDirect(invoice, storeSettings);
+                }}
                 className="w-full bg-neutral-900 text-white hover:bg-neutral-800 font-mono text-xs uppercase font-bold py-2.5 flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Printer className="h-4 w-4" />

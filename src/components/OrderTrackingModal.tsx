@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { X, Search, Package, CheckCircle2, Truck, Clock, AlertCircle, FileText, ExternalLink, ShieldCheck } from 'lucide-react';
 import { Order, StoreSettings } from '../types';
 import { printWarrantyCertificate } from '../utils/warrantyPrinter';
-import { printCustomerInvoice } from '../utils/invoicePrinter';
 
 interface OrderTrackingModalProps {
   onClose: () => void;

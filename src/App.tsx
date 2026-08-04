@@ -11,7 +11,7 @@ import ExitIntentModal from './components/ExitIntentModal';
 import OrderTrackingModal from './components/OrderTrackingModal';
 import POSRegisterView from './components/POSRegisterView';
 
-import { Product, CartItem, Order, Coupon, CustomerProfile, Review, ReturnRequest, CustomerSegment, UpsellRule, FinanceTransaction, User, StoreSettings, DEFAULT_STORE_SETTINGS } from './types';
+import { Product, CartItem, Order, Coupon, CustomerProfile, Review, ReturnRequest, CustomerSegment, UpsellRule, FinanceTransaction, User, StoreSettings, DEFAULT_STORE_SETTINGS, PurchaseOrder, RepairJob, StockUnit } from './types';
 import { INITIAL_PRODUCTS, INITIAL_REVIEWS, INITIAL_COUPONS } from './data/products';
 
 import Navbar from './components/Navbar';
@@ -206,6 +206,32 @@ export default function App() {
     localStorage.setItem('techseller_users_v4', JSON.stringify(users));
   }, [users]);
 
+  // ── ERP PHASE 1 STATE ─────────────────────────────────────────────────────
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>(() => {
+    try {
+      const saved = localStorage.getItem('techseller_purchase_orders_v4');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+
+  const [repairJobs, setRepairJobs] = useState<RepairJob[]>(() => {
+    try {
+      const saved = localStorage.getItem('techseller_repair_jobs_v4');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+
+  const [stockUnits, setStockUnits] = useState<StockUnit[]>(() => {
+    try {
+      const saved = localStorage.getItem('techseller_stock_units_v4');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+
+  useEffect(() => { localStorage.setItem('techseller_purchase_orders_v4', JSON.stringify(purchaseOrders)); }, [purchaseOrders]);
+  useEffect(() => { localStorage.setItem('techseller_repair_jobs_v4', JSON.stringify(repairJobs)); }, [repairJobs]);
+  useEffect(() => { localStorage.setItem('techseller_stock_units_v4', JSON.stringify(stockUnits)); }, [stockUnits]);
+
   const [returns, setReturns] = useState<ReturnRequest[]>(() => {
     try {
       const saved = localStorage.getItem('techseller_returns_v4');
@@ -309,6 +335,9 @@ export default function App() {
         if (Array.isArray(payload.orders)) setOrders(payload.orders);
         if (Array.isArray(payload.customers)) setCustomers(payload.customers);
         if (Array.isArray(payload.financeTransactions)) setFinanceTransactions(payload.financeTransactions);
+        if (Array.isArray(payload.purchaseOrders)) setPurchaseOrders(payload.purchaseOrders);
+        if (Array.isArray(payload.repairJobs)) setRepairJobs(payload.repairJobs);
+        if (Array.isArray(payload.stockUnits)) setStockUnits(payload.stockUnits);
         if (Array.isArray(payload.users)) setUsers(payload.users);
         if (Array.isArray(payload.returns)) setReturns(payload.returns);
         if (Array.isArray(payload.categories)) setCategories(payload.categories);
@@ -351,7 +380,10 @@ export default function App() {
         categories,
         customerSegments,
         upsellRules,
-        collections
+        collections,
+        purchaseOrders,
+        repairJobs,
+        stockUnits
       };
 
       void fetch('/api/state', {
@@ -381,7 +413,10 @@ export default function App() {
     categories,
     customerSegments,
     upsellRules,
-    collections
+    collections,
+    purchaseOrders,
+    repairJobs,
+    stockUnits
   ]);
 
   // STOREFRONT UI STATES
@@ -876,6 +911,78 @@ export default function App() {
 
   const handleDeleteTransaction = (id: string) => {
     setFinanceTransactions(prev => prev.filter(t => t.id !== id));
+  };
+
+  // ── ERP: PURCHASE ORDERS ──────────────────────────────────────────────────
+  const handleAddPurchaseOrder = (po: PurchaseOrder) => {
+    setPurchaseOrders(prev => [po, ...prev]);
+  };
+
+  const handleUpdatePurchaseOrder = (po: PurchaseOrder) => {
+    setPurchaseOrders(prev => prev.map(p => p.id === po.id ? po : p));
+  };
+
+  const handleDeletePurchaseOrder = (id: string) => {
+    setPurchaseOrders(prev => prev.filter(p => p.id !== id));
+  };
+
+  const handleReceiveGRN = (poId: string, receivedItems: { lineItemId: string; receivedQty: number }[]) => {
+    setPurchaseOrders(prev => prev.map(po => {
+      if (po.id !== poId) return po;
+      const updatedItems = po.items.map(item => {
+        const recv = receivedItems.find(r => r.lineItemId === item.id);
+        return recv ? { ...item, receivedQty: item.receivedQty + recv.receivedQty } : item;
+      });
+      const allReceived = updatedItems.every(i => i.receivedQty >= i.orderedQty);
+      const anyReceived = updatedItems.some(i => i.receivedQty > 0);
+      return {
+        ...po,
+        items: updatedItems,
+        status: allReceived ? 'Received' : anyReceived ? 'Partially Received' : po.status,
+        receivedDate: allReceived ? new Date().toISOString().split('T')[0] : po.receivedDate,
+      };
+    }));
+
+    // Auto-update product stock counts
+    const po = purchaseOrders.find(p => p.id === poId);
+    if (po) {
+      receivedItems.forEach(recv => {
+        const lineItem = po.items.find(i => i.id === recv.lineItemId);
+        if (lineItem?.productId && recv.receivedQty > 0) {
+          setProducts(prev => prev.map(p =>
+            p.id === lineItem.productId ? { ...p, stock: p.stock + recv.receivedQty } : p
+          ));
+        }
+      });
+    }
+  };
+
+  // ── ERP: REPAIR JOBS ──────────────────────────────────────────────────────
+  const handleAddRepairJob = (job: RepairJob) => {
+    setRepairJobs(prev => [job, ...prev]);
+  };
+
+  const handleUpdateRepairJob = (job: RepairJob) => {
+    setRepairJobs(prev => prev.map(j => j.id === job.id ? job : j));
+  };
+
+  const handleDeleteRepairJob = (id: string) => {
+    setRepairJobs(prev => prev.filter(j => j.id !== id));
+  };
+
+  const handleDeductPartsFromStock = (productId: string, qty: number) => {
+    setProducts(prev => prev.map(p =>
+      p.id === productId ? { ...p, stock: Math.max(0, p.stock - qty) } : p
+    ));
+  };
+
+  // ── ERP: STOCK UNITS ──────────────────────────────────────────────────────
+  const handleAddStockUnit = (unit: StockUnit) => {
+    setStockUnits(prev => [unit, ...prev]);
+  };
+
+  const handleUpdateStockUnit = (unit: StockUnit) => {
+    setStockUnits(prev => prev.map(u => u.id === unit.id ? unit : u));
   };
 
   const handleAddUser = (user: User) => {
@@ -1760,6 +1867,19 @@ export default function App() {
                 onUpdateStoreSettings={setStoreSettings}
                 onShowAlert={triggerAlert}
                 storeSettings={storeSettings}
+                purchaseOrders={purchaseOrders}
+                onAddPurchaseOrder={handleAddPurchaseOrder}
+                onUpdatePurchaseOrder={handleUpdatePurchaseOrder}
+                onDeletePurchaseOrder={handleDeletePurchaseOrder}
+                onReceiveGRN={handleReceiveGRN}
+                repairJobs={repairJobs}
+                onAddRepairJob={handleAddRepairJob}
+                onUpdateRepairJob={handleUpdateRepairJob}
+                onDeleteRepairJob={handleDeleteRepairJob}
+                onDeductPartsFromStock={handleDeductPartsFromStock}
+                stockUnits={stockUnits}
+                onAddStockUnit={handleAddStockUnit}
+                onUpdateStockUnit={handleUpdateStockUnit}
               />
             </Suspense>
           </div>
@@ -2032,9 +2152,10 @@ export default function App() {
             onCompleteSale={(items, total, method, notes) => {
               handleAddPOSOrder({
                 id: 'POS-' + Date.now(),
-                customerId: 'WALK-IN',
                 customerName: 'Walk-in Customer',
                 customerEmail: '',
+                customerAddress: 'Counter POS Purchase',
+                customerCity: 'Sydney NSW',
                 date: new Date().toISOString().split('T')[0],
                 status: 'Delivered',
                 paymentMethod: method,
@@ -2043,8 +2164,9 @@ export default function App() {
                   name: i.product.name,
                   quantity: i.quantity,
                   price: i.product.discountPrice || i.product.price,
-                  selectedColor: i.selectedColor,
-                  selectedSize: i.selectedSize
+                  color: i.selectedColor,
+                  size: i.selectedSize,
+                  image: i.product.image || ''
                 })),
                 subtotal: total,
                 tax: total * 0.08,

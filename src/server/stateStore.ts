@@ -21,6 +21,9 @@ export interface AppStateStore {
   customerSegments: any[];
   upsellRules: any[];
   collections: string[];
+  purchaseOrders: any[];
+  repairJobs: any[];
+  stockUnits: any[];
 }
 
 export interface AdminExtrasStore {
@@ -43,7 +46,10 @@ const APP_STATE_DEFAULTS: AppStateStore = {
   categories: ['Laptops', 'Desktops', 'Monitors', 'Workstations', 'Apple Mac', 'Parts'],
   customerSegments: [],
   upsellRules: [],
-  collections: ['Laptops', 'Apple Mac']
+  collections: ['Laptops', 'Apple Mac'],
+  purchaseOrders: [],
+  repairJobs: [],
+  stockUnits: []
 };
 
 const ADMIN_EXTRAS_DEFAULTS: AdminExtrasStore = {
