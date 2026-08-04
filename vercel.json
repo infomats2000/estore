@@ -1,6 +1,7 @@
 {
   "version": 2,
-  "buildCommand": "prisma generate && vite build",
+  "framework": "vite",
+  "buildCommand": "npm run vercel-build",
   "outputDirectory": "dist",
   "rewrites": [
     {
