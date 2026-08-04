@@ -1,0 +1,237 @@
+generator client {
+  provider        = "prisma-client-js"
+  output          = "../src/generated/prisma/client"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model AdminUser {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("admin")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("admin_users")
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  slug        String    @unique
+  description String    @default("")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  products    Product[]
+
+  @@index([name])
+  @@map("categories")
+}
+
+model Product {
+  id               String         @id @default(cuid())
+  name             String
+  description      String         @default("")
+  categoryId       String?
+  category         Category?      @relation(fields: [categoryId], references: [id])
+  price            Float
+  discountPrice    Float?
+  stock            Int            @default(0)
+  costPrice        Float?         @default(0)
+  rating           Float          @default(0)
+  reviewsCount     Int            @default(0)
+  sales            Int            @default(0)
+  image            String         @default("")
+  additionalImages String         @default("[]")
+  specs            String         @default("{}")
+  tags             String         @default("[]")
+  collection       String?
+  colors           String         @default("[]")
+  sizes            String         @default("[]")
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  images           ProductImage[]
+  orderItems       OrderItem[]
+
+  @@index([categoryId])
+  @@index([name])
+  @@map("products")
+}
+
+model ProductImage {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+  @@map("product_images")
+}
+
+model Customer {
+  id              String     @id @default(cuid())
+  name            String
+  email           String     @unique
+  phone           String     @default("")
+  address         String     @default("")
+  city            String     @default("")
+  type            String     @default("Retail")
+  company         String     @default("")
+  abn             String     @default("")
+  walletBalance   Float      @default(0)
+  points          Int        @default(0)
+  wishlist        String     @default("[]")
+  notes           String     @default("")
+  registrationDate DateTime   @default(now())
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  addresses       Address[]
+  orders          Order[]
+
+  @@index([email])
+  @@map("customers")
+}
+
+model Address {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  line1      String
+  line2      String?
+  city       String
+  state      String
+  postalCode String
+  country    String   @default("AU")
+  isDefault  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([customerId])
+  @@map("addresses")
+}
+
+model Order {
+  id                String          @id @default(cuid())
+  customerId        String?
+  customer          Customer?       @relation(fields: [customerId], references: [id])
+  orderNumber       String          @unique
+  status            String          @default("Pending")
+  subtotal          Float           @default(0)
+  tax               Float           @default(0)
+  shipping          Float           @default(0)
+  discount          Float           @default(0)
+  total             Float           @default(0)
+  paymentMethod     String          @default("Cash")
+  paymentStatus     String          @default("Unpaid")
+  notes             String          @default("")
+  shippingMethodId  String?
+  shippingMethod    ShippingMethod? @relation(fields: [shippingMethodId], references: [id])
+  paymentMethodId   String?
+  paymentMethodRef  PaymentMethod?  @relation(fields: [paymentMethodId], references: [id])
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  items             OrderItem[]
+
+  @@index([customerId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  name      String
+  price     Float
+  quantity  Int
+  color     String?
+  size      String?
+  image     String   @default("")
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
+}
+
+model Coupon {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  type        String   @default("percent")
+  value       Float
+  active      Boolean  @default(true)
+  minPurchase Float?   @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([code])
+  @@map("coupons")
+}
+
+model StoreSettings {
+  id                    String   @id @default(cuid())
+  storeName             String   @default("Tech Seller")
+  storeTagline          String   @default("")
+  legalName             String   @default("")
+  businessNumber        String   @default("")
+  currencySymbol        String   @default("$")
+  taxRatePercent        Int      @default(10)
+  taxName               String   @default("GST")
+  address               String   @default("")
+  cityStateZip          String   @default("")
+  phone                 String   @default("")
+  email                 String   @default("")
+  website               String   @default("")
+  businessHours         String   @default("")
+  invoiceHeaderSubtitle String   @default("")
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@map("store_settings")
+}
+
+model ShippingMethod {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String   @default("")
+  cost        Float    @default(0)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  orders      Order[]
+
+  @@map("shipping_methods")
+}
+
+model PaymentMethod {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String   @default("")
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  orders      Order[]
+
+  @@map("payment_methods")
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  action    String
+  entity    String
+  details   String   @default("")
+  createdAt DateTime @default(now())
+
+  @@index([entity])
+  @@index([createdAt])
+  @@map("activity_logs")
+}

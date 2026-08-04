@@ -1,0 +1,8 @@
+{
+  "name": "TECH SELLER",
+  "description": "A feature-rich, high-performance e-commerce platform with elegant collections, interactive shopping cart, secure simulated checkout, dynamic receipt generation, and a powerful live merchant analytics dashboard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
