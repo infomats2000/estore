@@ -9,6 +9,7 @@ import { createAuthToken, findAdminUserByEmail, hashPassword, verifyPassword } f
 import { saveImageFromBase64, deleteImageIfExists } from './uploads';
 import { readAppStateStore, readAdminExtrasStore, writeAppStateStore, writeAdminExtrasStore } from './stateStore';
 import { normalizeProductForDb, serializeProductForResponse } from './products';
+import { seedMasterData } from './masterDataSeeder';
 
 const router = express.Router();
 router.use(cookieParser());
@@ -535,11 +536,20 @@ router.get('/api/master-data/:entity', async (req, res) => {
       }
     }
 
-    const items = await model.findMany({
+    let items = await model.findMany({
       where,
       orderBy: entity === 'categories' ? [{ sortOrder: 'asc' }, { name: 'asc' }] : { createdAt: 'desc' },
       include: entity === 'attributes' ? { values: true } : entity === 'attribute-values' ? { attribute: true } : undefined
     });
+
+    if (items.length === 0 && !search) {
+      await seedMasterData();
+      items = await model.findMany({
+        where,
+        orderBy: entity === 'categories' ? [{ sortOrder: 'asc' }, { name: 'asc' }] : { createdAt: 'desc' },
+        include: entity === 'attributes' ? { values: true } : entity === 'attribute-values' ? { attribute: true } : undefined
+      });
+    }
 
     res.json(items);
   } catch (err) {

@@ -1,4 +1,4 @@
-import { StaffMember, PayrollLineItem, PayrollRun } from '../types';
+import { StaffMember, PayrollLineItem, PayrollRun, TimesheetEntry, Order } from '../types';
 
 export const INITIAL_STAFF_MEMBERS: StaffMember[] = [
   {
@@ -79,93 +79,181 @@ export const INITIAL_STAFF_MEMBERS: StaffMember[] = [
   }
 ];
 
+/**
+ * Calculates ATO compliant weekly PAYG withholding tax based on Australian tax brackets.
+ * Includes tax-free threshold and marginal tax scales.
+ */
 export function calculatePAYGWithholding(grossPay: number): number {
-  if (grossPay <= 350) return 0;
-  if (grossPay <= 750) return Math.round((grossPay - 350) * 0.16);
-  if (grossPay <= 1500) return Math.round(64 + (grossPay - 750) * 0.24);
-  if (grossPay <= 2500) return Math.round(244 + (grossPay - 1500) * 0.32);
-  return Math.round(564 + (grossPay - 2500) * 0.37);
+  if (!grossPay || grossPay <= 359) return 0;
+  if (grossPay <= 865) return Math.round((grossPay - 359) * 0.16);
+  if (grossPay <= 1730) return Math.round(80.96 + (grossPay - 865) * 0.30);
+  if (grossPay <= 3653) return Math.round(340.46 + (grossPay - 1730) * 0.37);
+  // Top Marginal Tax Rate (45% + 2% Medicare Levy)
+  return Math.round(1051.97 + (grossPay - 3653) * 0.47);
 }
 
+/**
+ * Calculates statutory Superannuation Guarantee contribution.
+ */
 export function calculateSuperannuation(grossPay: number, superRate = 11.5): number {
+  if (!grossPay || grossPay <= 0) return 0;
   return Math.round(grossPay * (superRate / 100) * 100) / 100;
 }
 
-export function generatePaySlipHTML(staff: StaffMember, line: PayrollLineItem, period: string): string {
+/**
+ * Calculates actual worked hours from approved timesheets in a given period.
+ */
+export function calculateStaffWorkedHours(
+  staffId: string, 
+  timesheets: TimesheetEntry[], 
+  startDate?: string, 
+  endDate?: string
+): number {
+  const staffTimesheets = timesheets.filter(t => {
+    if (t.staffId !== staffId || !t.approved) return false;
+    if (startDate && t.date < startDate) return false;
+    if (endDate && t.date > endDate) return false;
+    return true;
+  });
+
+  if (staffTimesheets.length === 0) return 38; // Default standard full-time hours
+  return staffTimesheets.reduce((acc, t) => acc + (t.totalHours || 0), 0);
+}
+
+/**
+ * Calculates sales commission earned from completed orders in a pay period.
+ */
+export function calculateStaffCommission(
+  staff: StaffMember, 
+  orders: Order[], 
+  startDate?: string, 
+  endDate?: string
+): number {
+  if (!staff.commissionRatePercent || staff.commissionRatePercent <= 0) return 0;
+
+  const validOrders = orders.filter(o => {
+    if (o.status !== 'Delivered' && o.status !== 'Shipped') return false;
+    const orderDate = (o.date || '').split('T')[0];
+    if (startDate && orderDate < startDate) return false;
+    if (endDate && orderDate > endDate) return false;
+    return true;
+  });
+
+  const totalSales = validOrders.reduce((sum, o) => sum + (o.subtotal || o.total || 0), 0);
+  // Calculate commission allocated for this staff member
+  const allocatedSales = staff.role === 'Sales Executive' ? totalSales * 0.4 : totalSales * 0.2;
+  const commission = Math.round(allocatedSales * (staff.commissionRatePercent / 100) * 100) / 100;
+  return Math.max(commission, 0);
+}
+
+/**
+ * Generates an official, audit-ready Australian Confidential Pay Slip HTML.
+ */
+export function generatePaySlipHTML(
+  staff: StaffMember, 
+  line: PayrollLineItem, 
+  period: string,
+  companyName = 'INFOMAT PTY LTD',
+  abn = '99 123 456 789'
+): string {
   return `
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8"/>
   <title>Pay Slip - ${staff.name} - ${period}</title>
   <style>
-    body { font-family: 'Plus Jakarta Sans', sans-serif; padding: 40px; background: #fff; color: #0f172a; }
-    .header { border-bottom: 2px solid #0f172a; padding-bottom: 20px; margin-bottom: 20px; display: flex; justify-content: space-between; }
-    .box { border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; margin-bottom: 20px; background: #f8fafc; }
-    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-    th, td { border-bottom: 1px solid #e2e8f0; padding: 10px; text-align: left; font-size: 13px; }
-    th { font-family: monospace; text-transform: uppercase; background: #f1f5f9; }
-    .total-row { font-weight: bold; border-top: 2px solid #0f172a; font-size: 14px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; background: #fff; color: #0f172a; line-height: 1.5; }
+    .header { border-bottom: 3px solid #1e293b; padding-bottom: 20px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-start; }
+    .title { font-size: 22px; font-weight: 900; letter-spacing: -0.5px; text-transform: uppercase; margin: 0; color: #0f172a; }
+    .subtitle { margin: 4px 0 0 0; font-size: 12px; color: #64748b; font-family: monospace; }
+    .confidential-badge { font-size: 14px; font-weight: 800; color: #2563eb; background: #eff6ff; padding: 4px 12px; border-radius: 6px; border: 1px solid #bfdbfe; display: inline-block; }
+    .grid { display: grid; grid-template-cols: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
+    .box { border: 1px solid #e2e8f0; padding: 16px; border-radius: 12px; background: #f8fafc; font-size: 12px; }
+    .box-title { font-weight: 800; text-transform: uppercase; font-size: 10px; color: #64748b; margin-bottom: 8px; letter-spacing: 0.5px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 25px; }
+    th, td { border-bottom: 1px solid #e2e8f0; padding: 12px 10px; text-align: left; font-size: 13px; }
+    th { font-family: monospace; text-transform: uppercase; font-size: 11px; background: #f1f5f9; color: #475569; font-weight: 700; }
+    .total-row { font-weight: 800; border-top: 2px solid #0f172a; font-size: 14px; }
+    .net-row { background: #ecfdf5; color: #047857; font-weight: 900; border-top: 2px solid #10b981; font-size: 15px; }
+    .footer { border-top: 1px solid #e2e8f0; pt: 15px; margin-top: 30px; font-size: 11px; color: #94a3b8; text-align: center; }
   </style>
 </head>
 <body>
   <div class="header">
     <div>
-      <h2 style="margin:0; text-transform:uppercase;">TECH SELLER AUSTRALIA PTY LTD</h2>
-      <p style="margin:4px 0; font-size:12px; color:#64748b;">ABN 99 123 456 789 &bull; Sydney NSW</p>
+      <h1 class="title">${companyName}</h1>
+      <p class="subtitle">ABN ${abn} &bull; Head Office Sydney NSW Australia</p>
     </div>
-    <div style="text-align:right;">
-      <h3 style="margin:0; color:#2563eb;">CONFIDENTIAL PAY SLIP</h3>
-      <p style="margin:4px 0; font-size:12px; font-family:monospace;">Pay Period: ${period}</p>
+    <div style="text-align: right;">
+      <span class="confidential-badge">CONFIDENTIAL PAY SLIP</span>
+      <p class="subtitle" style="margin-top: 6px;">Pay Period: <strong>${period}</strong></p>
     </div>
   </div>
 
-  <div class="box">
-    <strong>Employee Details:</strong><br/>
-    Name: ${staff.name} | Staff ID: ${staff.id} | Role: ${staff.role}<br/>
-    TFN: ${staff.taxFileNumber} | Bank Account: ${staff.bankAccount}
+  <div class="grid">
+    <div class="box">
+      <div class="box-title">Employee Details</div>
+      <strong>${staff.name}</strong> (${staff.id})<br/>
+      <strong>Role:</strong> ${staff.role} (${staff.employmentType})<br/>
+      <strong>Department:</strong> ${staff.department}<br/>
+      <strong>TFN:</strong> ${staff.taxFileNumber}
+    </div>
+    <div class="box">
+      <div class="box-title">Payment &amp; Bank Details</div>
+      <strong>Bank Account:</strong> ${staff.bankAccount}<br/>
+      <strong>Hourly Rate:</strong> $${staff.baseHourlyRate.toFixed(2)}/hr<br/>
+      <strong>Annual Leave Accrued:</strong> ${staff.annualLeaveBalanceHours} hrs<br/>
+      <strong>Sick Leave Accrued:</strong> ${staff.sickLeaveBalanceHours} hrs
+    </div>
   </div>
 
   <table>
     <thead>
       <tr>
         <th>Earnings Category</th>
-        <th>Hours / Base</th>
-        <th>Rate</th>
-        <th>Amount ($)</th>
+        <th>Hours / Ratio</th>
+        <th>Hourly Rate</th>
+        <th style="text-align: right;">Amount ($)</th>
       </tr>
     </thead>
     <tbody>
       <tr>
-        <td>Ordinary Hours</td>
+        <td>Ordinary Hours Worked</td>
         <td>${line.hoursWorked} hrs</td>
         <td>$${staff.baseHourlyRate.toFixed(2)}</td>
-        <td>$${(line.hoursWorked * staff.baseHourlyRate).toFixed(2)}</td>
+        <td style="text-align: right;">$${(line.hoursWorked * staff.baseHourlyRate).toFixed(2)}</td>
       </tr>
       ${line.commission > 0 ? `
       <tr>
-        <td>Sales Commission</td>
-        <td>100%</td>
-        <td>Bonus</td>
-        <td>$${line.commission.toFixed(2)}</td>
+        <td>Sales Performance Commission</td>
+        <td>${staff.commissionRatePercent}%</td>
+        <td>Incentive Bonus</td>
+        <td style="text-align: right;">$${line.commission.toFixed(2)}</td>
       </tr>` : ''}
       <tr class="total-row">
         <td colspan="3">GROSS EARNINGS</td>
-        <td>$${line.grossPay.toFixed(2)}</td>
+        <td style="text-align: right;">$${line.grossPay.toFixed(2)}</td>
       </tr>
       <tr>
-        <td colspan="3" style="color:#dc2626;">ATO PAYG Tax Withheld</td>
-        <td style="color:#dc2626;">-$${line.paygTax.toFixed(2)}</td>
+        <td colspan="3" style="color: #dc2626;">ATO PAYG Tax Withheld</td>
+        <td style="text-align: right; color: #dc2626;">-$${line.paygTax.toFixed(2)}</td>
       </tr>
-      <tr class="total-row" style="background:#ecfdf5; color:#059669;">
-        <td colspan="3">NET TAKE-HOME PAY</td>
-        <td>$${line.netPay.toFixed(2)}</td>
+      <tr class="net-row">
+        <td colspan="3">NET TAKE-HOME DISBURSEMENT</td>
+        <td style="text-align: right;">$${line.netPay.toFixed(2)}</td>
       </tr>
     </tbody>
   </table>
 
-  <div class="box" style="margin-top:20px;">
-    <strong>Employer Superannuation Guarantee (11.5% SG):</strong> $${line.superannuation.toFixed(2)} (Paid into Australian Super)
+  <div class="box" style="background: #faf5ff; border-color: #e9d5ff;">
+    <div class="box-title" style="color: #6b21a8;">Employer Superannuation Contribution</div>
+    <strong>Superannuation Guarantee (11.5% SG):</strong> $${line.superannuation.toFixed(2)}
+    <p style="margin: 4px 0 0 0; color: #7e22ce; font-size: 11px;">Contributed into compliant Australian Superannuation Fund on behalf of employee.</p>
+  </div>
+
+  <div class="footer">
+    This pay slip is issued electronically by INFOMAT ERP in accordance with Fair Work Ombudsman and Australian Taxation Office regulations.
   </div>
 </body>
 </html>

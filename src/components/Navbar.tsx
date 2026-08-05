@@ -222,9 +222,9 @@ export default function Navbar({
                   type="button"
                   onClick={onOpenPOS}
                   className="flex items-center gap-1.5 rounded-md border-2 border-amber-200 bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-2 font-mono text-[11px] font-black uppercase tracking-wider text-slate-950 shadow-lg shadow-amber-500/40 ring-2 ring-amber-300/50 transition-all hover:scale-[1.03] hover:from-amber-400 hover:to-orange-400"
-                  title="POS Retail Cash Register"
+                  title="Launch retail in-store counter cash register (POS)"
                 >
-                  <span>POS REGISTER</span>
+                  <span>CASH REGISTER (POS)</span>
                 </button>
               )}
               <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tighter bg-gradient-to-r from-cyan-300 via-sky-200 to-blue-300 bg-clip-text text-transparent drop-shadow-[0_1px_6px_rgba(125,211,252,0.45)]">
@@ -267,11 +267,11 @@ export default function Navbar({
               <button
                 onClick={onOpenCustomerPortal}
                 className="hidden md:flex items-center gap-1.5 border border-purple-900 bg-purple-950 text-purple-200 px-2.5 py-1.5 transition-all hover:bg-purple-900 shadow-sm"
-                title="Customer Self-Service Portal"
+                title="View your orders, track shipments & manage account"
                 id="customer-portal-btn"
               >
                 <User className="h-3.5 w-3.5 text-purple-300" />
-                <span className="font-mono text-[10px] font-bold tracking-wider">MY PORTAL</span>
+                <span className="font-mono text-[10px] font-bold tracking-wider">MY ACCOUNT &amp; ORDERS</span>
               </button>
             )}
             {!isAdminMode && (
@@ -299,9 +299,9 @@ export default function Navbar({
                 type="button"
                 onClick={onOpenCompare}
                 className="relative flex items-center gap-1.5 border border-neutral-400 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 px-2.5 py-1.5 font-mono text-[10px] font-bold uppercase transition-all hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                title="Compare Products"
+                title="Compare product specifications side-by-side"
               >
-                <span>COMPARE</span>
+                <span>COMPARE SPECS</span>
                 {compareCount > 0 && (
                   <span className="flex h-4 min-w-[16px] items-center justify-center px-1 bg-blue-600 text-white font-mono text-[9px] font-black">
                     {compareCount}
@@ -316,10 +316,10 @@ export default function Navbar({
                 type="button"
                 onClick={onOpenPCBuilder}
                 className="relative flex items-center gap-1.5 border border-blue-500 bg-blue-600 hover:bg-blue-500 text-white px-2.5 py-1.5 font-mono text-[10px] font-black uppercase tracking-wider transition-all shadow-sm cursor-pointer"
-                title="Build Custom PC Online"
+                title="Interactively select compatible PC parts & build your computer"
               >
                 <Cpu className="h-3.5 w-3.5 text-blue-200" />
-                <span>BUILD PC</span>
+                <span>CUSTOM PC BUILDER</span>
               </button>
             )}
 
@@ -329,10 +329,10 @@ export default function Navbar({
                 type="button"
                 onClick={onOpenTrackOrder}
                 className="hidden md:flex items-center gap-1.5 border border-neutral-400 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 px-2.5 py-1.5 font-mono text-[10px] font-bold uppercase transition-all hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                title="Live Order Tracking"
+                title="Track live courier delivery status"
               >
                 <Truck className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
-                <span>TRACK ORDER</span>
+                <span>TRACK SHIPMENT</span>
               </button>
             )}
 
@@ -347,7 +347,7 @@ export default function Navbar({
                 title="Store Control & Settings"
                 id="store-settings-btn"
               >
-                <span>Settings</span>
+                <span>Store Settings</span>
               </button>
             )}
 
@@ -391,7 +391,7 @@ export default function Navbar({
                 id="login-btn"
               >
                 <LogIn className="h-3 w-3" />
-                <span className="hidden sm:inline">ADMIN LOGIN</span>
+                <span className="hidden sm:inline">STAFF / ADMIN LOGIN</span>
               </button>
             )}
           </div>

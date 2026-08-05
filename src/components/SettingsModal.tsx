@@ -228,7 +228,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 : 'border-transparent text-slate-600 hover:text-slate-900'
             }`}
           >
-            <Sliders className="h-4 w-4 text-blue-600" /> Master Data System
+            <Sliders className="h-4 w-4 text-blue-600" /> Store Lookup Tables &amp; Setup
           </button>
         </div>
 
