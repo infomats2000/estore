@@ -14,6 +14,114 @@ export interface ProductTierPrices {
   Government?: number;
 }
 
+export interface BundleComponent {
+  productId: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+}
+
+export interface ConsignmentPayoutRecord {
+  id: string;
+  vendorName: string;
+  productId: string;
+  productName: string;
+  serialNumber?: string;
+  saleOrderId: string;
+  saleAmount: number;
+  vendorPayoutAmount: number;
+  storeCommissionAmount: number;
+  status: 'Unpaid' | 'Paid' | 'Processing';
+  dateSold: string;
+  paidDate?: string;
+  payoutReference?: string;
+}
+
+export interface PaymentSplitLine {
+  id: string;
+  method: 'Cash' | 'EFTPOS Card' | 'Store Credit / Wallet' | 'Trade Credit' | 'Gift Card';
+  amount: number;
+  reference?: string;
+}
+
+export interface LaybyDeposit {
+  id: string;
+  date: string;
+  amount: number;
+  paymentMethod: string;
+  receiptNumber: string;
+}
+
+export interface LaybyOrder {
+  id: string;
+  laybyNumber: string;
+  customerId: string;
+  customerName: string;
+  customerPhone?: string;
+  items: CartItem[];
+  totalAmount: number;
+  depositPaid: number;
+  remainingBalance: number;
+  status: 'Active' | 'Completed' | 'Cancelled' | 'Forfeited';
+  createdAt: string;
+  expiryDate: string;
+  deposits: LaybyDeposit[];
+}
+
+export type SalesChannel = 'eBay' | 'Amazon' | 'Shopify' | 'WooCommerce';
+export type MarketplaceCode = 'EBAY_AU' | 'EBAY_US' | 'EBAY_GB' | 'EBAY_CA' | 'EBAY_DE';
+
+export interface ChannelAccount {
+  id: string;
+  channel: SalesChannel;
+  marketplace: MarketplaceCode;
+  sellerId: string;
+  storeName: string;
+  status: 'Connected' | 'Disconnected' | 'Token Expired' | 'Syncing';
+  accessTokenEncrypted: string;
+  refreshTokenEncrypted: string;
+  tokenExpiresAt: string;
+  syncFrequencyMinutes: number;
+  lastSyncAt: string;
+  nextSyncAt: string;
+  createdAt: string;
+}
+
+export interface ChannelListing {
+  id: string;
+  accountId: string;
+  productId: string;
+  externalListingId: string;
+  channel: SalesChannel;
+  title: string;
+  subtitle?: string;
+  sku: string;
+  mpn?: string;
+  brand?: string;
+  upc?: string;
+  ean?: string;
+  price: number;
+  quantity: number;
+  status: 'Active' | 'Draft' | 'Scheduled' | 'Ended' | 'Out of Stock';
+  itemSpecifics: Record<string, string>;
+  listingUrl: string;
+  lastSyncAt: string;
+}
+
+export interface ChannelSyncJob {
+  id: string;
+  accountId: string;
+  jobType: 'IMPORT_LISTINGS' | 'EXPORT_PRODUCTS' | 'REALTIME_INVENTORY_SYNC' | 'IMPORT_ORDERS' | 'END_OUT_OF_STOCK';
+  status: 'Pending' | 'In Progress' | 'Completed' | 'Failed';
+  progressPercent: number;
+  totalItems: number;
+  processedItems: number;
+  failedItems: number;
+  errorMessage?: string;
+  startedAt: string;
+  completedAt?: string;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -37,6 +145,18 @@ export interface Product {
   locationStock?: Record<string, number>;
   tierPrices?: ProductTierPrices;
   volumeDiscounts?: VolumeDiscount[];
+  isBundle?: boolean;
+  kitType?: 'Standalone' | 'Bundle' | 'Kit' | 'Configurable';
+  bundleComponents?: BundleComponent[];
+  bundleSavings?: number;
+  isConsignment?: boolean;
+  consignmentVendorName?: string;
+  consignmentCommissionPercent?: number;
+  consignmentPayoutCost?: number;
+  isDropship?: boolean;
+  dropshipVendorName?: string;
+  dropshipSKU?: string;
+  dropshipLeadTimeDays?: number;
 }
 
 export interface InventoryLog {
@@ -665,3 +785,88 @@ export interface RefurbInspectionSession {
   trueCOGS: number;
   notes?: string;
 }
+
+// ============================================================
+// ERP REPORTS & ANALYTICS MODULE TYPES
+// ============================================================
+
+export type ERPReportCategory = 'Financial' | 'Sales' | 'Inventory' | 'Trade' | 'Services';
+
+export type ERPReportType =
+  | 'pnl'
+  | 'gst-tax'
+  | 'cash-flow'
+  | 'sales-velocity'
+  | 'channel-breakdown'
+  | 'inventory-valuation'
+  | 'reorder-alerts'
+  | 'shrinkage-audit'
+  | 'ar-aging'
+  | 'customer-clv'
+  | 'repair-throughput'
+  | 'refurb-margins'
+  | 'customer-wise'
+  | 'supplier-wise'
+  | 'warehouse-wise'
+  | 'brand-wise'
+  | 'payment-method-wise'
+  | 'staff-wise';
+
+export type ReportDatePreset = 'today' | 'this-week' | 'this-month' | 'this-quarter' | 'ytd' | 'custom';
+
+export interface ReportFilterParams {
+  preset: ReportDatePreset;
+  startDate: string;
+  endDate: string;
+  categoryFilter?: string;
+  warehouseFilter?: string;
+  customerFilter?: string;
+  supplierFilter?: string;
+  brandFilter?: string;
+  paymentMethodFilter?: string;
+  staffFilter?: string;
+  searchQuery?: string;
+}
+
+export interface ReportKPI {
+  label: string;
+  value: number | string;
+  change?: string;
+  trend?: 'up' | 'down' | 'neutral';
+  format: 'currency' | 'number' | 'percent' | 'text';
+  subtext?: string;
+}
+
+export interface ReportColumn {
+  key: string;
+  label: string;
+  align?: 'left' | 'center' | 'right';
+  format?: 'currency' | 'number' | 'percent' | 'date' | 'text' | 'badge';
+  badgeStyleMap?: Record<string, string>;
+}
+
+export interface ERPReportData {
+  id: string;
+  type: ERPReportType;
+  category: ERPReportCategory;
+  title: string;
+  subtitle: string;
+  dateGenerated: string;
+  periodLabel: string;
+  kpis: ReportKPI[];
+  columns: ReportColumn[];
+  rows: Record<string, any>[];
+  summaryRow?: Record<string, any>;
+  chartData?: any[];
+}
+
+export interface EmailReportPayload {
+  recipientEmail: string;
+  ccEmail?: string;
+  subject: string;
+  reportTitle: string;
+  reportType: ERPReportType;
+  format: 'pdf' | 'csv' | 'html';
+  customNotes?: string;
+}
+

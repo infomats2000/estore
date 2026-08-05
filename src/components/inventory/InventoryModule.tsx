@@ -7,7 +7,8 @@ import SuppliersManager from './SuppliersManager';
 import InventoryReports from './InventoryReports';
 import ProfitReports from './ProfitReports';
 import StocktakeManager from './StocktakeManager';
-import { Package, Layers, Sparkles, Truck, BarChart2, TrendingUp, ClipboardCheck } from 'lucide-react';
+import ConsignmentPayoutManager from './ConsignmentPayoutManager';
+import { Package, Layers, Sparkles, Truck, BarChart2, TrendingUp, ClipboardCheck, Coins } from 'lucide-react';
 
 interface InventoryModuleProps {
   products: Product[];
@@ -63,7 +64,26 @@ export default function InventoryModule({
   onAddShrinkageRecord,
   onUpdateProductStock
 }: InventoryModuleProps) {
-  const [activeSubTab, setActiveSubTab] = useState<'products' | 'categories' | 'collections' | 'suppliers' | 'reports' | 'profit' | 'stocktake'>('products');
+  const [activeSubTab, setActiveSubTab] = useState<'products' | 'categories' | 'collections' | 'suppliers' | 'stocktake' | 'consignment' | 'reports' | 'profit'>('products');
+
+  const [consignmentPayouts, setConsignmentPayouts] = useState<import('../../types').ConsignmentPayoutRecord[]>([
+    {
+      id: 'CONS-101',
+      vendorName: 'Apex Hardware Consignments Ltd',
+      productId: 'P-001',
+      productName: 'Refurbished Enterprise ThinkPad - i5 / 16GB / 256GB SSD',
+      saleOrderId: 'ORD-9821',
+      saleAmount: 499.00,
+      vendorPayoutAmount: 424.15,
+      storeCommissionAmount: 74.85,
+      status: 'Unpaid',
+      dateSold: '2026-07-28'
+    }
+  ]);
+
+  const handleUpdatePayoutStatus = (id: string, status: 'Paid' | 'Processing', reference?: string) => {
+    setConsignmentPayouts(prev => prev.map(p => p.id === id ? { ...p, status, payoutReference: reference, paidDate: new Date().toISOString().split('T')[0] } : p));
+  };
 
   const navItems = [
     { id: 'products', label: 'Products', icon: Package },
@@ -71,6 +91,7 @@ export default function InventoryModule({
     { id: 'collections', label: 'Collections', icon: Sparkles },
     { id: 'suppliers', label: 'Suppliers', icon: Truck },
     { id: 'stocktake', label: 'Stocktake & Cycles', icon: ClipboardCheck },
+    { id: 'consignment', label: 'Consignment Payouts', icon: Coins },
     { id: 'reports', label: 'Reports', icon: BarChart2 },
     { id: 'profit', label: 'Profit & Margins', icon: TrendingUp },
   ] as const;
@@ -149,6 +170,12 @@ export default function InventoryModule({
           <ProfitReports
             products={products}
             categories={categories}
+          />
+        )}
+        {activeSubTab === 'consignment' && (
+          <ConsignmentPayoutManager
+            payouts={consignmentPayouts}
+            onUpdatePayoutStatus={handleUpdatePayoutStatus}
           />
         )}
         {activeSubTab === 'stocktake' && (

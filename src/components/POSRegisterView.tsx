@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, ShoppingCart, Plus, Minus, Trash2, Printer, Check, DollarSign, CreditCard, RotateCcw, X, Scan, Sparkles, Building2 } from 'lucide-react';
-import { Product, StoreSettings, CartItem, Invoice, CustomerProfile } from '../types';
+import { Search, ShoppingCart, Plus, Minus, Trash2, Printer, Check, DollarSign, CreditCard, RotateCcw, X, Scan, Sparkles, Building2, Monitor, Clock, Layers } from 'lucide-react';
+import { Product, StoreSettings, CartItem, Invoice, CustomerProfile, PaymentSplitLine, LaybyOrder } from '../types';
 import { convertOrderToInvoice, printInvoiceDirect } from '../utils/invoicePrinter';
 import { calculateEffectivePrice, getAvailableCredit, isCreditHold } from '../utils/pricing';
+import { kickCashDrawerHardware } from '../utils/cashDrawerPrinter';
+import LaybyManagerModal from './pos/LaybyManagerModal';
 
 interface POSRegisterViewProps {
   products: Product[];
@@ -11,6 +13,7 @@ interface POSRegisterViewProps {
   customers?: CustomerProfile[];
   onCompleteSale: (items: CartItem[], total: number, paymentMethod: string, notes: string) => void;
   onUpdateCustomerProfile?: (updated: CustomerProfile) => void;
+  onClose?: () => void;
 }
 
 export default function POSRegisterView({
@@ -19,7 +22,8 @@ export default function POSRegisterView({
   storeSettings,
   customers = [],
   onCompleteSale,
-  onUpdateCustomerProfile
+  onUpdateCustomerProfile,
+  onClose
 }: POSRegisterViewProps) {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -31,10 +35,17 @@ export default function POSRegisterView({
   const [posPoNumber, setPosPoNumber] = useState<string>('');
 
   // Payment states
-  const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'EFTPOS Card' | 'On Account / Trade Credit'>('Cash');
+  const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'EFTPOS Card' | 'On Account / Trade Credit' | 'Split Payment' | 'Lay-by Deposit'>('Cash');
   const [cashTendered, setCashTendered] = useState<string>('');
   const [saleCompleted, setSaleCompleted] = useState(false);
   const [lastCompletedOrder, setLastCompletedOrder] = useState<any | null>(null);
+
+  // Multi-Tender Split Payment State
+  const [splitLines, setSplitLines] = useState<PaymentSplitLine[]>([]);
+
+  // Lay-by State & Orders
+  const [laybyOrders, setLaybyOrders] = useState<LaybyOrder[]>([]);
+  const [isLaybyModalOpen, setIsLaybyModalOpen] = useState(false);
 
   const barcodeInputRef = useRef<HTMLInputElement>(null);
 
@@ -42,6 +53,33 @@ export default function POSRegisterView({
   useEffect(() => {
     barcodeInputRef.current?.focus();
   }, []);
+
+  // Sync to Dual-Monitor Customer Facing Display window via BroadcastChannel
+  useEffect(() => {
+    try {
+      const channel = new BroadcastChannel('pos_customer_display');
+      const sub = cart.reduce((s, i) => s + (i.product.discountPrice || i.product.price) * i.quantity, 0);
+      const cust = customers.find(c => c.id === selectedCustomerId);
+      const cVal = parseFloat(cashTendered) || 0;
+      const cDue = Math.max(0, cVal - sub);
+
+      channel.postMessage({
+        cart,
+        subtotal: sub,
+        tax: sub - (sub / 1.1),
+        total: sub,
+        discount: 0,
+        customerName: cust?.name,
+        paymentMethod,
+        changeDue: cDue,
+        saleCompleted,
+        orderNumber: lastCompletedOrder?.orderNumber
+      });
+      channel.close();
+    } catch (err) {
+      // BroadcastChannel optional
+    }
+  }, [cart, selectedCustomerId, paymentMethod, cashTendered, saleCompleted, lastCompletedOrder, customers]);
 
   const filteredProducts = products.filter(p => {
     const matchesCat = selectedCategory === 'All' || p.category === selectedCategory;
@@ -130,7 +168,7 @@ export default function POSRegisterView({
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)] bg-neutral-100 overflow-hidden font-sans">
+    <div className="flex flex-col h-screen bg-neutral-100 overflow-hidden font-sans">
       {/* Top POS Toolbar */}
       <div className="bg-neutral-900 text-white p-4 flex items-center justify-between border-b border-neutral-800">
         <div className="flex items-center gap-3">
@@ -158,13 +196,57 @@ export default function POSRegisterView({
           </div>
         </form>
 
-        <button
-          onClick={handleNewSale}
-          className="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white px-4 py-2 font-mono text-xs uppercase font-bold transition-colors cursor-pointer"
-        >
-          <RotateCcw className="h-4 w-4" />
-          <span>New Transaction</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              window.open('#/customer-display', 'CustomerDisplay', 'width=1024,height=768');
+            }}
+            className="flex items-center gap-1.5 bg-blue-900/80 hover:bg-blue-800 border border-blue-700 text-blue-200 px-3 py-2 font-mono text-xs uppercase font-bold transition-colors cursor-pointer"
+            title="Open Dual-Monitor Customer Facing Display window"
+          >
+            <Monitor className="h-4 w-4 text-blue-400" />
+            <span>Customer Display</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => kickCashDrawerHardware()}
+            className="flex items-center gap-1.5 bg-amber-900/80 hover:bg-amber-800 border border-amber-700 text-amber-200 px-3 py-2 font-mono text-xs uppercase font-bold transition-colors cursor-pointer"
+            title="Trigger ESC/POS Hardware Cash Drawer Kick Signal"
+          >
+            <DollarSign className="h-4 w-4 text-amber-400" />
+            <span>Open Drawer</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsLaybyModalOpen(true)}
+            className="flex items-center gap-1.5 bg-purple-900/80 hover:bg-purple-800 border border-purple-700 text-purple-200 px-3 py-2 font-mono text-xs uppercase font-bold transition-colors cursor-pointer"
+            title="Manage Customer Lay-by Tickets & Installment Deposits"
+          >
+            <Clock className="h-4 w-4 text-purple-400" />
+            <span>Lay-by Manager ({laybyOrders.filter(l => l.status === 'Active').length})</span>
+          </button>
+
+          <button
+            onClick={handleNewSale}
+            className="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white px-4 py-2 font-mono text-xs uppercase font-bold transition-colors cursor-pointer"
+          >
+            <RotateCcw className="h-4 w-4" />
+            <span>New Transaction</span>
+          </button>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-neutral-400 hover:text-white px-4 py-2 font-mono text-xs uppercase font-bold transition-colors cursor-pointer"
+              id="pos-close-btn"
+            >
+              <X className="h-4 w-4" />
+              <span>Close POS</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Main Split Interface */}
@@ -386,8 +468,8 @@ export default function POSRegisterView({
             </div>
           ) : (
             <div className="p-4 bg-neutral-50 border-t border-neutral-300 space-y-3">
-              {/* Payment Method Selector */}
-              <div className="grid grid-cols-3 gap-1.5">
+              {/* Payment Method Selector Grid */}
+              <div className="grid grid-cols-2 gap-1.5">
                 <button
                   type="button"
                   onClick={() => setPaymentMethod('Cash')}
@@ -416,6 +498,16 @@ export default function POSRegisterView({
                   }`}
                 >
                   <Building2 className="h-3.5 w-3.5" /> Net 30
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('Split Payment')}
+                  className={`py-2 font-mono text-[10px] font-bold uppercase border flex items-center justify-center gap-1 ${
+                    paymentMethod === 'Split Payment' ? 'bg-purple-600 text-white border-purple-600' : 'bg-white border-neutral-300 text-neutral-700'
+                  }`}
+                >
+                  <Layers className="h-3.5 w-3.5" /> Split Pay
                 </button>
               </div>
 
@@ -557,6 +649,39 @@ export default function POSRegisterView({
           )}
         </div>
       </div>
+
+      <LaybyManagerModal
+        isOpen={isLaybyModalOpen}
+        onClose={() => setIsLaybyModalOpen(false)}
+        laybyOrders={laybyOrders}
+        onAddInstallment={(laybyNumber, amount, method) => {
+          setLaybyOrders(prev => prev.map(l => {
+            if (l.laybyNumber === laybyNumber) {
+              const newPaid = l.depositPaid + amount;
+              const newRem = Math.max(0, l.totalAmount - newPaid);
+              const isDone = newRem <= 0;
+              return {
+                ...l,
+                depositPaid: newPaid,
+                remainingBalance: newRem,
+                status: isDone ? 'Completed' : 'Active',
+                deposits: [
+                  ...l.deposits,
+                  {
+                    id: `DEP-${Date.now()}`,
+                    date: new Date().toISOString().split('T')[0],
+                    amount,
+                    paymentMethod: method,
+                    receiptNumber: `REC-${Math.floor(1000 + Math.random() * 9000)}`
+                  }
+                ]
+              };
+            }
+            return l;
+          }));
+        }}
+        storeSettings={storeSettings}
+      />
     </div>
   );
 }

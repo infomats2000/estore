@@ -8,6 +8,20 @@
 
 @variant dark (&:where(.dark, .dark *));
 
+:root {
+  --storefront-font-sans: "Inter", "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --storefront-font-mono: "Inter", "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --storefront-bg: #f8f8f8;
+  --storefront-text: #1a1a1a;
+
+  --admin-font-sans: "Inter", "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --admin-font-mono: "Inter", "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --admin-bg: #f4f6f8;
+  --admin-text: #111827;
+  --admin-dark-bg: #0a0a0a;
+  --admin-dark-text: #f3f4f6;
+}
+
 body {
   font-family: "Inter", "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background-color: #eef2f6;
@@ -15,9 +29,23 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-.dark body {
-  background-color: #0f172a;
-  color: #f1f5f9;
+#store-app-root.storefront-theme {
+  --font-sans: var(--storefront-font-sans);
+  --font-mono: var(--storefront-font-mono);
+  background-color: var(--storefront-bg);
+  color: var(--storefront-text);
+}
+
+#store-app-root.admin-theme {
+  --font-sans: var(--admin-font-sans);
+  --font-mono: var(--admin-font-mono);
+  background-color: var(--admin-bg);
+  color: var(--admin-text);
+}
+
+#store-app-root.admin-theme.dark {
+  background-color: var(--admin-dark-bg);
+  color: var(--admin-dark-text);
 }
 
 @layer utilities {

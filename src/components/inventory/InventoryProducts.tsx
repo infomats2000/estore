@@ -4,6 +4,7 @@ import { Package, Plus, Trash2, Search, Filter, ArrowUpDown, ChevronDown, Check,
 import { PlusCircle, X, Upload, Coins, Boxes, AlertTriangle, CheckCircle, SlidersHorizontal, Edit3, History, FileSpreadsheet, RefreshCw, Printer, QrCode, Layers, Sparkles } from 'lucide-react';
 import { parseCSVContent, autoMapCSVColumns, processCSVImportData, CSVParseResult, CSVColumnMapping } from '../../utils/csvImporter';
 import { printProductLabelsBatch, generateBarcodeSVG, generateQRCodeSVG } from '../../utils/labelPrinter';
+import BundleBuilderModal from './BundleBuilderModal';
 
 
 interface InventoryProductsProps {
@@ -59,6 +60,7 @@ export default function InventoryProducts({
 
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [showBundleModal, setShowBundleModal] = useState(false);
 
   const [newProdName, setNewProdName] = useState('');
   const [newProdPrice, setNewProdPrice] = useState('');
@@ -482,23 +484,11 @@ export default function InventoryProducts({
           <div className="space-y-6 animate-fade-in" id="dashboard-tab-inventory">
             
             {/* Header banner with vibrant gradient and buttons */}
-            <div className="bg-transparent text-neutral-900 dark:text-neutral-100 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-xl shadow-lg shadow-blue-500/30 text-white shrink-0">
-                  <Package className="h-6 w-6" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 font-mono text-[9px] uppercase font-bold tracking-widest text-blue-600 dark:text-blue-400">
-                    <span className="bg-blue-100 text-blue-800 border border-blue-300 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800 px-2 py-0.5 rounded-full flex items-center gap-1">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                      CATALOG DATABASE
-                    </span>
-                    <span className="text-neutral-500 dark:text-slate-400">• HARDWARE & COMPONENT AUDIT</span>
-                  </div>
-                  <h4 className="font-sans text-xl font-black uppercase tracking-tight text-neutral-900 dark:text-white mt-1 flex items-center gap-2">
-                    Store Inventory & Stock Management
-                  </h4>
-                </div>
+            <div className="bg-transparent text-neutral-900 dark:text-neutral-100 p-5 space-y-4">
+              <div>
+                <h4 className="font-sans text-xl font-black uppercase tracking-tight text-neutral-900 dark:text-white">
+                  Store Inventory & Stock Management
+                </h4>
               </div>
 
               <div className="flex flex-wrap items-center gap-2.5">
@@ -518,6 +508,15 @@ export default function InventoryProducts({
                 >
                   <FileSpreadsheet className="h-4 w-4" />
                   <span>Import CSV / Excel</span>
+                </button>
+
+                <button
+                  onClick={() => setShowBundleModal(true)}
+                  className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 font-sans text-xs uppercase tracking-wider font-black bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-600/20 transition-all cursor-pointer"
+                  title="Link child component SKUs to build composite product bundles & kits"
+                >
+                  <Layers className="h-4 w-4" />
+                  <span>Create Bundle / Kit SKU</span>
                 </button>
 
                 <button
@@ -2351,6 +2350,13 @@ export default function InventoryProducts({
                 </div>
               </div>
             )}
+
+            <BundleBuilderModal
+              isOpen={showBundleModal}
+              onClose={() => setShowBundleModal(false)}
+              products={products}
+              onSaveBundle={onAddProduct}
+            />
 
           </div>
         </div>

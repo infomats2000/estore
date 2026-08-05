@@ -313,62 +313,62 @@ export default function B2BTradeManager({
 
       {/* KPI METRICS OVERVIEW */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        <div className="border border-slate-800 bg-slate-900/80 p-4 rounded-none">
-          <span className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest text-slate-400 font-bold">
+        <div className="border border-slate-700 bg-slate-800 p-4 rounded-xl">
+          <span className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest text-slate-300 font-bold">
             <DollarSign className="h-3.5 w-3.5 text-indigo-400" /> Accounts Receivable
           </span>
           <div className="mt-1 font-mono text-xl font-bold text-white">
             ${totalReceivables.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
-          <span className="font-mono text-[9px] text-slate-400 uppercase tracking-wider mt-1 block">
+          <span className="font-mono text-[9px] text-slate-300 uppercase tracking-wider mt-1 block">
             Outstanding Trade Credit
           </span>
         </div>
 
-        <div className="border border-slate-800 bg-slate-900/80 p-4 rounded-none">
-          <span className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest text-slate-400 font-bold">
+        <div className="border border-slate-700 bg-slate-800 p-4 rounded-xl">
+          <span className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest text-slate-300 font-bold">
             <AlertTriangle className="h-3.5 w-3.5 text-rose-400" /> Overdue Balances
           </span>
           <div className="mt-1 font-mono text-xl font-bold text-rose-400">
             ${totalOverdueAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
-          <span className="font-mono text-[9px] text-slate-400 uppercase tracking-wider mt-1 block">
+          <span className="font-mono text-[9px] text-slate-300 uppercase tracking-wider mt-1 block">
             {overdueCustomers.length} Overdue Accounts
           </span>
         </div>
 
-        <div className="border border-slate-800 bg-slate-900/80 p-4 rounded-none">
-          <span className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest text-slate-400 font-bold">
+        <div className="border border-slate-700 bg-slate-800 p-4 rounded-xl">
+          <span className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest text-slate-300 font-bold">
             <CreditCard className="h-3.5 w-3.5 text-emerald-400" /> Total Credit Extended
           </span>
           <div className="mt-1 font-mono text-xl font-bold text-emerald-400">
             ${totalCreditLimit.toLocaleString()}
           </div>
-          <span className="font-mono text-[9px] text-slate-400 uppercase tracking-wider mt-1 block">
+          <span className="font-mono text-[9px] text-slate-300 uppercase tracking-wider mt-1 block">
             Approved Credit Lines
           </span>
         </div>
 
-        <div className="border border-slate-800 bg-slate-900/80 p-4 rounded-none">
-          <span className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest text-slate-400 font-bold">
+        <div className="border border-slate-700 bg-slate-800 p-4 rounded-xl">
+          <span className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest text-slate-300 font-bold">
             <Lock className="h-3.5 w-3.5 text-amber-400" /> Credit Holds
           </span>
           <div className="mt-1 font-mono text-xl font-bold text-amber-400">
-            {creditHoldCount} <span className="font-sans text-[9px] text-slate-400 uppercase font-bold">accounts</span>
+            {creditHoldCount} <span className="font-sans text-[9px] text-slate-300 uppercase font-bold">accounts</span>
           </div>
-          <span className="font-mono text-[9px] text-slate-400 uppercase tracking-wider mt-1 block">
+          <span className="font-mono text-[9px] text-slate-300 uppercase tracking-wider mt-1 block">
             Blocked from Credit Orders
           </span>
         </div>
 
-        <div className="border border-slate-800 bg-slate-900/80 p-4 rounded-none">
-          <span className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest text-slate-400 font-bold">
+        <div className="border border-slate-700 bg-slate-800 p-4 rounded-xl">
+          <span className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest text-slate-300 font-bold">
             <Clock className="h-3.5 w-3.5 text-blue-400" /> Pending Applications
           </span>
           <div className="mt-1 font-mono text-xl font-bold text-blue-400">
-            {pendingCount} <span className="font-sans text-[9px] text-slate-400 uppercase font-bold">requests</span>
+            {pendingCount} <span className="font-sans text-[9px] text-slate-300 uppercase font-bold">requests</span>
           </div>
-          <span className="font-mono text-[9px] text-slate-400 uppercase tracking-wider mt-1 block">
+          <span className="font-mono text-[9px] text-slate-300 uppercase tracking-wider mt-1 block">
             Awaiting Admin Review
           </span>
         </div>
@@ -379,7 +379,7 @@ export default function B2BTradeManager({
         <button
           onClick={() => setActiveSubTab('directory')}
           className={`border-b-2 py-3 px-5 font-bold tracking-widest transition-colors flex items-center gap-2 ${
-            activeSubTab === 'directory' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-200'
+            activeSubTab === 'directory' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-600 hover:text-slate-900'
           }`}
         >
           <Building2 className="h-4 w-4" /> B2B Trade Directory ({b2bCustomers.length})
@@ -388,7 +388,7 @@ export default function B2BTradeManager({
         <button
           onClick={() => setActiveSubTab('overdue')}
           className={`border-b-2 py-3 px-5 font-bold tracking-widest transition-colors flex items-center gap-2 ${
-            activeSubTab === 'overdue' ? 'border-rose-500 text-rose-400' : 'border-transparent text-slate-400 hover:text-slate-200'
+            activeSubTab === 'overdue' ? 'border-rose-500 text-rose-400' : 'border-transparent text-slate-600 hover:text-slate-900'
           }`}
         >
           <ShieldAlert className="h-4 w-4" /> Overdue & Credit Holds ({overdueCustomers.length})
@@ -397,7 +397,7 @@ export default function B2BTradeManager({
         <button
           onClick={() => setActiveSubTab('ledger')}
           className={`border-b-2 py-3 px-5 font-bold tracking-widest transition-colors flex items-center gap-2 ${
-            activeSubTab === 'ledger' ? 'border-emerald-500 text-emerald-400' : 'border-transparent text-slate-400 hover:text-slate-200'
+            activeSubTab === 'ledger' ? 'border-emerald-500 text-emerald-400' : 'border-transparent text-slate-600 hover:text-slate-900'
           }`}
         >
           <FileText className="h-4 w-4" /> Statements & Ledger
@@ -406,7 +406,7 @@ export default function B2BTradeManager({
         <button
           onClick={() => setActiveSubTab('pricing')}
           className={`border-b-2 py-3 px-5 font-bold tracking-widest transition-colors flex items-center gap-2 ${
-            activeSubTab === 'pricing' ? 'border-purple-500 text-purple-400' : 'border-transparent text-slate-400 hover:text-slate-200'
+            activeSubTab === 'pricing' ? 'border-purple-500 text-purple-400' : 'border-transparent text-slate-600 hover:text-slate-900'
           }`}
         >
           <Tag className="h-4 w-4" /> Tiered Pricing Matrix
@@ -418,7 +418,7 @@ export default function B2BTradeManager({
         <div className="space-y-4">
           
           {/* SEARCH & FILTERS */}
-          <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/60 p-4 border border-slate-800">
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50 p-4 border border-slate-200">
             <div className="flex flex-wrap items-center gap-3 flex-1">
               <div className="relative min-w-[260px] flex-1">
                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
@@ -458,9 +458,9 @@ export default function B2BTradeManager({
           </div>
 
           {/* CUSTOMERS TABLE */}
-          <div className="border border-slate-800 overflow-x-auto bg-slate-900/40">
+          <div className="border border-slate-200 overflow-x-auto bg-white">
             <table className="w-full text-left font-sans text-xs">
-              <thead className="border-b border-slate-800 bg-slate-950 text-[10px] uppercase font-bold tracking-wider text-slate-400">
+              <thead className="border-b border-slate-200 bg-slate-100 text-[10px] uppercase font-bold tracking-wider text-slate-700">
                 <tr>
                   <th className="py-3 px-4">Account / Company</th>
                   <th className="py-3 px-4">Contact</th>
@@ -471,7 +471,7 @@ export default function B2BTradeManager({
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60">
+              <tbody className="divide-y divide-slate-200">
                 {b2bCustomers.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="py-12 text-center text-slate-500 font-sans text-xs uppercase tracking-wider">
@@ -489,9 +489,9 @@ export default function B2BTradeManager({
                     const tier = trade?.priceTier || 'Reseller';
 
                     return (
-                      <tr key={cust.id} className="hover:bg-slate-800/40 transition-colors">
+                      <tr key={cust.id} className="hover:bg-slate-50 transition-colors">
                         <td className="py-3.5 px-4">
-                          <div className="font-bold text-white uppercase text-xs">
+                          <div className="font-bold text-slate-900 uppercase text-xs">
                             {trade?.companyName || cust.company || cust.name}
                           </div>
                           <div className="font-mono text-[10px] text-indigo-400">
@@ -500,7 +500,7 @@ export default function B2BTradeManager({
                         </td>
 
                         <td className="py-3.5 px-4">
-                          <div className="text-slate-200">{cust.name}</div>
+                          <div className="text-slate-800">{cust.name}</div>
                           <div className="font-mono text-[10px] text-slate-400">{cust.email}</div>
                         </td>
 
@@ -522,7 +522,7 @@ export default function B2BTradeManager({
                             </span>
                             <span className="text-slate-400">${limit.toLocaleString()}</span>
                           </div>
-                          <div className="h-1.5 w-full bg-slate-800 overflow-hidden">
+                          <div className="h-1.5 w-full bg-slate-200 overflow-hidden">
                             <div 
                               className={`h-full transition-all ${
                                 percentUsed >= 90 ? 'bg-rose-500' :
@@ -586,7 +586,7 @@ export default function B2BTradeManager({
       {/* TAB 2: OVERDUE INVOICES & AUTOMATIC CREDIT HOLDS */}
       {activeSubTab === 'overdue' && (
         <div className="space-y-4">
-          <div className="bg-slate-900/60 p-4 border border-slate-800">
+          <div className="bg-slate-50 p-4 border border-slate-200">
             <h3 className="font-sans text-sm font-bold uppercase tracking-wider text-rose-400 flex items-center gap-2">
               <ShieldAlert className="h-4 w-4" /> Overdue Debt Safeguards & Credit Holds
             </h3>
@@ -595,9 +595,9 @@ export default function B2BTradeManager({
             </p>
           </div>
 
-          <div className="border border-slate-800 overflow-x-auto bg-slate-900/40">
+          <div className="border border-slate-200 overflow-x-auto bg-white">
             <table className="w-full text-left font-sans text-xs">
-              <thead className="border-b border-slate-800 bg-slate-950 text-[10px] uppercase font-bold tracking-wider text-slate-400">
+              <thead className="border-b border-slate-200 bg-slate-100 text-[10px] uppercase font-bold tracking-wider text-slate-700">
                 <tr>
                   <th className="py-3 px-4">Customer / Company</th>
                   <th className="py-3 px-4">Current Balance</th>
@@ -607,7 +607,7 @@ export default function B2BTradeManager({
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60">
+              <tbody className="divide-y divide-slate-200">
                 {overdueCustomers.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="py-12 text-center text-slate-500 font-sans text-xs uppercase tracking-wider">
@@ -621,9 +621,9 @@ export default function B2BTradeManager({
                     const aging = calculateAgingSummary(cust.tradeLedger || []);
 
                     return (
-                      <tr key={cust.id} className="hover:bg-slate-800/40 transition-colors">
+                      <tr key={cust.id} className="hover:bg-slate-50 transition-colors">
                         <td className="py-3.5 px-4">
-                          <div className="font-bold text-white uppercase text-xs">
+                          <div className="font-bold text-slate-900 uppercase text-xs">
                             {trade?.companyName || cust.company || cust.name}
                           </div>
                           <div className="font-mono text-[10px] text-indigo-400">
@@ -687,9 +687,9 @@ export default function B2BTradeManager({
       {activeSubTab === 'ledger' && (
         <div className="space-y-6">
           
-          <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-900/60 p-4 border border-slate-800">
+          <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-50 p-4 border border-slate-200">
             <div className="flex items-center gap-3 min-w-[300px]">
-              <label className="font-mono text-xs uppercase font-bold text-slate-400">Select B2B Account:</label>
+              <label className="font-mono text-xs uppercase font-bold text-slate-700">Select B2B Account:</label>
               <select
                 value={selectedCustomer?.id || ''}
                 onChange={(e) => {
@@ -737,15 +737,15 @@ export default function B2BTradeManager({
             <div className="space-y-6">
               
               {/* Account Summary Strip */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 bg-slate-950 p-4 border border-slate-800">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 bg-slate-50 p-4 border border-slate-200">
                 <div>
-                  <span className="font-mono text-[9px] uppercase tracking-widest text-slate-400 font-bold block">Company / Account</span>
+                  <span className="font-mono text-[9px] uppercase tracking-widest text-slate-300 font-bold block">Company / Account</span>
                   <div className="font-bold text-white text-sm mt-0.5">{selectedCustomer.tradeAccount.companyName}</div>
                   <span className="font-mono text-[10px] text-indigo-400">{selectedCustomer.tradeAccount.accountNumber} &bull; ABN: {selectedCustomer.tradeAccount.abn || 'N/A'}</span>
                 </div>
 
                 <div>
-                  <span className="font-mono text-[9px] uppercase tracking-widest text-slate-400 font-bold block">Credit Position</span>
+                  <span className="font-mono text-[9px] uppercase tracking-widest text-slate-300 font-bold block">Credit Position</span>
                   <div className="font-mono text-sm font-bold text-white mt-0.5">
                     Limit: ${selectedCustomer.tradeAccount.creditLimit.toLocaleString()}
                   </div>
@@ -755,7 +755,7 @@ export default function B2BTradeManager({
                 </div>
 
                 <div>
-                  <span className="font-mono text-[9px] uppercase tracking-widest text-slate-400 font-bold block">Current Owing Balance</span>
+                  <span className="font-mono text-[9px] uppercase tracking-widest text-slate-300 font-bold block">Current Owing Balance</span>
                   <div className="font-mono text-lg font-bold text-rose-400 mt-0.5">
                     ${selectedCustomer.tradeAccount.creditBalance.toFixed(2)}
                   </div>
@@ -763,7 +763,7 @@ export default function B2BTradeManager({
                 </div>
 
                 <div>
-                  <span className="font-mono text-[9px] uppercase tracking-widest text-slate-400 font-bold block">Assigned Price Tier</span>
+                  <span className="font-mono text-[9px] uppercase tracking-widest text-slate-300 font-bold block">Assigned Price Tier</span>
                   <div className="font-mono text-sm font-bold text-indigo-300 mt-0.5">
                     {selectedCustomer.tradeAccount.priceTier} ({TIER_DISCOUNT_PERCENTAGES[selectedCustomer.tradeAccount.priceTier]}% off base)
                   </div>
@@ -772,8 +772,8 @@ export default function B2BTradeManager({
               </div>
 
               {/* Ledger Entries Table */}
-              <div className="border border-slate-800 bg-slate-900/40">
-                <div className="p-4 border-b border-slate-800 flex justify-between items-center">
+              <div className="border border-slate-200 bg-white">
+                <div className="p-4 border-b border-slate-200 flex justify-between items-center">
                   <h4 className="font-sans text-xs font-bold uppercase tracking-wider text-slate-200">
                     Trade Ledger Activity History
                   </h4>
@@ -783,7 +783,7 @@ export default function B2BTradeManager({
                 </div>
 
                 <table className="w-full text-left font-sans text-xs">
-                  <thead className="border-b border-slate-800 bg-slate-950 text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                  <thead className="border-b border-slate-200 bg-slate-100 text-[10px] uppercase font-bold tracking-wider text-slate-700">
                     <tr>
                       <th className="py-3 px-4">Date</th>
                       <th className="py-3 px-4">Reference #</th>
@@ -793,7 +793,7 @@ export default function B2BTradeManager({
                       <th className="py-3 px-4 text-right">Running Balance</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/60">
+                  <tbody className="divide-y divide-slate-200">
                     {(!selectedCustomer.tradeLedger || selectedCustomer.tradeLedger.length === 0) ? (
                       <tr>
                         <td colSpan={6} className="py-8 text-center text-slate-500 font-mono text-xs">
@@ -804,7 +804,7 @@ export default function B2BTradeManager({
                       selectedCustomer.tradeLedger.map(entry => {
                         const isCharge = entry.amount > 0;
                         return (
-                          <tr key={entry.id} className="hover:bg-slate-800/40 font-mono text-xs">
+                          <tr key={entry.id} className="hover:bg-slate-50 font-mono text-xs">
                             <td className="py-3 px-4 text-slate-300">{entry.date}</td>
                             <td className="py-3 px-4 font-bold text-indigo-300">{entry.reference}</td>
                             <td className="py-3 px-4 font-sans text-slate-200">
@@ -830,8 +830,8 @@ export default function B2BTradeManager({
 
             </div>
           ) : (
-            <div className="border border-slate-800 p-12 text-center bg-slate-900/40">
-              <Building2 className="h-10 w-10 text-slate-600 mx-auto mb-3" />
+            <div className="border border-slate-200 p-12 text-center bg-slate-50">
+              <Building2 className="h-10 w-10 text-slate-400 mx-auto mb-3" />
               <h4 className="font-sans text-sm font-bold uppercase tracking-wider text-slate-300">
                 No Account Selected
               </h4>
@@ -858,7 +858,7 @@ export default function B2BTradeManager({
                     <span className="font-mono text-xs uppercase font-bold text-indigo-400">{tier} Tier</span>
                     <span className="font-mono text-xs font-bold text-emerald-400">{disc}% OFF</span>
                   </div>
-                  <p className="font-sans text-[11px] text-slate-400 mt-2">
+                  <p className="font-sans text-[11px] text-slate-300 mt-2">
                     {tier === 'Retail' && 'Standard storefront retail pricing.'}
                     {tier === 'Reseller' && 'IT Resellers & System Integrators (10% discount off base).'}
                     {tier === 'Wholesale' && 'Corporate & Institutional Bulk Buyers (15% discount off base).'}
@@ -870,7 +870,7 @@ export default function B2BTradeManager({
           </div>
 
           {/* PER-PRODUCT TIER PRICING CONFIGURATION */}
-          <div className="border border-slate-800 bg-slate-900/40 p-5">
+          <div className="border border-slate-200 bg-white p-5">
             <h3 className="font-sans text-sm font-bold uppercase tracking-wider text-white mb-4">
               Per-Product Tier Override & Volume Discounts
             </h3>

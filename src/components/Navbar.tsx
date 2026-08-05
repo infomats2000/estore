@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShoppingBag, User, ShieldCheck, Search, Store, Sun, Moon, Phone, Mail, Truck, Shield, Laptop, Sliders, LogIn, Headphones } from 'lucide-react';
+import { ShoppingBag, ShieldCheck, Search, Phone, Mail, Truck, Shield, Laptop, LogIn, Headphones } from 'lucide-react';
 import { Product, StoreSettings } from '../types';
 
 interface NavbarProps {
@@ -74,7 +74,7 @@ export default function Navbar({
     <header className="sticky top-0 z-40 w-full shadow-md" id="app-header">
       {/* Top Announcement Bar */}
       {storeSettings?.showAnnouncementBar !== false && (
-        <div className="bg-emerald-600 text-white text-[10px] py-1.5 px-4 font-sans border-b border-black/10">
+        <div className="bg-blue-900 text-white text-[10px] py-1.5 px-4 font-sans border-b border-black/10">
           <div className="mx-auto max-w-7xl flex flex-col sm:flex-row items-center justify-between gap-1">
             <div className="flex items-center gap-3 text-white/90">
               <span className="flex items-center gap-1 font-bold text-white">
@@ -103,7 +103,7 @@ export default function Navbar({
       )}
 
       {/* Main Branding & Action Header */}
-      <div className="bg-[#212120] border-b border-black/10 text-white transition-colors">
+      <div className="bg-[#2f2f2f] border-b border-black/10 text-white transition-colors">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8 gap-4">
           
           {/* Logo and Brand */}
@@ -212,9 +212,19 @@ export default function Navbar({
               </div>
             </div>
           ) : (
-            <div className="hidden sm:block" id="admin-badge-container">
-              <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tighter text-white">
-                Store Manager
+            <div className="hidden sm:flex items-center gap-3" id="admin-badge-container">
+              {onOpenPOS && (
+                <button
+                  type="button"
+                  onClick={onOpenPOS}
+                  className="flex items-center gap-1.5 rounded-md border-2 border-amber-200 bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-2 font-mono text-[11px] font-black uppercase tracking-wider text-slate-950 shadow-lg shadow-amber-500/40 ring-2 ring-amber-300/50 transition-all hover:scale-[1.03] hover:from-amber-400 hover:to-orange-400"
+                  title="POS Retail Cash Register"
+                >
+                  <span>POS REGISTER</span>
+                </button>
+              )}
+              <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tighter bg-gradient-to-r from-cyan-300 via-sky-200 to-blue-300 bg-clip-text text-transparent drop-shadow-[0_1px_6px_rgba(125,211,252,0.45)]">
+                infomat
               </h2>
             </div>
           )}
@@ -240,15 +250,11 @@ export default function Navbar({
                 onClick={onOpenAccount}
                 onMouseEnter={onPrefetchAccount}
                 onFocus={onPrefetchAccount}
-                className="flex items-center gap-2 border border-neutral-400 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-1.5 text-neutral-800 dark:text-neutral-200 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all md:px-2.5"
+                className="text-[10px] font-bold uppercase tracking-wider text-sky-200 dark:text-sky-200 hover:text-white dark:hover:text-white transition-colors"
                 title="My Account & Wallet"
                 id="account-drawer-btn"
               >
-                <User className="h-3.5 w-3.5 text-white dark:text-neutral-900 dark:text-amber-400" />
-                <div className="hidden lg:block text-left font-mono text-[9px] leading-tight uppercase tracking-wider">
-                  <div className="text-neutral-500 dark:text-neutral-400 font-medium">ACCOUNT</div>
-                  <div className="font-bold text-neutral-900 dark:text-neutral-50">${customerWallet.toFixed(2)}</div>
-                </div>
+                <span>My Account (${customerWallet.toFixed(2)})</span>
               </button>
             )}
 
@@ -273,7 +279,7 @@ export default function Navbar({
             )}
 
             {/* Compare Button */}
-            {onOpenCompare && (
+            {!isAdminMode && onOpenCompare && (
               <button
                 type="button"
                 onClick={onOpenCompare}
@@ -302,18 +308,6 @@ export default function Navbar({
               </button>
             )}
 
-            {/* POS Register Quick Button */}
-            {isAdminMode && onOpenPOS && (
-              <button
-                type="button"
-                onClick={onOpenPOS}
-                className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1.5 font-mono text-[10px] font-black uppercase transition-all shadow-sm"
-                title="POS Retail Cash Register"
-              >
-                <span>POS REGISTER</span>
-              </button>
-            )}
-
             {/* Store Settings Button */}
             {isAdminMode && onOpenSettings && (
               <button
@@ -321,11 +315,11 @@ export default function Navbar({
                 onClick={onOpenSettings}
                 onMouseEnter={onPrefetchSettings}
                 onFocus={onPrefetchSettings}
-                className="flex h-8 w-8 items-center justify-center border border-neutral-400 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                className="text-[10px] font-bold uppercase tracking-wider text-sky-200 dark:text-sky-200 hover:text-white dark:hover:text-white transition-colors"
                 title="Store Control & Settings"
                 id="store-settings-btn"
               >
-                <Sliders className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                <span>Settings</span>
               </button>
             )}
 
@@ -333,15 +327,11 @@ export default function Navbar({
             {isAdminMode && (
               <button
                 onClick={onToggleDarkMode}
-                className="flex h-8 w-8 items-center justify-center border border-neutral-400 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                className="text-[10px] font-bold uppercase tracking-wider text-sky-200 dark:text-sky-200 hover:text-white dark:hover:text-white transition-colors"
                 title={isDarkMode ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
                 id="theme-toggle-btn"
               >
-                {isDarkMode ? (
-                  <Sun className="h-3.5 w-3.5 text-amber-400" />
-                ) : (
-                  <Moon className="h-3.5 w-3.5 text-white dark:text-neutral-900" />
-                )}
+                <span>{isDarkMode ? 'Light Theme' : 'Dark Theme'}</span>
               </button>
             )}
 
@@ -355,11 +345,10 @@ export default function Navbar({
                   e.preventDefault();
                   setIsAdminMode(false);
                 }}
-                className="bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2 px-3 py-2 text-[9px] font-black tracking-widest uppercase transition-all"
+                className="bg-red-800 text-white hover:bg-red-900 flex items-center gap-2 px-3 py-2 text-[9px] font-black tracking-widest uppercase transition-all rounded-md"
                 id="dashboard-mode-toggle"
               >
-                <Store className="h-3 w-3" />
-                <span className="hidden sm:inline">EXIT ADMIN</span>
+                <span>Log Out</span>
               </button>
             ) : (
               <button

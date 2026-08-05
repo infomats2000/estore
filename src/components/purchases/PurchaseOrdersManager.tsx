@@ -187,12 +187,12 @@ export default function PurchaseOrdersManager({
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: 'Open POs', value: stats.open, color: 'border-blue-400 bg-blue-50', textColor: 'text-blue-700' },
-          { label: 'Open Value', value: `$${stats.openValue.toFixed(0)}`, color: 'border-indigo-400 bg-indigo-50', textColor: 'text-indigo-700' },
-          { label: 'Unpaid Supplier Inv.', value: `$${stats.unpaidValue.toFixed(0)}`, color: 'border-red-400 bg-red-50', textColor: 'text-red-700' },
-          { label: 'This Month', value: stats.thisMonth, color: 'border-emerald-400 bg-emerald-50', textColor: 'text-emerald-700' },
+          { label: 'Open POs', value: stats.open, color: 'border-blue-300 bg-blue-50', textColor: 'text-blue-700' },
+          { label: 'Open Value', value: `$${stats.openValue.toFixed(0)}`, color: 'border-indigo-300 bg-indigo-50', textColor: 'text-indigo-700' },
+          { label: 'Unpaid Supplier Inv.', value: `$${stats.unpaidValue.toFixed(0)}`, color: 'border-red-300 bg-red-50', textColor: 'text-red-700' },
+          { label: 'This Month', value: stats.thisMonth, color: 'border-emerald-300 bg-emerald-50', textColor: 'text-emerald-700' },
         ].map(s => (
-          <div key={s.label} className={`border-l-4 ${s.color} rounded-xl p-4`}>
+          <div key={s.label} className={`border ${s.color} rounded-xl p-4`}>
             <div className={`text-2xl font-black ${s.textColor}`}>{s.value}</div>
             <div className="text-xs font-bold uppercase tracking-wider text-neutral-500 mt-1">{s.label}</div>
           </div>

@@ -23,6 +23,8 @@ import StockUnitsManager from './stock/StockUnitsManager';
 import WarehousesManager from './warehouse/WarehousesManager';
 import B2BTradeManager from './b2b/B2BTradeManager';
 import RefurbGradingManager from './stock/RefurbGradingManager';
+import ERPReportsManager from './reports/ERPReportsManager';
+import EBayIntegrationManager from './ebay/EBayIntegrationManager';
 
 const FinanceManager = lazy(() => import('./FinanceManager'));
 const UserManager = lazy(() => import('./UserManager'));
@@ -227,14 +229,14 @@ export default function DashboardView({
   onUpdateProductStock,
 }: DashboardViewProps) {
   
-  const [activeTab, setActiveTab] = useState<'metrics' | 'analytics' | 'inventory' | 'categories' | 'collections' | 'orders' | 'invoices' | 'customers' | 'returns' | 'coupons' | 'segments' | 'upsells' | 'reviews' | 'suppliers' | 'shipping' | 'pos' | 'finance' | 'users' | 'repairs' | 'purchase-orders' | 'stock-units' | 'warehouses' | 'trade-accounts' | 'refurb'>(() => {
+  const [activeTab, setActiveTab] = useState<'metrics' | 'analytics' | 'reports' | 'inventory' | 'products' | 'categories' | 'collections' | 'orders' | 'invoices' | 'customers' | 'returns' | 'coupons' | 'segments' | 'upsells' | 'reviews' | 'suppliers' | 'shipping' | 'pos' | 'finance' | 'users' | 'repairs' | 'purchase-orders' | 'stock-units' | 'warehouses' | 'trade-accounts' | 'refurb' | 'ebay'>(() => {
     try {
       const hash = window.location.hash.replace('#', '');
       const validTabs = [
-        'metrics', 'analytics', 'inventory', 'categories', 'collections', 'orders', 'invoices',
+        'metrics', 'analytics', 'reports', 'inventory', 'products', 'categories', 'collections', 'orders', 'invoices',
         'customers', 'returns', 'coupons', 'segments', 'upsells', 'reviews',
         'suppliers', 'shipping', 'pos', 'finance', 'users',
-        'repairs', 'purchase-orders', 'stock-units', 'warehouses', 'trade-accounts', 'refurb'
+        'repairs', 'purchase-orders', 'stock-units', 'warehouses', 'trade-accounts', 'refurb', 'ebay'
       ];
       if (hash && validTabs.includes(hash)) {
         return hash as any;
@@ -248,6 +250,9 @@ export default function DashboardView({
     }
     return 'metrics';
   });
+  const [hoverMenu, setHoverMenu] = useState<'sales' | 'operations' | null>(null);
+
+  // INVOICING & PRINTING SYSTEM STATE
 
   // INVOICING & PRINTING SYSTEM STATE
   const [selectedInvoiceOrder, setSelectedInvoiceOrder] = useState<Order | null>(null);
@@ -292,7 +297,7 @@ export default function DashboardView({
     const handleHashChange = () => {
       const hash = window.location.hash.replace('#', '');
       const validTabs = [
-        'metrics', 'analytics', 'inventory', 'categories', 'collections', 'orders', 'invoices',
+        'metrics', 'analytics', 'inventory', 'products', 'categories', 'collections', 'orders', 'invoices',
         'customers', 'returns', 'coupons', 'segments', 'upsells', 'reviews',
         'suppliers', 'shipping', 'pos', 'finance', 'users',
         'repairs', 'purchase-orders', 'stock-units', 'warehouses', 'trade-accounts'
@@ -1832,20 +1837,118 @@ export default function DashboardView({
       <div className="mb-8 space-y-4">
         {/* Store Operations Group */}
         <div className="space-y-2">
-          <div className="flex items-center justify-between px-1">
-            <span className="font-mono text-[9px] uppercase font-black text-slate-500 dark:text-slate-400 tracking-wider flex items-center gap-1.5">
-              <SlidersHorizontal className="h-3 w-3 text-emerald-600 dark:text-emerald-400" /> Store Operations
-            </span>
-            <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-[8px] px-2 py-0.5 rounded-full font-mono font-bold">16 MODULES</span>
+          <div className="flex flex-wrap items-center justify-start gap-2 px-1 pb-1">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                setActiveTab('metrics');
+              }}
+              className={`font-mono text-[10px] uppercase tracking-wider transition-colors ${
+                activeTab === 'metrics'
+                  ? 'text-emerald-700 dark:text-emerald-300 font-black'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-300 font-bold'
+              }`}
+            >
+              Dashboard
+            </button>
+
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                setActiveTab('analytics');
+              }}
+              className={`font-mono text-[10px] uppercase tracking-wider transition-colors ${
+                activeTab === 'analytics'
+                  ? 'text-emerald-700 dark:text-emerald-300 font-black'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-300 font-bold'
+              }`}
+            >
+              Analytics
+            </button>
+
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                setActiveTab('reports');
+              }}
+              className={`font-mono text-[10px] uppercase tracking-wider transition-colors ${
+                activeTab === 'reports'
+                  ? 'text-emerald-700 dark:text-emerald-300 font-black'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-300 font-bold'
+              }`}
+            >
+              ERP Reports
+            </button>
+
+            <div
+              className="relative"
+              onMouseEnter={() => setHoverMenu('sales')}
+              onMouseLeave={() => setHoverMenu(null)}
+            >
+              <button
+                type="button"
+                className="h-7 rounded-md bg-white px-2 font-mono text-[10px] font-bold uppercase tracking-wider text-emerald-700 outline-none flex items-center gap-1.5"
+              >
+                <span>Sales & Service</span>
+                <span className="text-[9px] leading-none text-emerald-600">v</span>
+              </button>
+              {hoverMenu === 'sales' && (
+                <div className="absolute left-0 top-full z-30 mt-1 min-w-[170px] rounded-md border border-blue-200 bg-white py-1 shadow-lg">
+                  <button type="button" onClick={() => { setActiveTab('finance'); setHoverMenu(null); }} className="w-full px-3 py-1.5 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-700 hover:bg-blue-50">Finance</button>
+                  <button type="button" onClick={() => { setActiveTab('invoices'); setHoverMenu(null); }} className="w-full px-3 py-1.5 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-700 hover:bg-blue-50">Invoices</button>
+                  <button type="button" onClick={() => { setActiveTab('orders'); setHoverMenu(null); }} className="w-full px-3 py-1.5 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-700 hover:bg-blue-50">Orders</button>
+                  <button type="button" onClick={() => { setActiveTab('customers'); setHoverMenu(null); }} className="w-full px-3 py-1.5 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-700 hover:bg-blue-50">Customers</button>
+                  <button type="button" onClick={() => { setActiveTab('returns'); setHoverMenu(null); }} className="w-full px-3 py-1.5 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-700 hover:bg-blue-50">Returns</button>
+                  <button type="button" onClick={() => { setActiveTab('shipping'); setHoverMenu(null); }} className="w-full px-3 py-1.5 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-700 hover:bg-blue-50">Shipping</button>
+                </div>
+              )}
+            </div>
+
+            <div
+              className="relative"
+              onMouseEnter={() => setHoverMenu('operations')}
+              onMouseLeave={() => setHoverMenu(null)}
+            >
+              <button
+                type="button"
+                className="h-7 rounded-md bg-white px-2 font-mono text-[10px] font-bold uppercase tracking-wider text-emerald-700 outline-none flex items-center gap-1.5"
+              >
+                <span>Operations</span>
+                <span className="text-[9px] leading-none text-emerald-600">v</span>
+              </button>
+              {hoverMenu === 'operations' && (
+                <div className="absolute left-0 top-full z-30 mt-1 min-w-[190px] rounded-md border border-blue-200 bg-white py-1 shadow-lg">
+                  <button type="button" onClick={() => { setActiveTab('inventory'); setHoverMenu(null); }} className="w-full px-3 py-1.5 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-700 hover:bg-blue-50">Inventory</button>
+                  <button type="button" onClick={() => { setActiveTab('repairs'); setHoverMenu(null); }} className="w-full px-3 py-1.5 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-700 hover:bg-blue-50">Repairs</button>
+                  <button type="button" onClick={() => { setActiveTab('purchase-orders'); setHoverMenu(null); }} className="w-full px-3 py-1.5 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-700 hover:bg-blue-50">Purchase Orders</button>
+                  <button type="button" onClick={() => { setActiveTab('stock-units'); setHoverMenu(null); }} className="w-full px-3 py-1.5 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-700 hover:bg-blue-50">Stock Units</button>
+                  <button type="button" onClick={() => { setActiveTab('warehouses'); setHoverMenu(null); }} className="w-full px-3 py-1.5 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-700 hover:bg-blue-50">Warehouses</button>
+                  <button type="button" onClick={() => { setActiveTab('trade-accounts'); setHoverMenu(null); }} className="w-full px-3 py-1.5 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-700 hover:bg-blue-50">B2B Trade Accounts</button>
+                  <button type="button" onClick={() => { setActiveTab('refurb'); setHoverMenu(null); }} className="w-full px-3 py-1.5 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-700 hover:bg-blue-50">Refurb &amp; Grading</button>
+                </div>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => onOpenSettings?.('invoice')}
+              className="font-mono text-[10px] uppercase tracking-wider text-amber-700 hover:text-amber-600 font-black transition-colors"
+            >
+              Settings
+            </button>
           </div>
-          <div className="flex flex-wrap items-center gap-1.5 pb-2">
+
+          <div className="flex flex-wrap items-center justify-center gap-1.5 pb-2">
             {[
               { id: 'metrics', label: 'Dashboard', count: null, icon: BarChart3, color: 'bg-[#706d6d] text-white shadow-black/10', activeBorder: 'border-[#706d6d]' },
-              { id: 'pos', label: 'POS', count: null, icon: Calculator, color: 'bg-[#706d6d] text-white shadow-black/10', activeBorder: 'border-[#706d6d]' },
               { id: 'finance', label: 'Finance', count: financeTransactions.length, icon: DollarSign, color: 'bg-[#706d6d] text-white shadow-black/10', activeBorder: 'border-[#706d6d]' },
               { id: 'invoices', label: 'Invoices', count: orders.length, icon: FileText, color: 'bg-[#706d6d] text-white shadow-black/10', activeBorder: 'border-[#706d6d]' },
               { id: 'analytics', label: 'Analytics', count: null, icon: TrendingUp, color: 'bg-[#706d6d] text-white shadow-black/10', activeBorder: 'border-[#706d6d]' },
               { id: 'inventory', label: 'Inventory', count: products.length, icon: Package, color: 'bg-[#706d6d] text-white shadow-black/10', activeBorder: 'border-[#706d6d]' },
+              { id: 'products', label: 'Products', count: products.length, icon: Package, color: 'bg-[#706d6d] text-white shadow-black/10', activeBorder: 'border-[#706d6d]' },
               { id: 'orders', label: 'Orders', count: orders.length, icon: ShoppingCart, color: 'bg-[#706d6d] text-white shadow-black/10', activeBorder: 'border-[#706d6d]' },
               { id: 'customers', label: 'Customers', count: customers.length, icon: Users, color: 'bg-[#706d6d] text-white shadow-black/10', activeBorder: 'border-[#706d6d]' },
               { id: 'returns', label: 'Returns', count: returns.length, icon: Undo2, color: 'bg-[#706d6d] text-white shadow-black/10', activeBorder: 'border-[#706d6d]' },
@@ -1867,25 +1970,17 @@ export default function DashboardView({
                     e.preventDefault();
                     setActiveTab(tab.id as any);
                   }}
-                  className={`flex items-center gap-2 px-4 py-2 transition-all duration-200 rounded-lg whitespace-nowrap flex-shrink-0 border ${
+                  className={`flex items-center gap-1.5 px-4 py-1.5 transition-all duration-200 rounded-lg whitespace-nowrap flex-shrink-0 border ${
                     isActive 
-                      ? `${tab.color} border-transparent font-black shadow-lg scale-[1.02] ring-2 ring-white/20` 
-                      : 'bg-emerald-600 text-white hover:bg-emerald-500 border-emerald-500 shadow-sm'
+                      ? 'bg-[#f59e0b] text-slate-950 border-[#d97706] font-black shadow-xl scale-[1.03] ring-2 ring-amber-300/60' 
+                      : 'bg-[#107ed9] text-white hover:bg-[#2490e8] border-[#107ed9] shadow-sm'
                   }`}
                 >
-                  <Icon className={`h-3.5 w-3.5 shrink-0 ${isActive ? 'text-white' : 'text-emerald-100'}`} />
+                  <Icon className={`h-3 w-3 shrink-0 ${isActive ? 'text-slate-950' : 'text-white'}`} />
                   <span className="tracking-wider text-[10px] uppercase font-bold">{tab.label}</span>
                 </button>
               );
             })}
-            <button
-              type="button"
-              onClick={() => onOpenSettings?.('invoice')}
-              className="flex items-center gap-2 px-4 py-2 transition-all duration-200 rounded-lg whitespace-nowrap flex-shrink-0 border bg-amber-400 text-slate-950 hover:bg-amber-300 border-amber-300 shadow-sm"
-            >
-              <Plus className="h-3.5 w-3.5 shrink-0" />
-              <span className="tracking-wider text-[10px] uppercase font-black">Settings</span>
-            </button>
           </div>
         </div>
 
@@ -1898,117 +1993,117 @@ export default function DashboardView({
       {activeTab === 'metrics' && (
         <div className="space-y-8" id="dashboard-tab-metrics">
           {/* Top Scorecard Grid - Bootstrap Colorful Palettes */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            {/* Total Revenue card - Bootstrap Primary Blue */}
-            <div className="rounded-2xl bg-gradient-to-br from-[#198754] via-[#15803d] to-[#166534] text-white p-5 shadow-lg shadow-emerald-500/20 border-b-4 border-emerald-900 transform transition-transform hover:-translate-y-1">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
+            {/* Total Revenue card - Emerald + Light Grey */}
+            <div className="rounded-lg bg-gradient-to-br from-slate-100 via-slate-50 to-emerald-50 text-slate-950 p-3 shadow-lg shadow-emerald-300/60 border-2 border-teal-400 transform transition-transform hover:-translate-y-0.5">
               <div className="flex justify-between items-start">
-                <span className="font-mono text-[9px] uppercase font-bold tracking-widest text-blue-100">Gross Revenue</span>
-                <div className="bg-white/20 p-2 rounded-xl backdrop-blur-sm">
-                  <DollarSign className="h-4 w-4 text-white" />
+                <span className="font-mono text-[9px] uppercase font-bold tracking-widest text-teal-800">Gross Revenue</span>
+                <div className="bg-emerald-200 p-1.5 rounded-md">
+                  <DollarSign className="h-3 w-3 text-emerald-800" />
                 </div>
               </div>
-              <div className="mt-3 font-mono text-2xl font-black text-white">
+              <div className="mt-2 font-mono text-xl font-black text-slate-950 leading-none">
                 ${totalRevenue.toFixed(2)}
               </div>
-              <div className="mt-3 pt-2 border-t border-white/20 flex items-center justify-between text-[9px] font-mono font-bold uppercase tracking-wider text-emerald-100">
+              <div className="mt-2 pt-1.5 border-t border-emerald-300 flex items-center justify-between text-[9px] font-mono font-bold uppercase tracking-wider text-slate-700">
                 <span className="flex items-center gap-1">
-                  <ArrowUpRight className="h-3 w-3 text-emerald-300" /> Active Store
+                  <ArrowUpRight className="h-2.5 w-2.5 text-emerald-600" /> Active Store
                 </span>
-                <span className="bg-white/20 px-2 py-0.5 rounded-full text-white">LIVE</span>
+                <span className="bg-emerald-200 px-2 py-0.5 rounded-full text-emerald-900">LIVE</span>
               </div>
             </div>
 
-            {/* Total Sales count card - Bootstrap Success Green */}
-            <div className="rounded-2xl bg-gradient-to-br from-[#198754] via-[#15803d] to-[#166534] text-white p-5 shadow-lg shadow-emerald-500/20 border-b-4 border-emerald-900 transform transition-transform hover:-translate-y-1">
+            {/* Total Sales count card - Emerald + Light Grey */}
+            <div className="rounded-lg bg-gradient-to-br from-slate-100 via-slate-50 to-emerald-50 text-slate-950 p-3 shadow-lg shadow-emerald-300/60 border-2 border-blue-400 transform transition-transform hover:-translate-y-0.5">
               <div className="flex justify-between items-start">
-                <span className="font-mono text-[9px] uppercase font-bold tracking-widest text-emerald-100">Checkouts</span>
-                <div className="bg-white/20 p-2 rounded-xl backdrop-blur-sm">
-                  <ShoppingCart className="h-4 w-4 text-white" />
+                <span className="font-mono text-[9px] uppercase font-bold tracking-widest text-blue-800">Checkouts</span>
+                <div className="bg-emerald-200 p-1.5 rounded-md">
+                  <ShoppingCart className="h-3 w-3 text-emerald-800" />
                 </div>
               </div>
-              <div className="mt-3 font-mono text-2xl font-black text-white">
-                {totalSalesCount} <span className="font-sans text-xs uppercase text-emerald-200">Orders</span>
+              <div className="mt-2 font-mono text-xl font-black text-slate-950 leading-none">
+                {totalSalesCount} <span className="font-sans text-[10px] uppercase text-emerald-800">Orders</span>
               </div>
-              <div className="mt-3 pt-2 border-t border-white/20 flex items-center justify-between text-[9px] font-mono font-bold uppercase tracking-wider text-emerald-100">
+              <div className="mt-2 pt-1.5 border-t border-emerald-300 flex items-center justify-between text-[9px] font-mono font-bold uppercase tracking-wider text-slate-700">
                 <span>Realtime Pipeline</span>
-                <span className="bg-white/20 px-2 py-0.5 rounded-full text-white">100% SUCCESS</span>
+                <span className="bg-emerald-200 px-2 py-0.5 rounded-full text-emerald-900">100% SUCCESS</span>
               </div>
             </div>
 
-            {/* Average Order Value card - Bootstrap Info Cyan */}
-            <div className="rounded-2xl bg-gradient-to-br from-[#198754] via-[#15803d] to-[#166534] text-white p-5 shadow-lg shadow-emerald-500/20 border-b-4 border-emerald-900 transform transition-transform hover:-translate-y-1">
+            {/* Average Order Value card - Emerald + Light Grey */}
+            <div className="rounded-lg bg-gradient-to-br from-slate-100 via-slate-50 to-emerald-50 text-slate-950 p-3 shadow-lg shadow-emerald-300/60 border-2 border-violet-400 transform transition-transform hover:-translate-y-0.5">
               <div className="flex justify-between items-start">
-                <span className="font-mono text-[9px] uppercase font-bold tracking-widest text-emerald-100">Avg Order Value</span>
-                <div className="bg-white/20 p-2 rounded-xl backdrop-blur-sm">
-                  <TrendingUp className="h-4 w-4 text-white" />
+                <span className="font-mono text-[9px] uppercase font-bold tracking-widest text-violet-800">Avg Order Value</span>
+                <div className="bg-emerald-200 p-1.5 rounded-md">
+                  <TrendingUp className="h-3 w-3 text-emerald-800" />
                 </div>
               </div>
-              <div className="mt-3 font-mono text-2xl font-black text-white">
+              <div className="mt-2 font-mono text-xl font-black text-slate-950 leading-none">
                 ${averageOrderValue.toFixed(2)}
               </div>
-              <div className="mt-3 pt-2 border-t border-white/20 flex items-center justify-between text-[9px] font-mono font-bold uppercase tracking-wider text-emerald-100">
+              <div className="mt-2 pt-1.5 border-t border-emerald-300 flex items-center justify-between text-[9px] font-mono font-bold uppercase tracking-wider text-slate-700">
                 <span>Cart Density</span>
-                <span className="bg-white/20 px-2 py-0.5 rounded-full text-white">INDEX</span>
+                <span className="bg-emerald-200 px-2 py-0.5 rounded-full text-emerald-900">INDEX</span>
               </div>
             </div>
 
-            {/* Catalog sizes - Bootstrap Indigo / Purple */}
-            <div className="rounded-2xl bg-gradient-to-br from-[#198754] via-[#15803d] to-[#166534] text-white p-5 shadow-lg shadow-emerald-500/20 border-b-4 border-emerald-900 transform transition-transform hover:-translate-y-1">
+            {/* Catalog sizes - Emerald + Light Grey */}
+            <div className="rounded-lg bg-gradient-to-br from-slate-100 via-slate-50 to-emerald-50 text-slate-950 p-3 shadow-lg shadow-emerald-300/60 border-2 border-amber-400 transform transition-transform hover:-translate-y-0.5">
               <div className="flex justify-between items-start">
-                <span className="font-mono text-[9px] uppercase font-bold tracking-widest text-emerald-100">Store Products</span>
-                <div className="bg-white/20 p-2 rounded-xl backdrop-blur-sm">
-                  <Package className="h-4 w-4 text-white" />
+                <span className="font-mono text-[9px] uppercase font-bold tracking-widest text-amber-800">Store Products</span>
+                <div className="bg-emerald-200 p-1.5 rounded-md">
+                  <Package className="h-3 w-3 text-emerald-800" />
                 </div>
               </div>
-              <div className="mt-3 font-mono text-2xl font-black text-white">
-                {products.length} <span className="font-sans text-xs uppercase text-purple-200">ITEMs</span>
+              <div className="mt-2 font-mono text-xl font-black text-slate-950 leading-none">
+                {products.length} <span className="font-sans text-[10px] uppercase text-emerald-800">ITEMs</span>
               </div>
-              <div className="mt-3 pt-2 border-t border-white/20 flex items-center justify-between text-[9px] font-mono font-bold uppercase tracking-wider text-emerald-100">
+              <div className="mt-2 pt-1.5 border-t border-emerald-300 flex items-center justify-between text-[9px] font-mono font-bold uppercase tracking-wider text-slate-700">
                 <span>Active Catalog</span>
-                <span className="bg-white/20 px-2 py-0.5 rounded-full text-white">READY</span>
+                <span className="bg-emerald-200 px-2 py-0.5 rounded-full text-emerald-900">READY</span>
               </div>
             </div>
 
-            {/* Low stock alert box - Bootstrap Danger Red */}
-            <div className="rounded-2xl bg-gradient-to-br from-[#198754] via-[#15803d] to-[#166534] text-white p-5 shadow-lg shadow-emerald-500/20 border-b-4 border-emerald-900 transform transition-transform hover:-translate-y-1">
+            {/* Low stock alert box - Emerald + Light Grey */}
+            <div className="rounded-lg bg-gradient-to-br from-slate-100 via-slate-50 to-emerald-50 text-slate-950 p-3 shadow-lg shadow-emerald-300/60 border-2 border-rose-400 transform transition-transform hover:-translate-y-0.5">
               <div className="flex justify-between items-start">
-                <span className="font-mono text-[9px] uppercase font-bold tracking-widest text-rose-100">Low Stock Alerts</span>
-                <div className="bg-white/20 p-2 rounded-xl backdrop-blur-sm">
-                  <AlertTriangle className={`h-4 w-4 text-white ${lowStockCount > 0 ? 'animate-bounce' : ''}`} />
+                <span className="font-mono text-[9px] uppercase font-bold tracking-widest text-rose-800">Low Stock Alerts</span>
+                <div className="bg-emerald-200 p-1.5 rounded-md">
+                  <AlertTriangle className={`h-3 w-3 text-emerald-800 ${lowStockCount > 0 ? 'animate-bounce' : ''}`} />
                 </div>
               </div>
-              <div className="mt-3 font-mono text-2xl font-black text-white">
-                {lowStockCount} <span className="font-sans text-xs uppercase text-rose-200">Alerts</span>
+              <div className="mt-2 font-mono text-xl font-black text-slate-950 leading-none">
+                {lowStockCount} <span className="font-sans text-[10px] uppercase text-emerald-800">Alerts</span>
               </div>
-              <div className="mt-3 pt-2 border-t border-white/20 flex items-center justify-between text-[9px] font-mono font-bold uppercase tracking-wider text-rose-100">
+              <div className="mt-2 pt-1.5 border-t border-emerald-300 flex items-center justify-between text-[9px] font-mono font-bold uppercase tracking-wider text-slate-700">
                 <span>Threshold &lt;= 5</span>
-                <span className="bg-white/20 px-2 py-0.5 rounded-full text-white">{lowStockCount > 0 ? 'ATTN NEEDED' : 'HEALTHY'}</span>
+                <span className={`${lowStockCount > 0 ? 'bg-rose-200 text-rose-800' : 'bg-emerald-200 text-emerald-900'} px-2 py-0.5 rounded-full`}>{lowStockCount > 0 ? 'ATTN NEEDED' : 'HEALTHY'}</span>
               </div>
             </div>
           </div>
 
           {/* HIGH-LEVEL STORE PERFORMANCE OVERVIEW - BOOTSTRAP COLORFUL BENTO */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6" id="performance-overview-bento">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3" id="performance-overview-bento">
             {/* Sales Target Goal Card */}
-            <div className="rounded-2xl border-2 border-blue-200 dark:border-blue-900/60 bg-gradient-to-br from-blue-50/80 to-indigo-50/80 dark:from-slate-900 dark:to-blue-950/40 p-6 flex flex-col justify-between shadow-md" id="bento-target">
+            <div className="rounded-xl border-2 border-blue-200 dark:border-blue-900/60 bg-gradient-to-br from-blue-50/80 to-indigo-50/80 dark:from-slate-900 dark:to-blue-950/40 p-4 flex flex-col justify-between shadow-sm" id="bento-target">
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="font-mono text-[10px] uppercase font-black tracking-wider text-blue-700 dark:text-blue-300">Monthly Sales Goal Target</span>
-                  <div className="bg-blue-600 text-white p-1.5 rounded-lg">
-                    <Activity className="h-4 w-4" />
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-mono text-[9px] uppercase font-black tracking-wider text-blue-700 dark:text-blue-300">Monthly Sales Goal Target</span>
+                  <div className="bg-blue-600 text-white p-1 rounded-md">
+                    <Activity className="h-3.5 w-3.5" />
                   </div>
                 </div>
-                <div className="font-mono text-3xl font-black text-blue-950 dark:text-blue-100">
+                <div className="font-mono text-2xl font-black text-blue-950 dark:text-blue-100 leading-none">
                   {targetProgress.toFixed(0)}%
                 </div>
-                <p className="font-sans text-xs text-blue-800 dark:text-blue-300 mt-2 font-medium">
+                <p className="font-sans text-[11px] text-blue-800 dark:text-blue-300 mt-1.5 font-medium">
                   ${totalRevenue.toFixed(2)} achieved of ${salesTarget.toLocaleString()} target.
                 </p>
               </div>
-              <div className="mt-5">
-                <div className="w-full bg-blue-200 dark:bg-blue-900 h-3 rounded-full overflow-hidden p-0.5 border border-blue-300 dark:border-blue-700">
+              <div className="mt-3">
+                <div className="w-full bg-blue-200 dark:bg-blue-900 h-2.5 rounded-full overflow-hidden p-0.5 border border-blue-300 dark:border-blue-700">
                   <div 
-                    className="bg-gradient-to-r from-blue-600 to-indigo-600 h-2 rounded-full transition-all duration-500 shadow-sm" 
+                    className="bg-gradient-to-r from-blue-600 to-indigo-600 h-1.5 rounded-full transition-all duration-500 shadow-sm" 
                     style={{ width: `${Math.min(targetProgress, 100)}%` }}
                   />
                 </div>
@@ -2016,45 +2111,45 @@ export default function DashboardView({
             </div>
 
             {/* Best Sellers Card */}
-            <div className="rounded-2xl border-2 border-amber-400 bg-gradient-to-br from-amber-400 via-amber-500 to-yellow-500 text-slate-950 p-6 flex flex-col justify-between shadow-md" id="bento-bestseller">
+            <div className="rounded-xl border-2 border-amber-400 bg-gradient-to-br from-amber-400 via-amber-500 to-yellow-500 text-slate-950 p-4 flex flex-col justify-between shadow-sm" id="bento-bestseller">
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="font-mono text-[10px] uppercase font-black tracking-wider text-slate-950">Best Performing ITEM</span>
-                  <div className="bg-slate-950 text-amber-400 p-1.5 rounded-lg shadow-sm">
-                    <Award className="h-4 w-4" />
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-mono text-[9px] uppercase font-black tracking-wider text-slate-950">Best Performing ITEM</span>
+                  <div className="bg-slate-950 text-amber-400 p-1 rounded-md shadow-sm">
+                    <Award className="h-3.5 w-3.5" />
                   </div>
                 </div>
-                <div className="font-sans text-base font-black text-slate-950 uppercase truncate tracking-tight" title={bestSellingProduct}>
+                <div className="font-sans text-sm font-black text-slate-950 uppercase truncate tracking-tight" title={bestSellingProduct}>
                   {bestSellingProduct}
                 </div>
                 {bestSellingProductQty > 0 ? (
-                  <p className="font-sans text-xs text-slate-900 mt-2 font-bold">
-                    Generated <span className="font-mono text-slate-950 text-sm font-black">${bestSellingProductRevenue.toFixed(2)}</span> ({bestSellingProductQty} units sold).
+                  <p className="font-sans text-[11px] text-slate-900 mt-1.5 font-bold">
+                    Generated <span className="font-mono text-slate-950 text-xs font-black">${bestSellingProductRevenue.toFixed(2)}</span> ({bestSellingProductQty} units sold).
                   </p>
                 ) : (
-                  <p className="font-sans text-xs text-slate-800 mt-2 font-medium">
+                  <p className="font-sans text-[11px] text-slate-800 mt-1.5 font-medium">
                     No checkout records yet.
                   </p>
                 )}
               </div>
-              <div className="mt-5 flex items-center gap-2 text-[10px] font-mono font-black text-slate-950 uppercase tracking-widest bg-white/40 px-3 py-1.5 rounded-lg w-fit">
-                <Sparkles className="h-3.5 w-3.5 text-slate-950" /> TOP SELLING HARDWARE
+              <div className="mt-3 flex items-center gap-1.5 text-[9px] font-mono font-black text-slate-950 uppercase tracking-widest bg-white/40 px-2.5 py-1 rounded-md w-fit">
+                <Sparkles className="h-3 w-3 text-slate-950" /> TOP SELLING HARDWARE
               </div>
             </div>
 
             {/* Operational Pipeline / Fulfillment Card */}
-            <div className="rounded-2xl border-2 border-emerald-200 dark:border-emerald-900/60 bg-gradient-to-br from-emerald-50/80 to-teal-50/80 dark:from-slate-900 dark:to-emerald-950/40 p-6 flex flex-col justify-between shadow-md" id="bento-fulfillment">
+            <div className="rounded-xl border-2 border-emerald-200 dark:border-emerald-900/60 bg-gradient-to-br from-emerald-50/80 to-teal-50/80 dark:from-slate-900 dark:to-emerald-950/40 p-4 flex flex-col justify-between shadow-sm" id="bento-fulfillment">
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="font-mono text-[10px] uppercase font-black tracking-wider text-emerald-700 dark:text-emerald-300">Fulfillment Efficiency</span>
-                  <div className="bg-emerald-600 text-white p-1.5 rounded-lg">
-                    <ShieldCheck className="h-4 w-4" />
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-mono text-[9px] uppercase font-black tracking-wider text-emerald-700 dark:text-emerald-300">Fulfillment Efficiency</span>
+                  <div className="bg-emerald-600 text-white p-1 rounded-md">
+                    <ShieldCheck className="h-3.5 w-3.5" />
                   </div>
                 </div>
-                <div className="font-mono text-3xl font-black text-emerald-950 dark:text-emerald-100">
+                <div className="font-mono text-2xl font-black text-emerald-950 dark:text-emerald-100 leading-none">
                   {fulfillmentRate.toFixed(0)}%
                 </div>
-                <div className="font-sans text-xs text-emerald-800 dark:text-emerald-300 mt-2 font-medium">
+                <div className="font-sans text-[11px] text-emerald-800 dark:text-emerald-300 mt-1.5 font-medium">
                   {pendingCount + processingCount > 0 ? (
                     <span>Requires action: <span className="font-mono font-bold text-emerald-950 dark:text-emerald-100">{pendingCount + processingCount}</span> active orders in process.</span>
                   ) : (
@@ -2062,7 +2157,7 @@ export default function DashboardView({
                   )}
                 </div>
               </div>
-              <div className="mt-5 pt-3 border-t border-emerald-200 dark:border-emerald-800/80 flex items-center justify-between text-[9px] font-mono font-black text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">
+              <div className="mt-3 pt-2 border-t border-emerald-200 dark:border-emerald-800/80 flex items-center justify-between text-[8px] font-mono font-black text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">
                 <span className="bg-emerald-100 dark:bg-emerald-900/60 px-2 py-0.5 rounded-md">Pending: {pendingCount}</span>
                 <span className="bg-emerald-100 dark:bg-emerald-900/60 px-2 py-0.5 rounded-md">Processing: {processingCount}</span>
                 <span className="bg-emerald-200 dark:bg-emerald-800/80 text-emerald-950 dark:text-emerald-100 px-2 py-0.5 rounded-md">Shipped: {shippedCount + deliveredCount}</span>
@@ -2131,11 +2226,8 @@ export default function DashboardView({
       {activeTab === 'analytics' && (
         <div className="space-y-8 animate-fade-in" id="dashboard-tab-analytics">
           {/* Header & Controls Banner */}
-          <div className="bg-transparent text-neutral-900 dark:text-neutral-100 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl shadow-lg shadow-indigo-500/30 text-white shrink-0">
-                <BarChart3 className="h-6 w-6" />
-              </div>
+          <div className="rounded-2xl border border-neutral-400 dark:border-neutral-700 bg-slate-50/90 dark:bg-slate-900 p-4 shadow-sm space-y-3">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
                 <div className="flex items-center gap-2 font-mono text-[9px] uppercase font-bold tracking-widest text-indigo-600 dark:text-indigo-400">
                   <span className="bg-indigo-100 text-indigo-800 border border-indigo-300 dark:bg-indigo-950 dark:text-indigo-300 dark:border-indigo-800 px-2 py-0.5 rounded-full flex items-center gap-1">
@@ -2147,23 +2239,22 @@ export default function DashboardView({
                   Traffic, Funnel & Revenue Intelligence
                 </h4>
               </div>
-            </div>
-            
-            {/* Timeframe selector */}
-            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl border border-slate-300 dark:border-slate-700">
-              {(['24h', '7d', '30d', 'all'] as const).map((range) => (
-                <button
-                  key={range}
-                  onClick={() => setAnalyticsTimeRange(range)}
-                  className={`px-3.5 py-1.5 font-mono text-xs uppercase font-black transition-all rounded-lg cursor-pointer ${
-                    analyticsTimeRange === range
-                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-500/30'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  {range === '24h' ? '24 Hours' : range === '7d' ? '7 Days' : range === '30d' ? '30 Days' : 'All Time'}
-                </button>
-              ))}
+
+              <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl border border-slate-300 dark:border-slate-700">
+                {(['24h', '7d', '30d', 'all'] as const).map((range) => (
+                  <button
+                    key={range}
+                    onClick={() => setAnalyticsTimeRange(range)}
+                    className={`px-3.5 py-1.5 font-mono text-xs uppercase font-black transition-all rounded-lg cursor-pointer ${
+                      analyticsTimeRange === range
+                        ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-500/30'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    {range === '24h' ? '24 Hours' : range === '7d' ? '7 Days' : range === '30d' ? '30 Days' : 'All Time'}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -2483,8 +2574,8 @@ export default function DashboardView({
         </div>
       )}
 
-      {/* LIVE INVENTORY MANAGEMENT TAB */}
-      {activeTab === 'inventory' && (
+      {/* PRODUCTS TAB */}
+      {(activeTab === 'products' || activeTab === 'inventory') && (
         <InventoryModule
           products={products}
           onAddProduct={onAddProduct}
@@ -2526,27 +2617,20 @@ export default function DashboardView({
 
         return (
           <div className="space-y-6 animate-fade-in" id="dashboard-tab-orders">
-            {/* Header banner */}
-            <div className="bg-transparent text-neutral-900 dark:text-neutral-100 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-xl shadow-lg shadow-purple-500/30 text-white shrink-0">
-                  <ShoppingCart className="h-6 w-6" />
-                </div>
+            <div className="rounded-2xl border border-neutral-400 dark:border-neutral-700 bg-slate-50/90 dark:bg-slate-900 p-4 shadow-sm">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
                   <div className="flex items-center gap-2 font-mono text-[9px] uppercase font-bold tracking-widest text-indigo-400">
                     <span className="bg-indigo-950 text-indigo-300 border border-indigo-800 px-2 py-0.5 rounded-full flex items-center gap-1">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                       ORDER FULFILLMENT
                     </span>
-                    <span className="text-slate-400">• TRANSACTION LOGS</span>
                   </div>
-                  <h4 className="font-sans text-xl font-black uppercase tracking-tight text-white mt-1">
+                  <h4 className="font-sans text-xl font-black uppercase tracking-tight text-slate-950 dark:text-white mt-1">
                     Store Checkout & Order Dispatch
                   </h4>
                 </div>
-              </div>
 
-              <div className="flex items-center gap-2">
                 <span className="bg-slate-800 text-slate-300 border border-slate-700 px-3 py-1.5 rounded-xl font-mono text-xs font-bold uppercase">
                   Total Orders: <strong className="text-white">{orders.length}</strong>
                 </span>
@@ -2842,108 +2926,98 @@ export default function DashboardView({
         };
 
         return (
-          <div className="space-y-6 animate-fade-in" id="dashboard-tab-invoices">
+          <div className="space-y-4 animate-fade-in" id="dashboard-tab-invoices">
             
-            {/* Top Banner Header */}
-            <div className="bg-transparent text-neutral-900 dark:text-neutral-100 p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl shadow-lg shadow-amber-500/30 text-slate-950 font-black shrink-0">
-                  <FileText className="h-6 w-6" />
-                </div>
+            {/* Compact Overview Header */}
+            <div className="rounded-2xl border border-neutral-400 dark:border-neutral-700 bg-slate-50/90 dark:bg-slate-900 p-4 shadow-sm space-y-3">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <div className="flex items-center gap-2 font-mono text-[9px] uppercase font-bold tracking-widest text-amber-400">
                     <span className="bg-amber-950 text-amber-300 border border-amber-800 px-2 py-0.5 rounded-full flex items-center gap-1">
                       <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse"></span>
                       TAX INVOICING &amp; BILLING
                     </span>
-                    <span className="text-slate-400">• AUSTRALIAN GST &amp; B2B COMPLIANT</span>
                   </div>
-                  <h4 className="font-sans text-xl font-black uppercase tracking-tight text-white mt-1">
+                  <h4 className="mt-1 font-sans text-xl font-black uppercase tracking-tight text-slate-950 dark:text-white">
                     Invoices, B2B Quotes &amp; Printing System
                   </h4>
                 </div>
+
+                <button
+                  onClick={openInvoiceBuilder}
+                  className="inline-flex items-center gap-2 self-start rounded-xl bg-amber-400 px-4 py-2.5 font-mono text-xs font-black uppercase text-slate-950 shadow-md transition-all hover:bg-amber-300 active:scale-95"
+                >
+                  <Plus className="h-4 w-4" /> Create B2B Invoice
+                </button>
               </div>
 
-            </div>
-
-            {/* Quick Metrics Bar */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-neutral-400 dark:border-neutral-700 shadow-sm">
-                <span className="font-mono text-[10px] uppercase font-bold text-slate-400 block mb-1">Total Invoices Issued</span>
-                <div className="text-2xl font-black font-mono text-slate-900 dark:text-white">{allInvoices.length}</div>
-                <span className="text-[10px] text-slate-500 font-medium">Store checkouts + manual billing</span>
-              </div>
-
-              <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-neutral-400 dark:border-neutral-700 shadow-sm">
-                <span className="font-mono text-[10px] uppercase font-bold text-slate-400 block mb-1">Total Revenue Invoiced</span>
-                <div className="text-2xl font-black font-mono text-blue-600 dark:text-blue-400">${totalInvoicedRevenue.toFixed(2)}</div>
-                <span className="text-[10px] text-emerald-600 font-bold">100% Tax Compliant</span>
-              </div>
-
-              <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-neutral-400 dark:border-neutral-700 shadow-sm">
-                <span className="font-mono text-[10px] uppercase font-bold text-slate-400 block mb-1">Total GST Collected (10%)</span>
-                <div className="text-2xl font-black font-mono text-amber-500">${totalTaxCollected.toFixed(2)}</div>
-                <span className="text-[10px] text-slate-500 font-medium">Australian Tax Office ledger</span>
-              </div>
-
-              <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-neutral-400 dark:border-neutral-700 shadow-sm">
-                <span className="font-mono text-[10px] uppercase font-bold text-slate-400 block mb-1">Payment Clearing Status</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-emerald-600 font-mono">{paidCount} Paid</span>
-                  <span className="text-slate-400">•</span>
-                  <span className="text-xs font-bold text-amber-500 font-mono">{unpaidCount} Pending</span>
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <div className="rounded-xl border border-neutral-300 bg-white p-3 shadow-sm dark:border-neutral-700 dark:bg-slate-950">
+                  <span className="mb-1 block font-mono text-[9px] font-bold uppercase text-slate-400">Total Invoices Issued</span>
+                  <div className="font-mono text-xl font-black text-slate-950 dark:text-white">{allInvoices.length}</div>
+                  <span className="text-[10px] font-medium text-slate-500">Store checkouts + manual billing</span>
                 </div>
-                <span className="text-[10px] text-slate-500 font-medium">EFT Direct + Credit Card clearing</span>
-              </div>
-            </div>
 
-            {/* Controls Bar: Search & Status Filters */}
-            <div className="flex flex-col lg:flex-row gap-4 justify-between items-stretch lg:items-center bg-slate-50/80 dark:bg-slate-900 p-4 rounded-2xl border border-neutral-400 dark:border-neutral-700">
-              <div className="relative flex-1 max-w-md">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
-                  <Search className="h-4 w-4" />
-                </span>
-                <input
-                  type="text"
-                  placeholder="SEARCH INVOICE #, BUYER, EMAIL, OR PO..."
-                  value={invoiceSearchQuery}
-                  onChange={(e) => setInvoiceSearchQuery(e.target.value)}
-                  className="w-full rounded-xl border border-neutral-400 dark:border-neutral-700 bg-white dark:bg-slate-950 pl-10 pr-14 py-2.5 font-sans text-xs uppercase tracking-wider outline-none text-slate-900 dark:text-slate-100 focus:border-amber-500 placeholder:text-slate-400"
-                />
-                {invoiceSearchQuery && (
-                  <button 
-                    onClick={() => setInvoiceSearchQuery('')}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 font-mono text-xs uppercase tracking-widest font-black text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                  >
-                    Clear
-                  </button>
-                )}
+                <div className="rounded-xl border border-neutral-300 bg-white p-3 shadow-sm dark:border-neutral-700 dark:bg-slate-950">
+                  <span className="mb-1 block font-mono text-[9px] font-bold uppercase text-slate-400">Total Revenue Invoiced</span>
+                  <div className="font-mono text-xl font-black text-blue-600 dark:text-blue-400">${totalInvoicedRevenue.toFixed(2)}</div>
+                  <span className="text-[10px] font-bold text-emerald-600">100% Tax Compliant</span>
+                </div>
+
+                <div className="rounded-xl border border-neutral-300 bg-white p-3 shadow-sm dark:border-neutral-700 dark:bg-slate-950">
+                  <span className="mb-1 block font-mono text-[9px] font-bold uppercase text-slate-400">Total GST Collected (10%)</span>
+                  <div className="font-mono text-xl font-black text-amber-500">${totalTaxCollected.toFixed(2)}</div>
+                  <span className="text-[10px] font-medium text-slate-500">Australian Tax Office ledger</span>
+                </div>
+
+                <div className="rounded-xl border border-neutral-300 bg-white p-3 shadow-sm dark:border-neutral-700 dark:bg-slate-950">
+                  <span className="mb-1 block font-mono text-[9px] font-bold uppercase text-slate-400">Payment Clearing Status</span>
+                  <div className="flex items-center gap-2 text-xs font-mono font-bold">
+                    <span className="text-emerald-600">{paidCount} Paid</span>
+                    <span className="text-amber-500">{unpaidCount} Pending</span>
+                  </div>
+                  <span className="text-[10px] font-medium text-slate-500">EFT Direct + Credit Card clearing</span>
+                </div>
               </div>
 
-              <div className="flex flex-wrap gap-2">
-                {['All', 'Paid', 'Unpaid', 'Overdue', 'Cancelled'].map((status) => (
-                  <button
-                    key={status}
-                    onClick={() => setInvoiceStatusFilter(status)}
-                    className={`px-3.5 py-2 font-sans text-xs font-black uppercase tracking-wider transition-all rounded-xl cursor-pointer shadow-sm ${
-                      invoiceStatusFilter === status
-                        ? 'bg-amber-400 text-slate-950 shadow-amber-500/20 scale-105'
-                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
-                    }`}
-                  >
-                    {status}
-                  </button>
-                ))}
-              </div>
-            </div>
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="relative w-full lg:max-w-md">
+                  <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+                    <Search className="h-4 w-4" />
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="SEARCH INVOICE #, BUYER, EMAIL, OR PO..."
+                    value={invoiceSearchQuery}
+                    onChange={(e) => setInvoiceSearchQuery(e.target.value)}
+                    className="w-full rounded-xl border border-neutral-400 dark:border-neutral-700 bg-white dark:bg-slate-950 pl-10 pr-14 py-2.5 font-sans text-xs uppercase tracking-wider outline-none text-slate-900 dark:text-slate-100 focus:border-amber-500 placeholder:text-slate-400"
+                  />
+                  {invoiceSearchQuery && (
+                    <button 
+                      onClick={() => setInvoiceSearchQuery('')}
+                      className="absolute inset-y-0 right-0 flex items-center pr-3 font-mono text-xs uppercase tracking-widest font-black text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                onClick={openInvoiceBuilder}
-                className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-mono text-xs uppercase font-black px-4 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer active:scale-95"
-              >
-                <Plus className="h-4 w-4" /> Create Large Order Invoice
-              </button>
+                <div className="flex flex-wrap gap-2">
+                  {['All', 'Paid', 'Unpaid', 'Overdue', 'Cancelled'].map((status) => (
+                    <button
+                      key={status}
+                      onClick={() => setInvoiceStatusFilter(status)}
+                      className={`px-3.5 py-2 font-sans text-xs font-black uppercase tracking-wider transition-all rounded-xl cursor-pointer shadow-sm ${
+                        invoiceStatusFilter === status
+                          ? 'bg-amber-400 text-slate-950 shadow-amber-500/20 scale-105'
+                          : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
+                      }`}
+                    >
+                      {status}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             {invoiceBuilderOpen && (
@@ -3372,7 +3446,6 @@ export default function DashboardView({
                                 <span className="block font-bold text-xs text-slate-900 dark:text-white">{product.name}</span>
                                 <div className="flex items-center gap-2 font-mono text-[9px]">
                                   <span className="text-slate-500">{product.category}</span>
-                                  <span className="text-slate-400">•</span>
                                   <span className={`font-bold ${
                                     isOutOfStock ? 'text-rose-500' : isLowStock ? 'text-amber-500' : 'text-emerald-500'
                                   }`}>
@@ -3711,27 +3784,20 @@ export default function DashboardView({
       {/* COUPONS & CAMPAIGN MANAGEMENT TAB */}
       {activeTab === 'coupons' && (
         <div className="space-y-6 animate-fade-in" id="dashboard-tab-coupons">
-          {/* Header banner */}
-          <div className="bg-transparent text-neutral-900 dark:text-neutral-100 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl shadow-lg shadow-amber-500/30 text-white shrink-0">
-                <Tag className="h-6 w-6" />
-              </div>
+          <div className="rounded-2xl border border-neutral-400 dark:border-neutral-700 bg-slate-50/90 dark:bg-slate-900 p-4 shadow-sm">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
                 <div className="flex items-center gap-2 font-mono text-[9px] uppercase font-bold tracking-widest text-amber-400">
                   <span className="bg-amber-950 text-amber-300 border border-amber-800 px-2 py-0.5 rounded-full flex items-center gap-1">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                     PROMOTIONS & DISCOUNTS
                   </span>
-                  <span className="text-slate-400">• DISCOUNT CODES</span>
                 </div>
-                <h4 className="font-sans text-xl font-black uppercase tracking-tight text-white mt-1">
+                <h4 className="font-sans text-xl font-black uppercase tracking-tight text-slate-950 dark:text-white mt-1">
                   Promo Offers & Coupon Campaigns
                 </h4>
               </div>
-            </div>
 
-            <div className="flex items-center gap-2">
               <span className="bg-slate-800 text-slate-300 border border-slate-700 px-3 py-1.5 rounded-xl font-mono text-xs font-bold uppercase">
                 Active Codes: <strong className="text-amber-400">{coupons.filter(c => c.active).length} / {coupons.length}</strong>
               </span>
@@ -3889,27 +3955,20 @@ export default function DashboardView({
       {/* CATEGORIES MANAGEMENT TAB */}
       {activeTab === 'returns' && (
         <div className="space-y-6 animate-fade-in" id="admin-returns-view">
-          {/* Header banner */}
-          <div className="bg-transparent text-neutral-900 dark:text-neutral-100 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-gradient-to-br from-rose-500 to-red-600 rounded-xl shadow-lg shadow-rose-500/30 text-white shrink-0">
-                <Undo2 className="h-6 w-6" />
-              </div>
+          <div className="rounded-2xl border border-neutral-400 dark:border-neutral-700 bg-slate-50/90 dark:bg-slate-900 p-4 shadow-sm">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
                 <div className="flex items-center gap-2 font-mono text-[9px] uppercase font-bold tracking-widest text-rose-400">
                   <span className="bg-rose-950 text-rose-300 border border-rose-800 px-2 py-0.5 rounded-full flex items-center gap-1">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                     REFUNDS & DISPATCH
                   </span>
-                  <span className="text-slate-400">• HARDWARE RMA CLAIMS</span>
                 </div>
-                <h4 className="font-sans text-xl font-black uppercase tracking-tight text-white mt-1">
+                <h4 className="font-sans text-xl font-black uppercase tracking-tight text-slate-950 dark:text-white mt-1">
                   Returns & RMA Resolution Center
                 </h4>
               </div>
-            </div>
 
-            <div className="flex items-center gap-2">
               <span className="bg-slate-800 text-slate-300 border border-slate-700 px-3 py-1.5 rounded-xl font-mono text-xs font-bold uppercase">
                 Active Requests: <strong className="text-rose-400">{returns.filter(r => r.status === 'Pending').length} Pending</strong>
               </span>
@@ -4035,36 +4094,31 @@ export default function DashboardView({
       {/* COLLECTIONS VIEW */}
       {activeTab === 'customers' && (
         <div className="space-y-6 text-left animate-fade-in" id="admin-customers-view">
-          {/* Header banner */}
-          <div className="bg-transparent text-neutral-900 dark:text-neutral-100 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg shadow-indigo-500/30 text-white shrink-0">
-                <Users className="h-6 w-6" />
-              </div>
+          <div className="rounded-2xl border border-neutral-400 dark:border-neutral-700 bg-slate-50/90 dark:bg-slate-900 p-4 shadow-sm">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
                 <div className="flex items-center gap-2 font-mono text-[9px] uppercase font-bold tracking-widest text-indigo-400">
                   <span className="bg-indigo-950 text-indigo-300 border border-indigo-800 px-2 py-0.5 rounded-full flex items-center gap-1">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                     CUSTOMER DIRECTORY
                   </span>
-                  <span className="text-slate-400">• RETAIL & WHOLESALE CRM</span>
                 </div>
-                <h4 className="font-sans text-xl font-black uppercase tracking-tight text-white mt-1">
+                <h4 className="font-sans text-xl font-black uppercase tracking-tight text-slate-950 dark:text-white mt-1">
                   Customer Database & Order History
                 </h4>
               </div>
-            </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowAddCustomer(!showAddCustomer)}
-                className="bg-indigo-600 text-white px-4 py-2 rounded-xl font-mono text-xs font-bold uppercase hover:bg-indigo-700 transition-colors flex items-center gap-2"
-              >
-                <PlusCircle className="h-4 w-4" /> Add New Customer
-              </button>
-              <span className="bg-slate-800 text-slate-300 border border-slate-700 px-3 py-1.5 rounded-xl font-mono text-xs font-bold uppercase">
-                Registered Clients: <strong className="text-indigo-400">{customers.length}</strong>
-              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowAddCustomer(!showAddCustomer)}
+                  className="bg-indigo-600 text-white px-4 py-2 rounded-xl font-mono text-xs font-bold uppercase hover:bg-indigo-700 transition-colors flex items-center gap-2"
+                >
+                  <PlusCircle className="h-4 w-4" /> Add New Customer
+                </button>
+                <span className="bg-slate-800 text-slate-300 border border-slate-700 px-3 py-1.5 rounded-xl font-mono text-xs font-bold uppercase">
+                  Registered Clients: <strong className="text-indigo-400">{customers.length}</strong>
+                </span>
+              </div>
             </div>
           </div>
 
@@ -6945,6 +6999,33 @@ export default function DashboardView({
             products={products}
             stockUnits={stockUnits}
             onUpdateStockUnit={onUpdateStockUnit!}
+            onShowAlert={onShowAlert}
+          />
+        )}
+
+        {/* ERP REPORTS & ANALYTICS MODULE */}
+        {activeTab === 'reports' && (
+          <ERPReportsManager
+            products={products}
+            orders={orders}
+            customers={customers}
+            financeTransactions={financeTransactions}
+            purchaseOrders={purchaseOrders}
+            repairJobs={repairJobs}
+            stockUnits={stockUnits}
+            warehouses={warehouses}
+            shrinkageRecords={shrinkageRecords}
+            categories={categories}
+            storeSettings={storeSettings}
+            onShowAlert={onShowAlert}
+          />
+        )}
+
+        {/* EBAY & MULTI-CHANNEL INTEGRATION MODULE */}
+        {activeTab === 'ebay' && (
+          <EBayIntegrationManager
+            products={products}
+            storeSettings={storeSettings}
             onShowAlert={onShowAlert}
           />
         )}

@@ -10,6 +10,7 @@ import ProductCompareModal from './components/ProductCompareModal';
 import ExitIntentModal from './components/ExitIntentModal';
 import OrderTrackingModal from './components/OrderTrackingModal';
 import POSRegisterView from './components/POSRegisterView';
+import CustomerFacingDisplayModal from './components/pos/CustomerFacingDisplayModal';
 
 import { Product, CartItem, Order, Coupon, CustomerProfile, Review, ReturnRequest, CustomerSegment, UpsellRule, FinanceTransaction, User, StoreSettings, DEFAULT_STORE_SETTINGS, PurchaseOrder, RepairJob, StockUnit, WarehouseLocation, StockTransfer, StocktakeSession, ShrinkageRecord } from './types';
 import { INITIAL_PRODUCTS, INITIAL_REVIEWS, INITIAL_COUPONS } from './data/products';
@@ -912,17 +913,9 @@ export default function App() {
   });
 
   useEffect(() => {
-    if (isDarkMode && isAdminMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('techseller_theme_v4', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      if (!isAdminMode) {
-        // If we are on public site, we don't overwrite the user's preference in localStorage
-        // so that if they go back to admin, their preference is remembered.
-      } else {
-        localStorage.setItem('techseller_theme_v4', 'light');
-      }
+    // Persist admin theme preference without mutating global html classes.
+    if (isAdminMode) {
+      localStorage.setItem('techseller_theme_v4', isDarkMode ? 'dark' : 'light');
     }
   }, [isDarkMode, isAdminMode]);
 
@@ -1872,7 +1865,12 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8f8f8] dark:bg-[#0a0a0a] font-sans text-[#1a1a1a] dark:text-[#f3f4f6] flex flex-col selection:bg-neutral-900 selection:text-white dark:selection:bg-white dark:selection:text-neutral-950" id="store-app-root">
+    <div
+      className={`min-h-screen flex flex-col selection:bg-neutral-900 selection:text-white dark:selection:bg-white dark:selection:text-neutral-950 ${
+        isAdminMode ? 'admin-theme' : 'storefront-theme'
+      } ${isAdminMode && isDarkMode ? 'dark' : ''}`}
+      id="store-app-root"
+    >
       
       {/* GLOBAL SYSTEM ALERTS */}
       <AnimatePresence>
@@ -1942,7 +1940,7 @@ export default function App() {
       <main className="flex-1">
         {!isAdminMode ? (
           /* ================= CUSTOMER STOREFRONT ================= */
-          <div id="customer-storefront-view">
+          <div id="customer-storefront-view" className="storefront-scope">
             {!searchQuery && activeCategory === 'All' && (
               <div className="w-full pt-3 pr-0 pl-0 flex justify-end">
                 <FlashSaleBanner onApplyCoupon={handleApplyCoupon} couponCode="FLASH10" />
@@ -2271,7 +2269,7 @@ export default function App() {
           </div>
         ) : (
           /* ================= ADMIN COMMAND SYSTEM VIEW ================= */
-          <div id="admin-control-view" className="bg-gray-50/20">
+          <div id="admin-control-view" className="admin-scope bg-gray-50/20">
             <Suspense
               fallback={
                 <div className="flex min-h-[50vh] items-center justify-center px-4 py-20 text-center">
@@ -2373,7 +2371,7 @@ export default function App() {
       {!isAdminMode && <NewsletterSection onSubscribeSuccess={triggerAlert} />}
 
       {/* FOOTER SECTION - Australian Computer Traders */}
-      <footer className="border-t border-neutral-800 bg-neutral-900 dark:bg-neutral-900 text-white py-12" id="store-footer">
+      <footer className="border-t border-black/10 bg-[#2f2f2f] dark:bg-[#2f2f2f] text-white py-12" id="store-footer">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-10">
           
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-neutral-300 text-xs text-left">
@@ -2618,17 +2616,8 @@ export default function App() {
       {/* POS Register Full-Screen Overlay */}
       {showPOSView && (
         <div className="fixed inset-0 z-50 bg-white dark:bg-neutral-950 overflow-auto" id="pos-register-overlay">
-          <div className="flex items-center justify-between px-6 py-3 bg-neutral-900 text-white">
-            <span className="font-mono text-xs font-black uppercase tracking-widest">⚡ POS Cash Register</span>
-            <button
-              onClick={() => setShowPOSView(false)}
-              className="font-mono text-xs font-bold uppercase tracking-wider text-neutral-400 hover:text-white transition-colors px-4 py-2 border border-neutral-700 hover:border-white"
-              id="pos-close-btn"
-            >
-              ✕ Close POS
-            </button>
-          </div>
           <POSRegisterView
+            onClose={() => setShowPOSView(false)}
             products={products}
             categories={categories}
             storeSettings={storeSettings}
@@ -2663,6 +2652,12 @@ export default function App() {
         </div>
       )}
 
+      {/* Customer Facing Secondary Display Window */}
+      {window.location.hash.includes('customer-display') && (
+        <div className="fixed inset-0 z-[100] bg-slate-950">
+          <CustomerFacingDisplayModal />
+        </div>
+      )}
     </div>
   );
 }
