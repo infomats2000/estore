@@ -11,6 +11,8 @@ import ExitIntentModal from './components/ExitIntentModal';
 import OrderTrackingModal from './components/OrderTrackingModal';
 import POSRegisterView from './components/POSRegisterView';
 import CustomerFacingDisplayModal from './components/pos/CustomerFacingDisplayModal';
+import PCBuilderModal from './components/pcbuilder/PCBuilderModal';
+import CustomerPortalModal from './components/customer/CustomerPortalModal';
 
 import { Product, CartItem, Order, Coupon, CustomerProfile, Review, ReturnRequest, CustomerSegment, UpsellRule, FinanceTransaction, User, StoreSettings, DEFAULT_STORE_SETTINGS, PurchaseOrder, RepairJob, StockUnit, WarehouseLocation, StockTransfer, StocktakeSession, ShrinkageRecord } from './types';
 import { INITIAL_PRODUCTS, INITIAL_REVIEWS, INITIAL_COUPONS } from './data/products';
@@ -252,6 +254,7 @@ export default function App() {
   });
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [showCustomerPortalModal, setShowCustomerPortalModal] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('techseller_store_settings_v4', JSON.stringify(storeSettings));
@@ -880,11 +883,34 @@ export default function App() {
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   const [systemAlert, setSystemAlert] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
 
-  // NEW FEATURE STATES
   const [compareList, setCompareList] = useState<Product[]>([]);
   const [showCompareModal, setShowCompareModal] = useState(false);
   const [showTrackOrderModal, setShowTrackOrderModal] = useState(false);
   const [showPOSView, setShowPOSView] = useState(false);
+  const [showPCBuilderModal, setShowPCBuilderModal] = useState(false);
+
+  const handleAddToCartBatch = (items: { product: Product; quantity: number }[]) => {
+    setCart(prev => {
+      let updated = [...prev];
+      items.forEach(item => {
+        const existingIndex = updated.findIndex(i => i.product.id === item.product.id);
+        if (existingIndex > -1) {
+          updated[existingIndex] = {
+            ...updated[existingIndex],
+            quantity: updated[existingIndex].quantity + item.quantity
+          };
+        } else {
+          updated.push({
+            id: `${item.product.id}-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+            product: item.product,
+            quantity: item.quantity
+          });
+        }
+      });
+      return updated;
+    });
+    setIsCartOpen(true);
+  };
 
   const handleToggleCompare = (product: Product) => {
     setCompareList(prev => {
@@ -1864,6 +1890,10 @@ export default function App() {
     window.location.href = window.location.origin + window.location.pathname;
   };
 
+  const handleAddReturnRequest = (req: ReturnRequest) => {
+    triggerAlert(`Return request ${req.id} submitted successfully!`, 'success');
+  };
+
   return (
     <div
       className={`min-h-screen flex flex-col selection:bg-neutral-900 selection:text-white dark:selection:bg-white dark:selection:text-neutral-950 ${
@@ -1934,6 +1964,8 @@ export default function App() {
         onOpenCompare={() => setShowCompareModal(true)}
         compareCount={compareList.length}
         onOpenPOS={() => setShowPOSView(true)}
+        onOpenPCBuilder={() => setShowPCBuilderModal(true)}
+        onOpenCustomerPortal={() => setShowCustomerPortalModal(true)}
       />
 
       {/* CORE ROUTING SWITCH: CUSTOMER VIEW vs ADMIN VIEW */}
@@ -2658,6 +2690,28 @@ export default function App() {
           <CustomerFacingDisplayModal />
         </div>
       )}
+
+      {/* Interactive Custom PC Builder Modal */}
+      <PCBuilderModal
+        isOpen={showPCBuilderModal}
+        onClose={() => setShowPCBuilderModal(false)}
+        products={products}
+        onAddToCartBatch={handleAddToCartBatch}
+        onShowAlert={(title, msg, type) => triggerAlert(`${title}: ${msg}`, type === 'error' ? 'error' : 'success')}
+      />
+
+      {/* Customer Self-Service Portal Hub Modal */}
+      <CustomerPortalModal
+        isOpen={showCustomerPortalModal}
+        onClose={() => setShowCustomerPortalModal(false)}
+        orders={orders}
+        customerProfile={customerProfile}
+        products={products}
+        storeSettings={storeSettings}
+        onAddReturnRequest={handleAddReturnRequest}
+        onAddRepairJob={handleAddRepairJob}
+        onShowAlert={(msg, type) => triggerAlert(msg, type === 'error' ? 'error' : 'success')}
+      />
     </div>
   );
 }

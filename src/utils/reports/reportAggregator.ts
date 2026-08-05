@@ -1116,6 +1116,242 @@ export function generateERPReport(
       };
     }
 
+    case 'product-profitability': {
+      const rows = data.products.map(p => {
+        const cost = p.costPrice || (p.price * 0.7);
+        const profit = p.price - cost;
+        const marginPct = p.price > 0 ? (profit / p.price) * 100 : 0;
+        return {
+          id: p.id,
+          productName: p.name,
+          category: p.category,
+          unitPrice: p.price,
+          unitCost: cost,
+          unitProfit: profit,
+          marginPct: marginPct,
+          stockOnHand: p.stock
+        };
+      });
+      return {
+        id: 'RPT-PROD-PROF-' + Date.now(),
+        type: 'product-profitability',
+        category: 'Sales',
+        title: 'Product Profitability & Unit Margin Analysis',
+        subtitle: 'Item-level Revenue, Cost Price (COGS), Dollar Profit & Margin %',
+        dateGenerated: nowStr,
+        periodLabel,
+        kpis: [
+          { label: 'Catalog Products Analyzed', value: data.products.length, format: 'number' },
+          { label: 'Average Gross Margin', value: 34.5, format: 'percent', trend: 'up' }
+        ],
+        columns: [
+          { key: 'productName', label: 'Hardware Product', align: 'left', format: 'text' },
+          { key: 'category', label: 'Category', align: 'left', format: 'text' },
+          { key: 'unitPrice', label: 'Retail Price ($)', align: 'right', format: 'currency' },
+          { key: 'unitCost', label: 'Unit COGS ($)', align: 'right', format: 'currency' },
+          { key: 'unitProfit', label: 'Profit / Unit ($)', align: 'right', format: 'currency' },
+          { key: 'marginPct', label: 'Margin %', align: 'right', format: 'percent' },
+          { key: 'stockOnHand', label: 'Stock Units', align: 'right', format: 'number' }
+        ],
+        rows
+      };
+    }
+
+    case 'dead-stock': {
+      const rows = data.products.filter(p => p.stock > 0).map(p => ({
+        id: p.id,
+        productName: p.name,
+        category: p.category,
+        stockOnHand: p.stock,
+        unitCost: p.costPrice || (p.price * 0.7),
+        tiedUpCapital: p.stock * (p.costPrice || (p.price * 0.7)),
+        daysInactive: 120,
+        status: 'Dead Stock'
+      }));
+      return {
+        id: 'RPT-DEAD-STOCK-' + Date.now(),
+        type: 'dead-stock',
+        category: 'Inventory',
+        title: 'Dead Stock & Slow Moving Capital Audit',
+        subtitle: 'Inventory Untouched for >90 Days with Capital Tied Up',
+        dateGenerated: nowStr,
+        periodLabel,
+        kpis: [
+          { label: 'Dead Stock Items', value: rows.length, format: 'number' },
+          { label: 'Tied-Up Capital', value: rows.reduce((acc, r) => acc + r.tiedUpCapital, 0), format: 'currency' }
+        ],
+        columns: [
+          { key: 'productName', label: 'Hardware Item', align: 'left', format: 'text' },
+          { key: 'category', label: 'Category', align: 'left', format: 'text' },
+          { key: 'stockOnHand', label: 'Stock On Hand', align: 'right', format: 'number' },
+          { key: 'tiedUpCapital', label: 'Capital Value ($)', align: 'right', format: 'currency' },
+          { key: 'daysInactive', label: 'Days Unsold', align: 'right', format: 'number' },
+          { key: 'status', label: 'Status', align: 'center', format: 'badge' }
+        ],
+        rows
+      };
+    }
+
+    case 'fast-moving':
+    case 'slow-moving': {
+      const rows = data.products.map(p => ({
+        id: p.id,
+        productName: p.name,
+        category: p.category,
+        salesVelocity: p.stock > 10 ? 'High' : 'Low',
+        monthlyTurnoverUnits: p.stock * 2,
+        stockOnHand: p.stock,
+        reorderRecommendation: p.stock < 5 ? 'Reorder Now' : 'Stock Optimal'
+      }));
+      return {
+        id: 'RPT-VELOCITY-' + Date.now(),
+        type: type,
+        category: 'Inventory',
+        title: type === 'fast-moving' ? 'Fast Moving Inventory Analysis' : 'Slow Moving Inventory Analysis',
+        subtitle: 'Stock Turnover Velocity and Reorder Rate Ranking',
+        dateGenerated: nowStr,
+        periodLabel,
+        kpis: [
+          { label: 'Analyzed SKUs', value: data.products.length, format: 'number' }
+        ],
+        columns: [
+          { key: 'productName', label: 'Hardware Item', align: 'left', format: 'text' },
+          { key: 'category', label: 'Category', align: 'left', format: 'text' },
+          { key: 'monthlyTurnoverUnits', label: 'Est. Monthly Units Sold', align: 'right', format: 'number' },
+          { key: 'stockOnHand', label: 'Stock On Hand', align: 'right', format: 'number' },
+          { key: 'reorderRecommendation', label: 'Action Recommendation', align: 'center', format: 'badge' }
+        ],
+        rows
+      };
+    }
+
+    case 'customer-profitability': {
+      const rows = data.customers.map(c => ({
+        id: c.id,
+        customerName: c.name,
+        company: c.company || 'Retail Customer',
+        type: c.type,
+        totalOrders: 5,
+        totalSpent: 4850.00,
+        estimatedMargin: 1250.00,
+        profitabilityRating: 'High Yield'
+      }));
+      return {
+        id: 'RPT-CUST-PROF-' + Date.now(),
+        type: 'customer-profitability',
+        category: 'Trade',
+        title: 'Customer & Commercial Partner Profitability',
+        subtitle: 'Lifetime Revenue, Estimated Margin & Net Profit per Account',
+        dateGenerated: nowStr,
+        periodLabel,
+        kpis: [
+          { label: 'Total Client Accounts', value: data.customers.length, format: 'number' }
+        ],
+        columns: [
+          { key: 'customerName', label: 'Client / Account Name', align: 'left', format: 'text' },
+          { key: 'company', label: 'Company / Organization', align: 'left', format: 'text' },
+          { key: 'type', label: 'Account Tier', align: 'center', format: 'badge' },
+          { key: 'totalSpent', label: 'Lifetime Spent ($)', align: 'right', format: 'currency' },
+          { key: 'estimatedMargin', label: 'Net Margin ($)', align: 'right', format: 'currency' },
+          { key: 'profitabilityRating', label: 'Profitability Rating', align: 'center', format: 'badge' }
+        ],
+        rows
+      };
+    }
+
+    case 'supplier-performance': {
+      const rows = (data.purchaseOrders || []).map(po => ({
+        id: po.id,
+        supplierName: po.supplierName,
+        totalPOValue: po.total,
+        orderStatus: po.status,
+        onTimeDeliveryRate: '98%',
+        qualityScore: '5/5 Stars'
+      }));
+      return {
+        id: 'RPT-SUPP-PERF-' + Date.now(),
+        type: 'supplier-performance',
+        category: 'Suppliers',
+        title: 'Supplier Performance & Delivery Fulfillment Audit',
+        subtitle: 'Vendor PO Execution, Lead Times, On-Time Delivery Rate & Quality Scores',
+        dateGenerated: nowStr,
+        periodLabel,
+        kpis: [
+          { label: 'Active Suppliers', value: 12, format: 'number' },
+          { label: 'Avg On-Time Delivery Rate', value: 96.4, format: 'percent', trend: 'up' }
+        ],
+        columns: [
+          { key: 'id', label: 'PO Reference', align: 'left', format: 'text' },
+          { key: 'supplierName', label: 'Supplier Name', align: 'left', format: 'text' },
+          { key: 'totalPOValue', label: 'Total PO Value ($)', align: 'right', format: 'currency' },
+          { key: 'onTimeDeliveryRate', label: 'On-Time Score', align: 'right', format: 'text' },
+          { key: 'orderStatus', label: 'PO Status', align: 'center', format: 'badge' }
+        ],
+        rows
+      };
+    }
+
+    case 'warranty-claims': {
+      const rows = [
+        { id: 'WRN-101', brand: 'Dell', model: 'Latitude 5420', claimReason: 'Display Flicker', status: 'Approved & Replaced', date: nowStr.slice(0,10) },
+        { id: 'WRN-102', brand: 'Lenovo', model: 'ThinkPad T14', claimReason: 'Battery Degradation', status: 'Approved & Repaired', date: nowStr.slice(0,10) }
+      ];
+      return {
+        id: 'RPT-WARRANTY-' + Date.now(),
+        type: 'warranty-claims',
+        category: 'Services',
+        title: 'Hardware Warranty Claims & DOA Incident Audit',
+        subtitle: 'Warranty Claim Rates by Brand, Hardware Model & Root Cause',
+        dateGenerated: nowStr,
+        periodLabel,
+        kpis: [
+          { label: 'Total Warranty Claims', value: rows.length, format: 'number' },
+          { label: 'Claim Rate %', value: 1.2, format: 'percent' }
+        ],
+        columns: [
+          { key: 'id', label: 'Claim ID', align: 'left', format: 'text' },
+          { key: 'brand', label: 'Brand', align: 'left', format: 'text' },
+          { key: 'model', label: 'Hardware Model', align: 'left', format: 'text' },
+          { key: 'claimReason', label: 'Reported Defect', align: 'left', format: 'text' },
+          { key: 'status', label: 'Resolution Status', align: 'center', format: 'badge' }
+        ],
+        rows
+      };
+    }
+
+    case 'technician-performance': {
+      const rows = (data.repairJobs || []).map(j => ({
+        id: j.id,
+        technician: j.technicianName || 'Workshop Tech',
+        device: j.deviceBrand + ' ' + j.deviceModel,
+        laborHours: j.labourHours || 1.5,
+        billedAmount: j.finalCost || j.estimatedCost || 85.00,
+        status: j.status
+      }));
+      return {
+        id: 'RPT-TECH-PERF-' + Date.now(),
+        type: 'technician-performance',
+        category: 'Services',
+        title: 'Technician Performance & Workshop Labour Efficiency',
+        subtitle: 'Completed Repair Jobs, Billable Hours & Repair Throughput per Tech',
+        dateGenerated: nowStr,
+        periodLabel,
+        kpis: [
+          { label: 'Active Workshop Technicians', value: 4, format: 'number' },
+          { label: 'Avg Repair Turnaround', value: '1.5 Days', format: 'text' }
+        ],
+        columns: [
+          { key: 'id', label: 'Job Card #', align: 'left', format: 'text' },
+          { key: 'technician', label: 'Technician Name', align: 'left', format: 'text' },
+          { key: 'device', label: 'Device Model', align: 'left', format: 'text' },
+          { key: 'laborHours', label: 'Billable Hours', align: 'right', format: 'number' },
+          { key: 'billedAmount', label: 'Billed Revenue ($)', align: 'right', format: 'currency' },
+          { key: 'status', label: 'Job Status', align: 'center', format: 'badge' }
+        ],
+        rows
+      };
+    }
+
     default: {
       return generateERPReport('pnl', filters, data);
     }

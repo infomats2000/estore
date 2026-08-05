@@ -25,6 +25,19 @@ import B2BTradeManager from './b2b/B2BTradeManager';
 import RefurbGradingManager from './stock/RefurbGradingManager';
 import ERPReportsManager from './reports/ERPReportsManager';
 import EBayIntegrationManager from './ebay/EBayIntegrationManager';
+import AccountingFinanceManager from './finance/AccountingFinanceManager';
+import HRStaffPayrollManager from './hr/HRStaffPayrollManager';
+import MultiStoreManager from './stores/MultiStoreManager';
+import AutomationWorkflowBuilder from './automation/AutomationWorkflowBuilder';
+import BusinessIntelligenceManager from './bi/BusinessIntelligenceManager';
+import EnterpriseDistributorSuite from './distribution/EnterpriseDistributorSuite';
+import CommercialSalesManager from './sales/CommercialSalesManager';
+import CustomerPricingMatrixManager from './pricing/CustomerPricingMatrixManager';
+import MassiveInventorySuite from './inventory/MassiveInventorySuite';
+import EnterpriseProcurementManager from './procurement/EnterpriseProcurementManager';
+import WMSSystemManager from './wms/WMSSystemManager';
+import LogisticsDispatchManager from './logistics/LogisticsDispatchManager';
+import EnterpriseSupplierManager from './suppliers/EnterpriseSupplierManager';
 
 const FinanceManager = lazy(() => import('./FinanceManager'));
 const UserManager = lazy(() => import('./UserManager'));
@@ -229,14 +242,14 @@ export default function DashboardView({
   onUpdateProductStock,
 }: DashboardViewProps) {
   
-  const [activeTab, setActiveTab] = useState<'metrics' | 'analytics' | 'reports' | 'inventory' | 'products' | 'categories' | 'collections' | 'orders' | 'invoices' | 'customers' | 'returns' | 'coupons' | 'segments' | 'upsells' | 'reviews' | 'suppliers' | 'shipping' | 'pos' | 'finance' | 'users' | 'repairs' | 'purchase-orders' | 'stock-units' | 'warehouses' | 'trade-accounts' | 'refurb' | 'ebay'>(() => {
+  const [activeTab, setActiveTab] = useState<'metrics' | 'analytics' | 'reports' | 'inventory' | 'products' | 'categories' | 'collections' | 'orders' | 'invoices' | 'customers' | 'returns' | 'coupons' | 'segments' | 'upsells' | 'reviews' | 'suppliers' | 'shipping' | 'pos' | 'finance' | 'users' | 'repairs' | 'purchase-orders' | 'stock-units' | 'warehouses' | 'trade-accounts' | 'refurb' | 'ebay' | 'payroll' | 'stores' | 'automation' | 'bi' | 'distribution' | 'commercial-sales' | 'pricing-matrix' | 'massive-inventory' | 'procurement' | 'wms' | 'logistics-dispatch'>(() => {
     try {
       const hash = window.location.hash.replace('#', '');
       const validTabs = [
         'metrics', 'analytics', 'reports', 'inventory', 'products', 'categories', 'collections', 'orders', 'invoices',
         'customers', 'returns', 'coupons', 'segments', 'upsells', 'reviews',
         'suppliers', 'shipping', 'pos', 'finance', 'users',
-        'repairs', 'purchase-orders', 'stock-units', 'warehouses', 'trade-accounts', 'refurb', 'ebay'
+        'repairs', 'purchase-orders', 'stock-units', 'warehouses', 'trade-accounts', 'refurb', 'ebay', 'payroll', 'stores', 'automation', 'bi', 'distribution', 'commercial-sales', 'pricing-matrix', 'massive-inventory', 'procurement', 'wms', 'logistics-dispatch'
       ];
       if (hash && validTabs.includes(hash)) {
         return hash as any;
@@ -7026,6 +7039,111 @@ export default function DashboardView({
           <EBayIntegrationManager
             products={products}
             storeSettings={storeSettings}
+            onShowAlert={onShowAlert}
+          />
+        )}
+
+        {/* ENTERPRISE ACCOUNTING & FINANCE MANAGEMENT MODULE */}
+        {activeTab === 'finance' && (
+          <AccountingFinanceManager
+            transactions={financeTransactions}
+            onAddTransaction={onAddTransaction}
+            onDeleteTransaction={onDeleteTransaction}
+            orders={orders}
+            onShowAlert={onShowAlert}
+          />
+        )}
+
+        {/* HR, STAFF & PAYROLL MANAGEMENT MODULE */}
+        {activeTab === 'payroll' && (
+          <HRStaffPayrollManager
+            orders={orders}
+            onShowAlert={onShowAlert}
+          />
+        )}
+
+        {/* MULTI-STORE & MULTI-REGION ENTERPRISE MODULE */}
+        {activeTab === 'stores' && (
+          <MultiStoreManager
+            products={products}
+            warehouses={warehouses}
+            onUpdateProductStock={onUpdateProductStock}
+            onShowAlert={onShowAlert}
+          />
+        )}
+
+        {/* VISUAL WORKFLOW AUTOMATION BUILDER */}
+        {activeTab === 'automation' && (
+          <AutomationWorkflowBuilder
+            onShowAlert={onShowAlert}
+          />
+        )}
+
+        {/* EXECUTIVE BUSINESS INTELLIGENCE & PREDICTIVE SUITE */}
+        {activeTab === 'bi' && (
+          <BusinessIntelligenceManager
+            products={products}
+            orders={orders}
+            customers={customers}
+            onShowAlert={onShowAlert}
+          />
+        )}
+
+        {/* ENTERPRISE IT WHOLESALE, DISTRIBUTION & MSP SUITE */}
+        {activeTab === 'distribution' && (
+          <EnterpriseDistributorSuite
+            products={products}
+            suppliers={suppliers}
+            onShowAlert={onShowAlert}
+          />
+        )}
+
+        {/* COMMERCIAL B2B SALES & ADVANCED ORDER SUITE */}
+        {activeTab === 'commercial-sales' && (
+          <CommercialSalesManager
+            onShowAlert={onShowAlert}
+          />
+        )}
+
+        {/* 14-DIMENSION CUSTOMER-SPECIFIC MATRIX PRICING ENGINE */}
+        {activeTab === 'pricing-matrix' && (
+          <CustomerPricingMatrixManager
+            products={products}
+            onShowAlert={onShowAlert}
+          />
+        )}
+
+        {/* 100,000+ SKU ENTERPRISE WHOLESALE INVENTORY SUITE */}
+        {activeTab === 'massive-inventory' && (
+          <MassiveInventorySuite
+            onShowAlert={onShowAlert}
+          />
+        )}
+
+        {/* ENTERPRISE GLOBAL PROCUREMENT SUITE */}
+        {activeTab === 'procurement' && (
+          <EnterpriseProcurementManager
+            onShowAlert={onShowAlert}
+          />
+        )}
+
+        {/* ENTERPRISE WAREHOUSE MANAGEMENT SYSTEM (WMS) SUITE */}
+        {activeTab === 'wms' && (
+          <WMSSystemManager
+            onShowAlert={onShowAlert}
+          />
+        )}
+
+        {/* ENTERPRISE LOGISTICS, FREIGHT COSTING & COURIER DISPATCH SUITE */}
+        {activeTab === 'logistics-dispatch' && (
+          <LogisticsDispatchManager
+            onShowAlert={onShowAlert}
+          />
+        )}
+
+        {/* ENTERPRISE SUPPLIER PERFORMANCE & VENDOR SCORECARD SUITE */}
+        {activeTab === 'suppliers' && (
+          <EnterpriseSupplierManager
             onShowAlert={onShowAlert}
           />
         )}

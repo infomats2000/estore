@@ -68,8 +68,8 @@ export interface LaybyOrder {
   deposits: LaybyDeposit[];
 }
 
-export type SalesChannel = 'eBay' | 'Amazon' | 'Shopify' | 'WooCommerce';
-export type MarketplaceCode = 'EBAY_AU' | 'EBAY_US' | 'EBAY_GB' | 'EBAY_CA' | 'EBAY_DE';
+export type SalesChannel = 'eBay' | 'Amazon' | 'Facebook' | 'GoogleShopping' | 'Shopify' | 'WooCommerce';
+export type MarketplaceCode = 'EBAY_AU' | 'EBAY_US' | 'EBAY_GB' | 'EBAY_CA' | 'EBAY_DE' | 'AMAZON_AU' | 'AMAZON_US' | 'META_SHOP' | 'GOOGLE_MERCHANT';
 
 export interface ChannelAccount {
   id: string;
@@ -120,6 +120,238 @@ export interface ChannelSyncJob {
   errorMessage?: string;
   startedAt: string;
   completedAt?: string;
+}
+
+export type PCComponentCategory = 'CPU' | 'Motherboard' | 'RAM' | 'GPU' | 'PSU' | 'SSD' | 'Case' | 'Cooler';
+
+export interface PCBuildSelection {
+  cpu?: Product;
+  motherboard?: Product;
+  ram?: Product;
+  gpu?: Product;
+  psu?: Product;
+  ssd?: Product;
+  case?: Product;
+  cooler?: Product;
+}
+
+export interface CompatibilityWarning {
+  id: string;
+  type: 'error' | 'warning' | 'info';
+  title: string;
+  message: string;
+}
+
+export interface FPSEstimate {
+  game: string;
+  fps1080p: number;
+  fps1440p: number;
+  fps4k: number;
+}
+
+export interface PCBuildMetrics {
+  totalCost: number;
+  estimatedWattage: number;
+  recommendedWattage: number;
+  psuSufficient: boolean;
+  performanceScore: number;
+  bottleneckRating: string;
+  fpsEstimates: FPSEstimate[];
+  aiRecommendations: string[];
+}
+
+export type AccountType = 'Asset' | 'Liability' | 'Equity' | 'Revenue' | 'Expense';
+
+export interface ChartOfAccount {
+  code: string;
+  name: string;
+  type: AccountType;
+  category: string;
+  balance: number;
+}
+
+export interface JournalLine {
+  accountCode: string;
+  accountName: string;
+  debit: number;
+  credit: number;
+}
+
+export interface JournalEntry {
+  id: string;
+  date: string;
+  reference: string;
+  description: string;
+  lines: JournalLine[];
+  postedBy: string;
+}
+
+export interface FixedAsset {
+  id: string;
+  assetName: string;
+  assetTag: string;
+  category: 'IT Equipment' | 'Vehicles' | 'Machinery' | 'Furniture';
+  purchaseDate: string;
+  costPrice: number;
+  salvageValue: number;
+  usefulLifeYears: number;
+  depreciationMethod: 'Straight-Line' | 'Diminishing';
+  accumulatedDepreciation: number;
+  bookValue: number;
+}
+
+export interface BankReconcileItem {
+  id: string;
+  date: string;
+  description: string;
+  amount: number;
+  type: 'Deposit' | 'Withdrawal';
+  matched: boolean;
+}
+
+export interface LoanAccount {
+  id: string;
+  lenderName: string;
+  accountNumber: string;
+  principalAmount: number;
+  interestRatePercent: number;
+  monthlyPayment: number;
+  remainingBalance: number;
+  startDate: string;
+}
+
+export type EmploymentType = 'Full-Time' | 'Part-Time' | 'Casual';
+
+export interface StaffMember {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: 'Sales Executive' | 'Technician' | 'Warehouse Staff' | 'Store Manager';
+  department: 'Sales' | 'Service' | 'Fulfillment' | 'Management';
+  employmentType: EmploymentType;
+  baseHourlyRate: number;
+  annualSalary?: number;
+  superRatePercent: number;
+  taxFileNumber: string;
+  bankAccount: string;
+  commissionRatePercent: number;
+  annualLeaveBalanceHours: number;
+  sickLeaveBalanceHours: number;
+  performanceScore: number;
+  startDate: string;
+}
+
+export interface PayrollLineItem {
+  staffId: string;
+  staffName: string;
+  hoursWorked: number;
+  grossPay: number;
+  paygTax: number;
+  superannuation: number;
+  commission: number;
+  netPay: number;
+}
+
+export interface PayrollRun {
+  id: string;
+  payPeriodStart: string;
+  payPeriodEnd: string;
+  payDate: string;
+  status: 'Draft' | 'Approved' | 'Paid';
+  totalGross: number;
+  totalPAYG: number;
+  totalSuper: number;
+  totalNet: number;
+  lineItems: PayrollLineItem[];
+}
+
+export interface LeaveRequest {
+  id: string;
+  staffId: string;
+  staffName: string;
+  leaveType: 'Annual' | 'Sick' | 'Unpaid' | 'Maternity';
+  startDate: string;
+  endDate: string;
+  totalDays: number;
+  status: 'Pending' | 'Approved' | 'Rejected';
+  reason: string;
+}
+
+export interface TimesheetEntry {
+  id: string;
+  staffId: string;
+  staffName: string;
+  date: string;
+  clockIn: string;
+  clockOut: string;
+  breakMinutes: number;
+  totalHours: number;
+  approved: boolean;
+}
+
+export interface StoreBranch {
+  id: string;
+  storeName: string;
+  code: string;
+  region: 'Australia - NSW' | 'Australia - VIC' | 'Australia - QLD' | 'New Zealand' | 'United States';
+  currencySymbol: string;
+  currencyCode: 'AUD' | 'NZD' | 'USD' | 'GBP' | 'EUR';
+  currencyRateToAUD: number;
+  localTaxRatePercent: number;
+  defaultWarehouseId: string;
+  address: string;
+  phone: string;
+  active: boolean;
+}
+
+export interface RegionalPriceOverride {
+  productId: string;
+  storeId: string;
+  regionalPrice: number;
+  regionalDiscountPrice?: number;
+}
+
+export interface StockTransferOrder {
+  id: string;
+  transferNumber: string;
+  sourceStoreId: string;
+  sourceStoreName: string;
+  destinationStoreId: string;
+  destinationStoreName: string;
+  sourceWarehouseId: string;
+  destinationWarehouseId: string;
+  status: 'Draft' | 'In Transit' | 'Completed' | 'Cancelled';
+  createdDate: string;
+  dispatchedDate?: string;
+  receivedDate?: string;
+  items: {
+    productId: string;
+    productName: string;
+    quantity: number;
+  }[];
+}
+
+export interface SupplierPortalOrder {
+  id: string;
+  supplierId: string;
+  supplierName: string;
+  status: 'Sent' | 'Confirmed' | 'In Production' | 'Shipped' | 'Delivered' | 'Cancelled';
+  items: {
+    lineItemId: string;
+    productName: string;
+    orderedQty: number;
+    unitCost: number;
+    totalCost: number;
+  }[];
+  totalAmount: number;
+  createdDate: string;
+  expectedDelivery: string;
+  carrierName?: string;
+  trackingNumber?: string;
+  supplierInvoiceNumber?: string;
+  invoiceAttachmentUrl?: string;
+  shipmentNotes?: string;
 }
 
 export interface Product {
@@ -790,7 +1022,7 @@ export interface RefurbInspectionSession {
 // ERP REPORTS & ANALYTICS MODULE TYPES
 // ============================================================
 
-export type ERPReportCategory = 'Financial' | 'Sales' | 'Inventory' | 'Trade' | 'Services';
+export type ERPReportCategory = 'Financial' | 'Sales' | 'Inventory' | 'Trade' | 'Services' | 'Suppliers' | 'HR';
 
 export type ERPReportType =
   | 'pnl'
@@ -810,9 +1042,411 @@ export type ERPReportType =
   | 'warehouse-wise'
   | 'brand-wise'
   | 'payment-method-wise'
-  | 'staff-wise';
+  | 'staff-wise'
+  | 'product-profitability'
+  | 'category-profitability'
+  | 'dead-stock'
+  | 'fast-moving'
+  | 'slow-moving'
+  | 'customer-profitability'
+  | 'supplier-performance'
+  | 'warranty-claims'
+  | 'technician-performance'
+  | 'gross-margin'
+  | 'payroll-summary'
+  | 'commission-report';
 
 export type ReportDatePreset = 'today' | 'this-week' | 'this-month' | 'this-quarter' | 'ytd' | 'custom';
+
+export type WorkflowTriggerType = 
+  | 'STOCK_MINIMUM' 
+  | 'HIGH_VALUE_SALE' 
+  | 'WARRANTY_EXPIRING' 
+  | 'NEW_ONLINE_ORDER' 
+  | 'REPAIR_COMPLETED' 
+  | 'SHIPMENT_RECEIVED';
+
+export type WorkflowActionType = 
+  | 'CREATE_PO_DRAFT' 
+  | 'REQUIRE_MANAGER_APPROVAL' 
+  | 'NOTIFY_CUSTOMER_EMAIL' 
+  | 'ALLOCATE_STOCK_WAREHOUSE' 
+  | 'GENERATE_INVOICE_SMS' 
+  | 'NOTIFY_SALES_TEAM';
+
+export interface AutomationRule {
+  id: string;
+  name: string;
+  trigger: WorkflowTriggerType;
+  triggerThreshold?: number;
+  action: WorkflowActionType;
+  active: boolean;
+  lastTriggeredAt?: string;
+  executionCount: number;
+  description: string;
+}
+
+export interface AutomationExecutionLog {
+  id: string;
+  ruleId: string;
+  ruleName: string;
+  triggeredAt: string;
+  status: 'Success' | 'Failed' | 'Pending Approval';
+  payloadSummary: string;
+}
+
+export type ABCClass = 'A' | 'B' | 'C';
+export type XYZClass = 'X' | 'Y' | 'Z';
+
+export interface ProductBIInsight {
+  productId: string;
+  productName: string;
+  category: string;
+  abcClass: ABCClass;
+  xyzClass: XYZClass;
+  daysOfStockRemaining: number;
+  stockDepletionDate: string;
+  recommendedReorderQty: number;
+  currentPrice: number;
+  suggestedPrice: number;
+  priceActionReason: string;
+}
+
+export interface CustomerBIInsight {
+  customerId: string;
+  customerName: string;
+  companyName: string;
+  predictive12MoCLV: number;
+  churnRiskScore: 'Low Risk' | 'Medium Risk' | 'High Risk';
+  lastOrderDate: string;
+  recommendedAction: string;
+}
+
+export interface GeographicSalesPoint {
+  regionCode: string;
+  regionName: string;
+  orderCount: number;
+  totalRevenue: number;
+  grossMarginPercent: number;
+}
+
+export type TargetDistributorSector = 
+  | 'IT Wholesaler' 
+  | 'Hardware Importer' 
+  | 'Networking Distributor' 
+  | 'MSP Supplier' 
+  | 'System Integrator' 
+  | 'Laptop Wholesaler';
+
+export interface CustomerPriceMatrixRule {
+  id: string;
+  tierName: string;
+  discountPercent: number;
+  minOrderQty: number;
+  applicableCategory: string;
+}
+
+export interface ContainerShipmentPO {
+  id: string;
+  containerNumber: string;
+  palletsCount: number;
+  customsClearanceCode: string;
+  dutyTaxAmount: number;
+  freightCost: number;
+  etaPortDate: string;
+  status: 'In Transit Sea' | 'Customs Hold' | 'Cleared Port' | 'Unloaded Warehouse';
+}
+
+export interface ResellerPartnerProfile {
+  id: string;
+  businessName: string;
+  abn: string;
+  sector: TargetDistributorSector;
+  priceTier: string;
+  creditLimit: number;
+  availableCredit: number;
+  paymentTerms: 'Net 14' | 'Net 30' | 'Net 60';
+  monthlyTarget: number;
+  currentMonthSpend: number;
+  assignedAccountManager: string;
+}
+
+export type CommercialOrderType = 
+  | 'Sales Order' 
+  | 'Quotation' 
+  | 'Proforma Invoice' 
+  | 'Blanket Order' 
+  | 'Standing Order' 
+  | 'Drop Ship Order';
+
+export type CommercialPaymentCategory = 
+  | 'Credit Sale (Net 14)' 
+  | 'Credit Sale (Net 30)' 
+  | 'Credit Sale (Net 60)' 
+  | 'Cash / Pre-Paid';
+
+export type CommercialFulfillmentMode = 
+  | 'Standard Single Shipment' 
+  | 'Partial Shipment' 
+  | 'Split Warehouse Shipment' 
+  | 'Backorder Hold' 
+  | 'Direct Vendor Drop Ship';
+
+export interface CommercialSalesOrder {
+  id: string;
+  orderType: CommercialOrderType;
+  paymentCategory: CommercialPaymentCategory;
+  fulfillmentMode: CommercialFulfillmentMode;
+  customerId: string;
+  customerName: string;
+  companyName?: string;
+  contractPriceTier?: string;
+  blanketCommitmentUnits?: number;
+  blanketRemainingUnits?: number;
+  standingFrequency?: string;
+  dropShipClientAddress?: string;
+  items: {
+    productId: string;
+    productName: string;
+    orderedQty: number;
+    shippedQty: number;
+    backorderQty: number;
+    unitPrice: number;
+    totalPrice: number;
+  }[];
+  subtotal: number;
+  tax: number;
+  total: number;
+  status: 'Quotation Draft' | 'Proforma Sent' | 'Approved Order' | 'Partially Shipped' | 'Backordered' | 'Completed';
+  date: string;
+}
+
+export type PricingTierType = 
+  | 'Individual Custom Price'
+  | 'Tier Pricing'
+  | 'Volume Break Pricing'
+  | 'Contract Pricing'
+  | 'Promotional Pricing'
+  | 'Brand Discount'
+  | 'Category Discount'
+  | 'Customer Group Pricing'
+  | 'Customer Margin Target'
+  | 'Special Project Deal'
+  | 'Government Pricing'
+  | 'Education Pricing'
+  | 'Dealer Pricing'
+  | 'VIP Reseller';
+
+export interface CustomerPriceRule {
+  id: string;
+  customerId: string;
+  customerName: string;
+  productId?: string;
+  productName?: string;
+  brand?: string;
+  category?: string;
+  tierType: PricingTierType;
+  overridePrice?: number;
+  discountPercent?: number;
+  targetMarginPercent?: number;
+  volumeThreshold?: number;
+  specialProjectCode?: string;
+  expiryDate?: string;
+}
+
+export interface CustomerPricingCalculationResult {
+  baseMSRP: number;
+  finalPrice: number;
+  savingsAmount: number;
+  effectiveDiscountPercent: number;
+  appliedRuleType: PricingTierType;
+  appliedRuleDescription: string;
+}
+
+export interface MassiveStockSKU {
+  id: string;
+  skuCode: string;
+  productName: string;
+  category: string;
+  warehouseId: string;
+  warehouseName: string;
+  binLocation: string;
+  palletId?: string;
+  cartonBarcode?: string;
+  containerNumber?: string;
+  batchLotNumber?: string;
+  serialNumbers?: string[];
+  rfidTag?: string;
+  barcode: string;
+  qrCode: string;
+  expiryDate?: string;
+  onHandStock: number;
+  reservedStock: number;
+  transitStock: number;
+  incomingStock: number;
+  availableStock: number;
+  isVMI: boolean;
+  vmiVendorName?: string;
+}
+
+export type ProcurementStage = 
+  | 'RFQ Pending' 
+  | 'Quotes Received' 
+  | 'Comparison' 
+  | 'Pending Manager Approval' 
+  | 'Contract Approved' 
+  | 'PO Dispatched' 
+  | 'Partially Received' 
+  | 'Container Received' 
+  | 'Completed';
+
+export interface SupplierQuoteBid {
+  supplierId: string;
+  supplierName: string;
+  quotedUnitPrice: number;
+  currency: 'USD' | 'EUR' | 'TWD' | 'HKD' | 'AUD';
+  fxRate: number;
+  unitPriceAUD: number;
+  leadTimeDays: number;
+  paymentTerms: string;
+  qualityScore: number;
+}
+
+export interface EnterpriseProcurementRFQ {
+  id: string;
+  title: string;
+  targetSKU: string;
+  requestedQty: number;
+  targetDeliveryDate: string;
+  status: ProcurementStage;
+  quotes: SupplierQuoteBid[];
+  winningSupplierId?: string;
+  poTotalAUD: number;
+  freightCostAUD: number;
+  dutyTaxAUD: number;
+  customsChargesAUD: number;
+  allocatedLandedCostPerUnit: number;
+}
+
+export type WMSPickingStrategy = 
+  | 'Standard Item Picking' 
+  | 'Wave Picking' 
+  | 'Zone Picking' 
+  | 'Batch Picking';
+
+export type WMSTaskStatus = 
+  | 'Pending' 
+  | 'In Progress' 
+  | 'Packed' 
+  | 'Dispatched' 
+  | 'Completed';
+
+export interface WMSWarehouseZone {
+  zoneId: string;
+  zoneName: string;
+  aislesCount: number;
+  totalBins: number;
+  usedBins: number;
+  capacityUtilizationPercent: number;
+  primaryCategory: string;
+}
+
+export interface WMSShipmentPickTask {
+  id: string;
+  orderId: string;
+  customerName: string;
+  strategy: WMSPickingStrategy;
+  targetZone: string;
+  items: {
+    sku: string;
+    productName: string;
+    binLocation: string;
+    requestedQty: number;
+    pickedQty: number;
+    barcode: string;
+  }[];
+  status: WMSTaskStatus;
+  assignedPicker: string;
+  createdAt: string;
+}
+
+export interface WMSCycleCountAudit {
+  id: string;
+  warehouseName: string;
+  binLocation: string;
+  skuCode: string;
+  systemQty: number;
+  countedQty: number;
+  varianceQty: number;
+  auditorName: string;
+  status: 'Pending Audit' | 'Variance Approved' | 'Reconciled';
+}
+
+export type LogisticsCarrier = 
+  | 'Toll Priority' 
+  | 'Mainfreight Express' 
+  | 'DHL Express' 
+  | 'FedEx Enterprise' 
+  | 'StarTrack Direct';
+
+export type ShipmentStatus = 
+  | 'Planning' 
+  | 'Scheduled' 
+  | 'In Transit' 
+  | 'Out for Delivery' 
+  | 'Delivered';
+
+export interface LogisticsDispatchPlan {
+  id: string;
+  orderId: string;
+  customerName: string;
+  deliveryAddress: string;
+  carrier: LogisticsCarrier;
+  trackingNumber: string;
+  scheduledDeliveryTime: string;
+  weightKg: number;
+  volumeCbm: number;
+  distanceKm: number;
+  routeSequenceIndex: number;
+  freightCostAUD: number;
+  podSignatureName?: string;
+  podTimestamp?: string;
+  status: ShipmentStatus;
+}
+
+export interface SupplierContract {
+  contractId: string;
+  title: string;
+  startDate: string;
+  expiryDate: string;
+  minimumSpendAUD: number;
+  currentSpendAUD: number;
+  discountTier: string;
+  status: 'Active Agreement' | 'Expired' | 'Under Negotiation';
+}
+
+export interface SupplierPriceHistoryRecord {
+  id: string;
+  sku: string;
+  productName: string;
+  date: string;
+  priceAUD: number;
+  changePercent: number;
+}
+
+export interface EnterpriseSupplierScorecard {
+  id: string;
+  supplierName: string;
+  code: string;
+  contracts: SupplierContract[];
+  priceHistory: SupplierPriceHistoryRecord[];
+  avgLeadTimeDays: number;
+  overallPerformanceScore: number;
+  defectRatePercent: number;
+  deliveryAccuracyPercent: number;
+  onTimeDeliveryRatePercent: number;
+  assignedAccountManager: string;
+}
 
 export interface ReportFilterParams {
   preset: ReportDatePreset;

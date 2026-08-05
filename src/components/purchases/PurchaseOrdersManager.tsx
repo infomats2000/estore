@@ -5,6 +5,7 @@ import {
   ArrowRight, Receipt
 } from 'lucide-react';
 import { PurchaseOrder, POLineItem, Product, Supplier, StoreSettings } from '../../types';
+import SupplierPortalModal from './SupplierPortalModal';
 
 interface PurchaseOrdersManagerProps {
   purchaseOrders: PurchaseOrder[];
@@ -57,6 +58,7 @@ export default function PurchaseOrdersManager({
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingPO, setEditingPO] = useState<PurchaseOrder | null>(null);
+  const [showSupplierPortal, setShowSupplierPortal] = useState(false);
 
   // Form state
   const [formSupplier, setFormSupplier] = useState('');
@@ -216,6 +218,12 @@ export default function PurchaseOrdersManager({
           className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors"
           id="po-new-btn">
           <Plus className="h-4 w-4" /> New PO
+        </button>
+
+        <button onClick={() => setShowSupplierPortal(true)}
+          className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors shadow-md"
+          id="supplier-portal-btn">
+          <Truck className="h-4 w-4" /> Supplier Portal
         </button>
       </div>
 
@@ -535,6 +543,15 @@ export default function PurchaseOrdersManager({
           </div>
         );
       })()}
+      {/* B2B SUPPLIER PORTAL MODAL */}
+      <SupplierPortalModal
+        isOpen={showSupplierPortal}
+        onClose={() => setShowSupplierPortal(false)}
+        purchaseOrders={purchaseOrders}
+        suppliers={suppliers}
+        onUpdatePurchaseOrder={onUpdatePurchaseOrder}
+        onShowAlert={onShowAlert}
+      />
     </div>
   );
 }

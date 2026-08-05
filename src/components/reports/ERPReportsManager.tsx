@@ -99,18 +99,28 @@ export default function ERPReportsManager({
     { id: 'payment-method-wise', category: 'Financial', title: 'Payment Gateway Analytics', desc: 'Settlements & GST grouped by Payment Method', icon: CreditCard },
     
     { id: 'sales-velocity', category: 'Sales', title: 'Sales Velocity & Margins', desc: 'Itemized Units, ASP and SKU Gross Margins', icon: TrendingUp },
+    { id: 'product-profitability', category: 'Sales', title: 'Product Profitability & Unit Margins', desc: 'Item-level Revenue, COGS, Dollar Profit & Margin %', icon: Tag },
+    { id: 'category-profitability', category: 'Sales', title: 'Category Profitability Matrix', desc: 'Hardware Category Gross Revenue & Margin %', icon: Tag },
     { id: 'brand-wise', category: 'Sales', title: 'Hardware Brand Performance', desc: 'Dell, Lenovo, Apple, HP Sales & Stock Value', icon: Tag },
     
     { id: 'inventory-valuation', category: 'Inventory', title: 'Stock Asset Valuation', desc: 'Inventory Value at Cost & Retail Prices', icon: Package },
+    { id: 'dead-stock', category: 'Inventory', title: 'Dead Stock Audit (>90 Days)', desc: 'Inventory Untouched >90 Days & Capital Tied Up', icon: AlertTriangle },
+    { id: 'fast-moving', category: 'Inventory', title: 'Fast Moving Hardware Items', desc: 'High Velocity SKUs Turnover & Reorder Alerts', icon: TrendingUp },
+    { id: 'slow-moving', category: 'Inventory', title: 'Slow Moving Hardware Items', desc: 'Low Velocity SKUs & Inventory Optimization', icon: AlertTriangle },
     { id: 'reorder-alerts', category: 'Inventory', title: 'Reorder & Restock Alerts', desc: 'Low Stock Safety Threshold Warnings', icon: AlertTriangle },
     { id: 'shrinkage-audit', category: 'Inventory', title: 'Shrinkage & Write-Offs', desc: 'Audit Discrepancies & Damage Losses', icon: FileText },
-    { id: 'supplier-wise', category: 'Inventory', title: 'Supplier Sourcing & PO Spend', desc: 'PO Spend, Duties & Freight grouped by Vendor', icon: Truck },
     { id: 'warehouse-wise', category: 'Inventory', title: 'Warehouse Stock Distribution', desc: 'Stock Units & Valuation grouped by Facility', icon: Building2 },
 
     { id: 'ar-aging', category: 'Trade', title: 'Accounts Receivable Aging', desc: 'B2B Credit Balances Overdue Buckets', icon: Users },
+    { id: 'customer-profitability', category: 'Trade', title: 'Customer Account Profitability', desc: 'Lifetime Spend, Margin & Net Profit per Account', icon: UserCheck },
     { id: 'customer-wise', category: 'Trade', title: 'Customer Sales & Margins', desc: 'Spend, AOV, Gross Margins grouped by Client', icon: UserCheck },
 
+    { id: 'supplier-performance', category: 'Suppliers', title: 'Supplier Performance & Delivery', desc: 'PO Execution, On-Time Delivery Rate & Quality', icon: Truck },
+    { id: 'supplier-wise', category: 'Suppliers', title: 'Supplier Sourcing & PO Spend', desc: 'PO Spend, Duties & Freight grouped by Vendor', icon: Truck },
+
     { id: 'repair-throughput', category: 'Services', title: 'Service Repair Throughput', desc: 'Technician Labor & Replacement Parts COGS', icon: Wrench },
+    { id: 'technician-performance', category: 'Services', title: 'Technician Labour Efficiency', desc: 'Completed Repairs, Billable Hours & Tech Throughput', icon: Wrench },
+    { id: 'warranty-claims', category: 'Services', title: 'Warranty Claims & DOA Audit', desc: 'Claim Rates by Brand, Model & Root Cause', icon: ShieldCheck },
     { id: 'staff-wise', category: 'Services', title: 'Technician & Staff Ledger', desc: 'Billed Revenue & Profit per Staff Member', icon: Wrench }
   ];
 

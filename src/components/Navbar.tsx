@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShoppingBag, ShieldCheck, Search, Phone, Mail, Truck, Shield, Laptop, LogIn, Headphones } from 'lucide-react';
+import { ShoppingBag, ShieldCheck, Search, Phone, Mail, Truck, Shield, Laptop, LogIn, Headphones, Cpu, User } from 'lucide-react';
 import { Product, StoreSettings } from '../types';
 
 interface NavbarProps {
@@ -29,6 +29,8 @@ interface NavbarProps {
   onOpenCompare?: () => void;
   compareCount?: number;
   onOpenPOS?: () => void;
+  onOpenPCBuilder?: () => void;
+  onOpenCustomerPortal?: () => void;
 }
 
 export default function Navbar({
@@ -57,7 +59,9 @@ export default function Navbar({
   onOpenTrackOrder,
   onOpenCompare,
   compareCount = 0,
-  onOpenPOS
+  onOpenPOS,
+  onOpenPCBuilder,
+  onOpenCustomerPortal
 }: NavbarProps) {
   const allCategories = ['All', ...categories];
   const [showSearchMobile, setShowSearchMobile] = useState(false);
@@ -258,7 +262,18 @@ export default function Navbar({
               </button>
             )}
 
-            {/* Shopping Cart Button */}
+            {/* Customer Portal Button */}
+            {!isAdminMode && onOpenCustomerPortal && (
+              <button
+                onClick={onOpenCustomerPortal}
+                className="hidden md:flex items-center gap-1.5 border border-purple-900 bg-purple-950 text-purple-200 px-2.5 py-1.5 transition-all hover:bg-purple-900 shadow-sm"
+                title="Customer Self-Service Portal"
+                id="customer-portal-btn"
+              >
+                <User className="h-3.5 w-3.5 text-purple-300" />
+                <span className="font-mono text-[10px] font-bold tracking-wider">MY PORTAL</span>
+              </button>
+            )}
             {!isAdminMode && (
               <button
                 onClick={onOpenCart}
@@ -292,6 +307,19 @@ export default function Navbar({
                     {compareCount}
                   </span>
                 )}
+              </button>
+            )}
+
+            {/* Custom PC Builder Button */}
+            {!isAdminMode && onOpenPCBuilder && (
+              <button
+                type="button"
+                onClick={onOpenPCBuilder}
+                className="relative flex items-center gap-1.5 border border-blue-500 bg-blue-600 hover:bg-blue-500 text-white px-2.5 py-1.5 font-mono text-[10px] font-black uppercase tracking-wider transition-all shadow-sm cursor-pointer"
+                title="Build Custom PC Online"
+              >
+                <Cpu className="h-3.5 w-3.5 text-blue-200" />
+                <span>BUILD PC</span>
               </button>
             )}
 
