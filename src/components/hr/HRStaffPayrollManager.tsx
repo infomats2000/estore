@@ -180,37 +180,37 @@ export default function HRStaffPayrollManager({ orders, onShowAlert }: HRStaffPa
     <div className="space-y-6">
       {/* Top HR & Payroll HUD Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
-          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">ACTIVE EMPLOYEES</span>
-          <div className="text-2xl font-black text-slate-100 mt-1">{staffList.length} Headcount</div>
-          <span className="text-[11px] text-slate-400 mt-1 block font-mono">100% Australian TFN Compliant</span>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-xs">
+          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">ACTIVE EMPLOYEES</span>
+          <div className="text-2xl font-black text-slate-900 dark:text-slate-100 mt-1">{staffList.length} Headcount</div>
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block font-mono">100% Australian TFN Compliant</span>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
-          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">LAST PAY RUN NET DISBURSED</span>
-          <div className="text-2xl font-black text-emerald-400 mt-1">${payRuns[0]?.totalNet.toLocaleString('en-AU', { minimumFractionDigits: 2 })}</div>
-          <span className="text-[11px] text-slate-400 mt-1 block">Gross: ${payRuns[0]?.totalGross.toLocaleString('en-AU')}</span>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-xs">
+          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">LAST PAY RUN NET DISBURSED</span>
+          <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">${payRuns[0]?.totalNet.toLocaleString('en-AU', { minimumFractionDigits: 2 })}</div>
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block">Gross: ${payRuns[0]?.totalGross.toLocaleString('en-AU')}</span>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
-          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">ATO PAYG TAX WITHHELD</span>
-          <div className="text-2xl font-black text-blue-400 mt-1">${payRuns[0]?.totalPAYG.toLocaleString('en-AU', { minimumFractionDigits: 2 })}</div>
-          <span className="text-[11px] text-slate-400 mt-1 block">Super (11.5%): ${payRuns[0]?.totalSuper.toLocaleString('en-AU')}</span>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-xs">
+          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">ATO PAYG TAX WITHHELD</span>
+          <div className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">${payRuns[0]?.totalPAYG.toLocaleString('en-AU', { minimumFractionDigits: 2 })}</div>
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block">Super (11.5%): ${payRuns[0]?.totalSuper.toLocaleString('en-AU')}</span>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
-          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">LEAVE REQUESTS PENDING</span>
-          <div className="text-2xl font-black text-amber-400 mt-1">{leaveRequests.filter(l => l.status === 'Pending').length} Action Required</div>
-          <span className="text-[11px] text-slate-400 mt-1 block font-mono">Avg Team Score: 93 / 100</span>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-xs">
+          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">LEAVE REQUESTS PENDING</span>
+          <div className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1">{leaveRequests.filter(l => l.status === 'Pending').length} Action Required</div>
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block font-mono">Avg Team Score: 93 / 100</span>
         </div>
       </div>
 
       {/* Navigation Bar */}
-      <div className="bg-slate-900 p-2 rounded-2xl border border-slate-800 flex flex-wrap gap-2">
+      <div className="bg-white dark:bg-slate-900 p-2 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-wrap gap-2 shadow-xs">
         <button
           onClick={() => setActiveTab('payroll')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-            activeTab === 'payroll' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+            activeTab === 'payroll' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white'
           }`}
         >
           <DollarSign className="w-4 h-4" /> Pay Run Processing &amp; Pay Slips
@@ -219,7 +219,7 @@ export default function HRStaffPayrollManager({ orders, onShowAlert }: HRStaffPa
         <button
           onClick={() => setActiveTab('directory')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-            activeTab === 'directory' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+            activeTab === 'directory' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white'
           }`}
         >
           <Users className="w-4 h-4" /> Staff Directory &amp; HR Records
@@ -228,7 +228,7 @@ export default function HRStaffPayrollManager({ orders, onShowAlert }: HRStaffPa
         <button
           onClick={() => setActiveTab('leave')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-            activeTab === 'leave' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+            activeTab === 'leave' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white'
           }`}
         >
           <Calendar className="w-4 h-4" /> Leave Requests &amp; Accruals
@@ -237,7 +237,7 @@ export default function HRStaffPayrollManager({ orders, onShowAlert }: HRStaffPa
         <button
           onClick={() => setActiveTab('timesheets')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-            activeTab === 'timesheets' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+            activeTab === 'timesheets' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white'
           }`}
         >
           <Clock className="w-4 h-4" /> Attendance &amp; Timesheets
@@ -246,7 +246,7 @@ export default function HRStaffPayrollManager({ orders, onShowAlert }: HRStaffPa
         <button
           onClick={() => setActiveTab('commission')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-            activeTab === 'commission' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+            activeTab === 'commission' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white'
           }`}
         >
           <TrendingUp className="w-4 h-4" /> Sales Commissions
@@ -255,7 +255,7 @@ export default function HRStaffPayrollManager({ orders, onShowAlert }: HRStaffPa
         <button
           onClick={() => setActiveTab('performance')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-            activeTab === 'performance' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+            activeTab === 'performance' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white'
           }`}
         >
           <Award className="w-4 h-4" /> Performance &amp; Appraisals
@@ -266,7 +266,7 @@ export default function HRStaffPayrollManager({ orders, onShowAlert }: HRStaffPa
       {activeTab === 'payroll' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-black uppercase text-slate-200">Australian ATO Compliant Pay Runs</h3>
+            <h3 className="text-sm font-black uppercase text-slate-800 dark:text-slate-200">Australian ATO Compliant Pay Runs</h3>
             <button
               onClick={handleRunPayroll}
               className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-lg shadow-emerald-600/20 flex items-center gap-2"
@@ -277,22 +277,22 @@ export default function HRStaffPayrollManager({ orders, onShowAlert }: HRStaffPa
 
           <div className="space-y-4">
             {payRuns.map(run => (
-              <div key={run.id} className="bg-slate-900 rounded-3xl border border-slate-800 p-5 space-y-4">
-                <div className="flex flex-wrap justify-between items-center gap-2 border-b border-slate-800 pb-3">
+              <div key={run.id} className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-5 space-y-4 shadow-xs">
+                <div className="flex flex-wrap justify-between items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
                   <div className="flex items-center gap-3">
-                    <span className="px-3 py-1 bg-emerald-950 text-emerald-300 text-xs font-mono font-bold rounded-lg border border-emerald-800">{run.id}</span>
-                    <span className="text-xs font-bold text-slate-200">Period: {run.payPeriodStart} to {run.payPeriodEnd}</span>
+                    <span className="px-3 py-1 bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 text-xs font-mono font-bold rounded-lg border border-emerald-200 dark:border-emerald-800">{run.id}</span>
+                    <span className="text-xs font-bold text-slate-900 dark:text-slate-200">Period: {run.payPeriodStart} to {run.payPeriodEnd}</span>
                   </div>
-                  <div className="font-mono text-xs text-slate-400">
-                    Disbursed Net Pay: <strong className="text-emerald-400">${run.totalNet.toLocaleString('en-AU', { minimumFractionDigits: 2 })}</strong>
+                  <div className="font-mono text-xs text-slate-600 dark:text-slate-400">
+                    Disbursed Net Pay: <strong className="text-emerald-600 dark:text-emerald-400">${run.totalNet.toLocaleString('en-AU', { minimumFractionDigits: 2 })}</strong>
                   </div>
                 </div>
 
                 {/* Line Items Table */}
-                <div className="bg-slate-950 rounded-2xl border border-slate-800 overflow-x-auto">
+                <div className="bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-x-auto">
                   <table className="w-full text-left font-mono text-xs">
                     <thead>
-                      <tr className="border-b border-slate-800 text-slate-400 text-[10px] uppercase">
+                      <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-[10px] uppercase bg-slate-100 dark:bg-slate-900">
                         <th className="p-3">Staff Name</th>
                         <th className="p-3">Hours</th>
                         <th className="p-3">Gross Pay</th>
@@ -302,21 +302,21 @@ export default function HRStaffPayrollManager({ orders, onShowAlert }: HRStaffPa
                         <th className="p-3 text-right">Pay Slip</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                    <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60 text-slate-700 dark:text-slate-300">
                       {run.lineItems.map(item => {
                         const staff = staffList.find(s => s.id === item.staffId) || staffList[0];
                         return (
-                          <tr key={item.staffId} className="hover:bg-slate-900/50">
-                            <td className="p-3 font-bold text-slate-100">{item.staffName}</td>
+                          <tr key={item.staffId} className="hover:bg-slate-100 dark:hover:bg-slate-900/50">
+                            <td className="p-3 font-bold text-slate-900 dark:text-slate-100">{item.staffName}</td>
                             <td className="p-3">{item.hoursWorked} hrs</td>
-                            <td className="p-3 text-slate-100">${item.grossPay.toFixed(2)}</td>
-                            <td className="p-3 text-rose-400">-${item.paygTax.toFixed(2)}</td>
-                            <td className="p-3 text-purple-400">${item.superannuation.toFixed(2)}</td>
-                            <td className="p-3 text-emerald-400 font-bold">${item.netPay.toFixed(2)}</td>
+                            <td className="p-3 text-slate-900 dark:text-slate-100">${item.grossPay.toFixed(2)}</td>
+                            <td className="p-3 text-rose-600 dark:text-rose-400">-${item.paygTax.toFixed(2)}</td>
+                            <td className="p-3 text-purple-600 dark:text-purple-400">${item.superannuation.toFixed(2)}</td>
+                            <td className="p-3 text-emerald-600 dark:text-emerald-400 font-bold">${item.netPay.toFixed(2)}</td>
                             <td className="p-3 text-right">
                               <button
                                 onClick={() => handlePrintPaySlip(staff, item)}
-                                className="px-2.5 py-1 text-[10px] bg-blue-950 text-blue-300 rounded border border-blue-800 hover:bg-blue-900"
+                                className="px-2.5 py-1 text-[10px] bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 rounded border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900"
                               >
                                 Print Slip
                               </button>
@@ -337,7 +337,7 @@ export default function HRStaffPayrollManager({ orders, onShowAlert }: HRStaffPa
       {activeTab === 'directory' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-black uppercase text-slate-200">Staff Employee Profiles &amp; Employment Terms</h3>
+            <h3 className="text-sm font-black uppercase text-slate-800 dark:text-slate-200">Staff Employee Profiles &amp; Employment Terms</h3>
             <button
               onClick={() => setShowAddStaffModal(true)}
               className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-lg shadow-blue-600/20 flex items-center gap-2"
@@ -348,23 +348,23 @@ export default function HRStaffPayrollManager({ orders, onShowAlert }: HRStaffPa
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {staffList.map(emp => (
-              <div key={emp.id} className="bg-slate-900 p-5 rounded-3xl border border-slate-800 space-y-3">
+              <div key={emp.id} className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-3 shadow-xs">
                 <div className="flex justify-between items-start">
                   <div>
-                    <span className="px-2.5 py-0.5 text-[10px] font-mono font-bold uppercase bg-blue-950 text-blue-300 rounded border border-blue-800">{emp.role}</span>
-                    <h4 className="font-bold text-sm text-slate-100 mt-1">{emp.name}</h4>
-                    <span className="text-[11px] font-mono text-slate-400">{emp.email} &bull; {emp.phone}</span>
+                    <span className="px-2.5 py-0.5 text-[10px] font-mono font-bold uppercase bg-blue-50 text-blue-700 rounded border border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">{emp.role}</span>
+                    <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100 mt-1">{emp.name}</h4>
+                    <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">{emp.email} &bull; {emp.phone}</span>
                   </div>
-                  <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-950/60 px-2 py-1 rounded-lg border border-emerald-800">Score: {emp.performanceScore}/100</span>
+                  <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-1 rounded-lg border border-emerald-200 dark:border-emerald-800">Score: {emp.performanceScore}/100</span>
                 </div>
 
-                <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800/80 font-mono text-xs grid grid-cols-2 gap-2 text-slate-400">
-                  <div>Base Rate: <strong className="text-slate-200">${emp.baseHourlyRate.toFixed(2)}/hr</strong></div>
-                  <div>Type: <strong className="text-blue-300">{emp.employmentType}</strong></div>
-                  <div>Annual Leave: <strong className="text-emerald-400">{emp.annualLeaveBalanceHours} hrs</strong></div>
-                  <div>Sick Leave: <strong className="text-purple-400">{emp.sickLeaveBalanceHours} hrs</strong></div>
-                  <div>TFN: <strong className="text-slate-300">{emp.taxFileNumber}</strong></div>
-                  <div>Super: <strong className="text-slate-300">{emp.superRatePercent}% SG</strong></div>
+                <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-200 dark:border-slate-800/80 font-mono text-xs grid grid-cols-2 gap-2 text-slate-600 dark:text-slate-400">
+                  <div>Base Rate: <strong className="text-slate-900 dark:text-slate-200">${emp.baseHourlyRate.toFixed(2)}/hr</strong></div>
+                  <div>Type: <strong className="text-blue-600 dark:text-blue-300">{emp.employmentType}</strong></div>
+                  <div>Annual Leave: <strong className="text-emerald-600 dark:text-emerald-400">{emp.annualLeaveBalanceHours} hrs</strong></div>
+                  <div>Sick Leave: <strong className="text-purple-600 dark:text-purple-400">{emp.sickLeaveBalanceHours} hrs</strong></div>
+                  <div>TFN: <strong className="text-slate-700 dark:text-slate-300">{emp.taxFileNumber}</strong></div>
+                  <div>Super: <strong className="text-slate-700 dark:text-slate-300">{emp.superRatePercent}% SG</strong></div>
                 </div>
               </div>
             ))}
@@ -375,22 +375,22 @@ export default function HRStaffPayrollManager({ orders, onShowAlert }: HRStaffPa
       {/* TAB 3: LEAVE MANAGEMENT */}
       {activeTab === 'leave' && (
         <div className="space-y-4">
-          <h3 className="text-sm font-black uppercase text-slate-200">Staff Leave Requests &amp; Accrual Balances</h3>
+          <h3 className="text-sm font-black uppercase text-slate-800 dark:text-slate-200">Staff Leave Requests &amp; Accrual Balances</h3>
 
-          <div className="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden divide-y divide-slate-800">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden divide-y divide-slate-200 dark:divide-slate-800 shadow-xs">
             {leaveRequests.map(req => (
               <div key={req.id} className="p-4 flex items-center justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 text-[10px] font-mono font-bold uppercase bg-purple-950 text-purple-300 rounded border border-purple-800">{req.leaveType} Leave</span>
-                    <h4 className="font-bold text-xs text-slate-200">{req.staffName}</h4>
+                    <span className="px-2 py-0.5 text-[10px] font-mono font-bold uppercase bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300 rounded border border-purple-200 dark:border-purple-800">{req.leaveType} Leave</span>
+                    <h4 className="font-bold text-xs text-slate-900 dark:text-slate-200">{req.staffName}</h4>
                   </div>
-                  <span className="text-[11px] font-mono text-slate-400 mt-1 block">Dates: {req.startDate} to {req.endDate} ({req.totalDays} Days) &bull; "{req.reason}"</span>
+                  <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-1 block">Dates: {req.startDate} to {req.endDate} ({req.totalDays} Days) &bull; "{req.reason}"</span>
                 </div>
 
                 <div className="flex items-center gap-3">
                   <span className={`px-2.5 py-1 text-xs font-mono font-bold rounded-lg border ${
-                    req.status === 'Approved' ? 'bg-emerald-950 text-emerald-400 border-emerald-800' : 'bg-amber-950 text-amber-400 border-amber-800'
+                    req.status === 'Approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800' : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-400 dark:border-amber-800'
                   }`}>
                     {req.status}
                   </span>
@@ -427,25 +427,25 @@ export default function HRStaffPayrollManager({ orders, onShowAlert }: HRStaffPa
       {/* TAB 4: TIMESHEETS */}
       {activeTab === 'timesheets' && (
         <div className="space-y-4">
-          <h3 className="text-sm font-black uppercase text-slate-200">Attendance Clock-In Logs &amp; Weekly Timesheets</h3>
+          <h3 className="text-sm font-black uppercase text-slate-800 dark:text-slate-200">Attendance Clock-In Logs &amp; Weekly Timesheets</h3>
 
-          <div className="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden divide-y divide-slate-800 font-mono text-xs">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden divide-y divide-slate-200 dark:divide-slate-800 font-mono text-xs shadow-xs">
             {timesheets.map(ts => (
               <div key={ts.id} className="p-4 flex items-center justify-between">
                 <div>
-                  <h4 className="font-bold text-slate-100">{ts.staffName} &bull; {ts.date}</h4>
-                  <span className="text-slate-400 text-[11px]">Clock-in: {ts.clockIn} | Clock-out: {ts.clockOut} (Break: {ts.breakMinutes}m)</span>
+                  <h4 className="font-bold text-slate-900 dark:text-slate-100">{ts.staffName} &bull; {ts.date}</h4>
+                  <span className="text-slate-500 dark:text-slate-400 text-[11px]">Clock-in: {ts.clockIn} | Clock-out: {ts.clockOut} (Break: {ts.breakMinutes}m)</span>
                 </div>
 
                 <div className="flex items-center gap-4">
-                  <span className="text-emerald-400 font-bold text-sm">{ts.totalHours} Worked Hours</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold text-sm">{ts.totalHours} Worked Hours</span>
                   <button
                     onClick={() => {
                       setTimesheets(prev => prev.map(t => t.id === ts.id ? { ...t, approved: !t.approved } : t));
                       onShowAlert?.('Timesheet status updated.', 'success');
                     }}
                     className={`px-3 py-1.5 font-bold rounded-xl border ${
-                      ts.approved ? 'bg-emerald-950 text-emerald-300 border-emerald-800' : 'bg-amber-600 text-white border-amber-500'
+                      ts.approved ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800' : 'bg-amber-600 text-white border-amber-500'
                     }`}
                   >
                     {ts.approved ? '✓ Approved' : 'Approve Timesheet'}
@@ -459,16 +459,16 @@ export default function HRStaffPayrollManager({ orders, onShowAlert }: HRStaffPa
 
       {/* TAB 5 & 6: COMMISSIONS & PERFORMANCE */}
       {(activeTab === 'commission' || activeTab === 'performance') && (
-        <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800 space-y-4">
-          <h3 className="text-sm font-black uppercase text-slate-100">Staff Sales Commissions &amp; Performance Scorecards</h3>
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-4 shadow-xs">
+          <h3 className="text-sm font-black uppercase text-slate-900 dark:text-slate-100">Staff Sales Commissions &amp; Performance Scorecards</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {staffList.map(emp => (
-              <div key={emp.id} className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2">
+              <div key={emp.id} className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="font-bold text-slate-100 text-xs">{emp.name} ({emp.role})</span>
-                  <span className="text-xs font-mono font-bold text-emerald-400">{emp.performanceScore} / 100 KPI</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 text-xs">{emp.name} ({emp.role})</span>
+                  <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">{emp.performanceScore} / 100 KPI</span>
                 </div>
-                <div className="text-[11px] font-mono text-slate-400">
+                <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
                   Commission Rate: {emp.commissionRatePercent}% &bull; Dept: {emp.department}
                 </div>
               </div>
@@ -479,9 +479,9 @@ export default function HRStaffPayrollManager({ orders, onShowAlert }: HRStaffPa
 
       {/* Add Staff Modal Sub-Overlay */}
       {showAddStaffModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 animate-fade-in">
-          <div className="bg-slate-900 w-full max-w-md rounded-3xl border border-slate-800 p-6 space-y-4 text-white">
-            <h3 className="font-black text-sm uppercase text-slate-100 border-b border-slate-800 pb-3">Add Employee to HR Directory</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 space-y-4 text-slate-900 dark:text-white shadow-2xl">
+            <h3 className="font-black text-sm uppercase text-slate-900 dark:text-slate-100 border-b border-slate-200 dark:border-slate-800 pb-3">Add Employee to HR Directory</h3>
 
             <div className="space-y-3">
               <input
@@ -489,13 +489,13 @@ export default function HRStaffPayrollManager({ orders, onShowAlert }: HRStaffPa
                 placeholder="Employee Full Name"
                 value={newStaffName}
                 onChange={e => setNewStaffName(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 px-3 py-2 text-xs rounded-xl text-white"
+                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-3 py-2 text-xs rounded-xl text-slate-900 dark:text-white"
               />
 
               <select
                 value={newStaffRole}
                 onChange={e => setNewStaffRole(e.target.value as any)}
-                className="w-full bg-slate-950 border border-slate-800 px-3 py-2 text-xs rounded-xl text-slate-200"
+                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-3 py-2 text-xs rounded-xl text-slate-900 dark:text-slate-200"
               >
                 <option value="Sales Executive">Sales Executive</option>
                 <option value="Technician">Technician</option>
@@ -508,7 +508,7 @@ export default function HRStaffPayrollManager({ orders, onShowAlert }: HRStaffPa
                 placeholder="Base Hourly Rate ($/hr)"
                 value={newStaffRate}
                 onChange={e => setNewStaffRate(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 px-3 py-2 text-xs rounded-xl text-emerald-400"
+                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-3 py-2 text-xs rounded-xl text-emerald-600 dark:text-emerald-400 font-bold"
               />
             </div>
 
@@ -523,7 +523,7 @@ export default function HRStaffPayrollManager({ orders, onShowAlert }: HRStaffPa
               <button
                 type="button"
                 onClick={() => setShowAddStaffModal(false)}
-                className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold text-xs"
+                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-xs"
               >
                 Cancel
               </button>

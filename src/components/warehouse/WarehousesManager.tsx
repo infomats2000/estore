@@ -606,7 +606,7 @@ export default function WarehousesManager({
 
               <div className="border border-neutral-200 rounded-xl overflow-hidden">
                 <table className="w-full text-xs">
-                  <thead className="bg-neutral-800 text-white font-bold uppercase text-[10px]">
+                  <thead className="bg-slate-100 dark:bg-neutral-800 text-slate-700 dark:text-white border-b border-slate-200 dark:border-slate-700 font-bold uppercase text-[10px]">
                     <tr>
                       <th className="p-3 text-left">Item Name</th>
                       <th className="p-3 text-center w-16">Qty</th>

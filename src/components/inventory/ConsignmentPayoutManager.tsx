@@ -103,7 +103,7 @@ export default function ConsignmentPayoutManager({
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-900 text-white font-mono uppercase tracking-wider text-[10px]">
+            <thead className="bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 font-mono uppercase tracking-wider text-[10px] border-b border-slate-200 dark:border-slate-700">
               <tr>
                 <th className="p-3">Vendor Name</th>
                 <th className="p-3">Consigned Product</th>

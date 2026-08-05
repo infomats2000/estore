@@ -94,43 +94,43 @@ export default function AutomationWorkflowBuilder({ onShowAlert }: AutomationWor
     <div className="space-y-6">
       {/* Top Banner Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
-          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">ACTIVE WORKFLOW RULES</span>
-          <div className="text-2xl font-black text-slate-100 mt-1">{rules.filter(r => r.active).length} Rules Active</div>
-          <span className="text-[11px] text-slate-400 mt-1 block font-mono">100% Real-Time Trigger Coverage</span>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-xs">
+          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">ACTIVE WORKFLOW RULES</span>
+          <div className="text-2xl font-black text-slate-900 dark:text-slate-100 mt-1">{rules.filter(r => r.active).length} Rules Active</div>
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block font-mono">100% Real-Time Trigger Coverage</span>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
-          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">TOTAL AUTOMATED EXECUTIONS</span>
-          <div className="text-2xl font-black text-amber-400 mt-1">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-xs">
+          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">TOTAL AUTOMATED EXECUTIONS</span>
+          <div className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1">
             {rules.reduce((acc, r) => acc + r.executionCount, 0)} Fired
           </div>
-          <span className="text-[11px] text-slate-400 mt-1 block">Zero Manual Intervention Needed</span>
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block font-mono">Zero Manual Intervention Needed</span>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
-          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">SYSTEM RESPONSE TIME</span>
-          <div className="text-2xl font-black text-emerald-400 mt-1">&lt; 150ms</div>
-          <span className="text-[11px] text-slate-400 mt-1 block font-mono">Instant Event Dispatch</span>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-xs">
+          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">SYSTEM RESPONSE TIME</span>
+          <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">&lt; 150ms</div>
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block font-mono">Instant Event Dispatch</span>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
-          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">EXECUTION HEALTH SCORE</span>
-          <div className="text-xl font-black text-purple-400 mt-1 flex items-center gap-1.5">
-            <ShieldCheck className="w-5 h-5 text-purple-400" />
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-xs">
+          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">EXECUTION HEALTH SCORE</span>
+          <div className="text-xl font-black text-purple-600 dark:text-purple-400 mt-1 flex items-center gap-1.5">
+            <ShieldCheck className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             <span>99.9% Success Rate</span>
           </div>
-          <span className="text-[11px] text-slate-400 mt-1 block font-mono">Automated Exception Recovery</span>
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block font-mono">Automated Exception Recovery</span>
         </div>
       </div>
 
       {/* Toolbar & Tabs */}
-      <div className="bg-slate-900 p-3 rounded-2xl border border-slate-800 flex flex-wrap items-center justify-between gap-3">
+      <div className="bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 shadow-xs">
         <div className="flex items-center gap-2">
           <button
             onClick={() => setActiveTab('canvas')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-              activeTab === 'canvas' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              activeTab === 'canvas' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white'
             }`}
           >
             <Layers className="w-4 h-4" /> Visual Workflow Canvas ({rules.length})
@@ -139,7 +139,7 @@ export default function AutomationWorkflowBuilder({ onShowAlert }: AutomationWor
           <button
             onClick={() => setActiveTab('logs')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-              activeTab === 'logs' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              activeTab === 'logs' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white'
             }`}
           >
             <Clock className="w-4 h-4" /> Trigger Audit Logs ({logs.length})
@@ -159,32 +159,32 @@ export default function AutomationWorkflowBuilder({ onShowAlert }: AutomationWor
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column: Rules List */}
           <div className="space-y-3">
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-400">Deployed Workflows</h3>
+            <h3 className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Deployed Workflows</h3>
             <div className="space-y-3">
               {rules.map(rule => (
                 <div
                   key={rule.id}
                   onClick={() => setSelectedRule(rule)}
-                  className={`p-4 rounded-3xl border transition-all cursor-pointer ${
+                  className={`p-4 rounded-3xl border transition-all cursor-pointer shadow-xs ${
                     selectedRule?.id === rule.id 
-                      ? 'bg-slate-900 border-blue-500/50 shadow-xl' 
-                      : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'
+                      ? 'bg-white dark:bg-slate-900 border-blue-500 shadow-md ring-2 ring-blue-500/20' 
+                      : 'bg-white/80 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="px-2.5 py-0.5 text-[10px] font-mono font-bold bg-blue-950 text-blue-300 rounded border border-blue-800">{rule.id}</span>
+                    <span className="px-2.5 py-0.5 text-[10px] font-mono font-bold bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 rounded border border-blue-200 dark:border-blue-800">{rule.id}</span>
                     <button
                       onClick={(e) => { e.stopPropagation(); handleToggleRule(rule.id); }}
                       className={`px-2 py-0.5 text-[10px] font-mono font-bold rounded ${
-                        rule.active ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-slate-800 text-slate-400'
+                        rule.active ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
                       }`}
                     >
                       {rule.active ? 'Active' : 'Paused'}
                     </button>
                   </div>
 
-                  <h4 className="font-bold text-sm text-slate-100 mt-2">{rule.name}</h4>
-                  <p className="text-[11px] text-slate-400 mt-1 line-clamp-2">{rule.description}</p>
+                  <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100 mt-2">{rule.name}</h4>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">{rule.description}</p>
                 </div>
               ))}
             </div>
@@ -193,13 +193,13 @@ export default function AutomationWorkflowBuilder({ onShowAlert }: AutomationWor
           {/* Right 2-Cols: Interactive Visual Node Flow Canvas */}
           <div className="lg:col-span-2 space-y-4">
             {selectedRule ? (
-              <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800 space-y-6">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+              <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-6 shadow-xs">
+                <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
                   <div>
-                    <span className="text-[10px] font-mono font-bold text-blue-400 uppercase tracking-widest bg-blue-950 px-2 py-0.5 rounded border border-blue-800">
+                    <span className="text-[10px] font-mono font-bold text-blue-700 dark:text-blue-400 uppercase tracking-widest bg-blue-50 dark:bg-blue-950 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-800">
                       VISUAL WORKFLOW NODE DIAGRAM
                     </span>
-                    <h3 className="text-base font-black text-slate-100 mt-1">{selectedRule.name}</h3>
+                    <h3 className="text-base font-black text-slate-900 dark:text-slate-100 mt-1">{selectedRule.name}</h3>
                   </div>
 
                   <button
@@ -213,45 +213,45 @@ export default function AutomationWorkflowBuilder({ onShowAlert }: AutomationWor
                 {/* 3-Node Visual Flow Diagram */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center relative font-mono text-xs">
                   {/* Node 1: Trigger */}
-                  <div className="bg-slate-950 p-5 rounded-2xl border border-amber-500/40 space-y-2 shadow-lg">
-                    <span className="px-2 py-0.5 text-[9px] font-bold uppercase bg-amber-950 text-amber-300 rounded border border-amber-800 block w-fit">
+                  <div className="bg-slate-50 dark:bg-slate-950 p-5 rounded-2xl border border-amber-300 dark:border-amber-500/40 space-y-2 shadow-xs">
+                    <span className="px-2 py-0.5 text-[9px] font-bold uppercase bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 rounded border border-amber-200 dark:border-amber-800 block w-fit">
                       1. TRIGGER NODE
                     </span>
-                    <h4 className="font-bold text-slate-100 text-sm">{selectedRule.trigger}</h4>
-                    <p className="text-[10px] text-slate-400">Fires when {selectedRule.trigger} event is emitted.</p>
+                    <h4 className="font-bold text-slate-900 dark:text-slate-100 text-sm">{selectedRule.trigger}</h4>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400">Fires when {selectedRule.trigger} event is emitted.</p>
                   </div>
 
                   {/* Node 2: Condition / Threshold */}
-                  <div className="bg-slate-950 p-5 rounded-2xl border border-blue-500/40 space-y-2 shadow-lg">
-                    <span className="px-2 py-0.5 text-[9px] font-bold uppercase bg-blue-950 text-blue-300 rounded border border-blue-800 block w-fit">
+                  <div className="bg-slate-50 dark:bg-slate-950 p-5 rounded-2xl border border-blue-300 dark:border-blue-500/40 space-y-2 shadow-xs">
+                    <span className="px-2 py-0.5 text-[9px] font-bold uppercase bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 rounded border border-blue-200 dark:border-blue-800 block w-fit">
                       2. CONDITION EVALUATOR
                     </span>
-                    <h4 className="font-bold text-slate-100 text-sm">
+                    <h4 className="font-bold text-slate-900 dark:text-slate-100 text-sm">
                       {selectedRule.triggerThreshold ? `Threshold >= ${selectedRule.triggerThreshold}` : 'Always True'}
                     </h4>
-                    <p className="text-[10px] text-slate-400">Evaluates rules against event payload context.</p>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400">Evaluates rules against event payload context.</p>
                   </div>
 
                   {/* Node 3: Automated Action */}
-                  <div className="bg-slate-950 p-5 rounded-2xl border border-emerald-500/40 space-y-2 shadow-lg">
-                    <span className="px-2 py-0.5 text-[9px] font-bold uppercase bg-emerald-950 text-emerald-300 rounded border border-emerald-800 block w-fit">
+                  <div className="bg-slate-50 dark:bg-slate-950 p-5 rounded-2xl border border-emerald-300 dark:border-emerald-500/40 space-y-2 shadow-xs">
+                    <span className="px-2 py-0.5 text-[9px] font-bold uppercase bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 rounded border border-emerald-200 dark:border-emerald-800 block w-fit">
                       3. ACTION NODE
                     </span>
-                    <h4 className="font-bold text-slate-100 text-sm">{selectedRule.action}</h4>
-                    <p className="text-[10px] text-slate-400">Automated ERP action dispatch.</p>
+                    <h4 className="font-bold text-slate-900 dark:text-slate-100 text-sm">{selectedRule.action}</h4>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400">Automated ERP action dispatch.</p>
                   </div>
                 </div>
 
-                <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 text-slate-400 font-mono text-xs space-y-1">
-                  <div>Rule Status: <strong className="text-emerald-400">{selectedRule.active ? 'Active & Monitoring' : 'Paused'}</strong></div>
-                  <div>Total Executions: <strong className="text-blue-300">{selectedRule.executionCount} Times Fired</strong></div>
-                  <div>Last Execution: <strong className="text-slate-200">{selectedRule.lastTriggeredAt || 'Never'}</strong></div>
+                <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-mono text-xs space-y-1">
+                  <div>Rule Status: <strong className="text-emerald-600 dark:text-emerald-400">{selectedRule.active ? 'Active & Monitoring' : 'Paused'}</strong></div>
+                  <div>Total Executions: <strong className="text-blue-600 dark:text-blue-300">{selectedRule.executionCount} Times Fired</strong></div>
+                  <div>Last Execution: <strong className="text-slate-800 dark:text-slate-200">{selectedRule.lastTriggeredAt || 'Never'}</strong></div>
                 </div>
               </div>
             ) : (
-              <div className="bg-slate-900 p-12 rounded-3xl border border-slate-800 text-center space-y-3 text-slate-400">
-                <Layers className="w-10 h-10 mx-auto text-blue-400 opacity-60" />
-                <h4 className="font-bold text-sm text-slate-200">Select a Workflow Rule</h4>
+              <div className="bg-white dark:bg-slate-900 p-12 rounded-3xl border border-slate-200 dark:border-slate-800 text-center space-y-3 text-slate-500 dark:text-slate-400 shadow-xs">
+                <Layers className="w-10 h-10 mx-auto text-blue-600 dark:text-blue-400 opacity-60" />
+                <h4 className="font-bold text-sm text-slate-900 dark:text-slate-200">Select a Workflow Rule</h4>
                 <p className="text-xs max-w-sm mx-auto">Select a workflow from the left panel to inspect its visual node flow diagram, condition thresholds, and automated action nodes.</p>
               </div>
             )}
@@ -261,10 +261,10 @@ export default function AutomationWorkflowBuilder({ onShowAlert }: AutomationWor
 
       {/* TAB 2: TRIGGER AUDIT LOGS */}
       {activeTab === 'logs' && (
-        <div className="bg-slate-900 rounded-3xl border border-slate-800 overflow-x-auto">
+        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-x-auto shadow-xs">
           <table className="w-full text-left font-mono text-xs">
             <thead>
-              <tr className="border-b border-slate-800 text-slate-400 text-[10px] uppercase">
+              <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-[10px] uppercase bg-slate-100 dark:bg-slate-900">
                 <th className="p-3">Log ID</th>
                 <th className="p-3">Rule Name</th>
                 <th className="p-3">Triggered At</th>
@@ -272,22 +272,22 @@ export default function AutomationWorkflowBuilder({ onShowAlert }: AutomationWor
                 <th className="p-3">Execution Payload Summary</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60 text-slate-300">
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60 text-slate-700 dark:text-slate-300">
               {logs.map(log => (
-                <tr key={log.id} className="hover:bg-slate-900/50">
+                <tr key={log.id} className="hover:bg-slate-100 dark:hover:bg-slate-900/50">
                   <td className="p-3">
-                    <span className="px-2 py-0.5 bg-blue-950 text-blue-300 font-bold rounded border border-blue-800 text-[10px]">{log.id}</span>
+                    <span className="px-2 py-0.5 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 font-bold rounded border border-blue-200 dark:border-blue-800 text-[10px]">{log.id}</span>
                   </td>
-                  <td className="p-3 font-bold text-slate-100">{log.ruleName}</td>
-                  <td className="p-3 text-slate-400">{new Date(log.triggeredAt).toLocaleString()}</td>
+                  <td className="p-3 font-bold text-slate-900 dark:text-slate-100">{log.ruleName}</td>
+                  <td className="p-3 text-slate-500 dark:text-slate-400">{new Date(log.triggeredAt).toLocaleString()}</td>
                   <td className="p-3">
                     <span className={`px-2 py-0.5 font-bold rounded text-[10px] border ${
-                      log.status === 'Success' ? 'bg-emerald-950 text-emerald-400 border-emerald-800' : 'bg-amber-950 text-amber-400 border-amber-800'
+                      log.status === 'Success' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800' : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-400 dark:border-amber-800'
                     }`}>
                       {log.status}
                     </span>
                   </td>
-                  <td className="p-3 text-slate-300">{log.payloadSummary}</td>
+                  <td className="p-3 text-slate-700 dark:text-slate-300">{log.payloadSummary}</td>
                 </tr>
               ))}
             </tbody>
@@ -298,27 +298,27 @@ export default function AutomationWorkflowBuilder({ onShowAlert }: AutomationWor
       {/* Add Workflow Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 animate-fade-in">
-          <div className="bg-slate-900 w-full max-w-md rounded-3xl border border-slate-800 p-6 space-y-4 text-white">
-            <h3 className="font-black text-sm uppercase text-slate-100 border-b border-slate-800 pb-3">Build Visual Workflow Rule</h3>
+          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 space-y-4 text-slate-900 dark:text-white shadow-2xl">
+            <h3 className="font-black text-sm uppercase text-slate-900 dark:text-slate-100 border-b border-slate-200 dark:border-slate-800 pb-3">Build Visual Workflow Rule</h3>
 
             <div className="space-y-3 font-mono text-xs">
               <div>
-                <label className="text-slate-400 uppercase text-[10px] font-bold block mb-1">Workflow Name</label>
+                <label className="text-slate-500 dark:text-slate-400 uppercase text-[10px] font-bold block mb-1">Workflow Name</label>
                 <input
                   type="text"
                   placeholder="e.g. VIP Order Priority Dispatch"
                   value={newRuleName}
                   onChange={e => setNewRuleName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 px-3 py-2 rounded-xl text-white"
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-3 py-2 rounded-xl text-slate-900 dark:text-white"
                 />
               </div>
 
               <div>
-                <label className="text-slate-400 uppercase text-[10px] font-bold block mb-1">Trigger Event</label>
+                <label className="text-slate-500 dark:text-slate-400 uppercase text-[10px] font-bold block mb-1">Trigger Event</label>
                 <select
                   value={newTrigger}
                   onChange={e => setNewTrigger(e.target.value as any)}
-                  className="w-full bg-slate-950 border border-slate-800 px-3 py-2 rounded-xl text-slate-200"
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-3 py-2 rounded-xl text-slate-900 dark:text-slate-200"
                 >
                   <option value="STOCK_MINIMUM">Stock Reaches Minimum</option>
                   <option value="HIGH_VALUE_SALE">High-Value Sale Order</option>
@@ -330,22 +330,22 @@ export default function AutomationWorkflowBuilder({ onShowAlert }: AutomationWor
               </div>
 
               <div>
-                <label className="text-slate-400 uppercase text-[10px] font-bold block mb-1">Condition Threshold</label>
+                <label className="text-slate-500 dark:text-slate-400 uppercase text-[10px] font-bold block mb-1">Condition Threshold</label>
                 <input
                   type="number"
                   placeholder="e.g. 5000 for $5k or 5 for stock"
                   value={newThreshold}
                   onChange={e => setNewThreshold(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 px-3 py-2 rounded-xl text-emerald-400 font-bold"
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-3 py-2 rounded-xl text-emerald-600 dark:text-emerald-400 font-bold"
                 />
               </div>
 
               <div>
-                <label className="text-slate-400 uppercase text-[10px] font-bold block mb-1">Automated ERP Action</label>
+                <label className="text-slate-500 dark:text-slate-400 uppercase text-[10px] font-bold block mb-1">Automated ERP Action</label>
                 <select
                   value={newAction}
                   onChange={e => setNewAction(e.target.value as any)}
-                  className="w-full bg-slate-950 border border-slate-800 px-3 py-2 rounded-xl text-slate-200"
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-3 py-2 rounded-xl text-slate-900 dark:text-slate-200"
                 >
                   <option value="CREATE_PO_DRAFT">Create Purchase Order Draft</option>
                   <option value="REQUIRE_MANAGER_APPROVAL">Require Manager Approval Flag</option>
@@ -368,7 +368,7 @@ export default function AutomationWorkflowBuilder({ onShowAlert }: AutomationWor
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
-                className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold text-xs"
+                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-xs"
               >
                 Cancel
               </button>

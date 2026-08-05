@@ -262,7 +262,7 @@ export default function PurchaseOrdersManager({
                 <div className="border-t border-neutral-100 bg-neutral-50 p-4 space-y-4">
                   {/* Line items table */}
                   <table className="w-full text-xs border border-neutral-200 rounded-lg overflow-hidden">
-                    <thead className="bg-neutral-800 text-white">
+                    <thead className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-b border-slate-200 dark:border-slate-700 font-semibold">
                       <tr>
                         <th className="text-left p-2">Product</th>
                         <th className="text-center p-2 w-20">Ordered</th>
@@ -273,33 +273,33 @@ export default function PurchaseOrdersManager({
                     </thead>
                     <tbody>
                       {po.items.map(item => (
-                        <tr key={item.id} className="border-t border-neutral-100">
-                          <td className="p-2 font-medium">{item.productName}</td>
-                          <td className="p-2 text-center">{item.orderedQty}</td>
-                          <td className={`p-2 text-center font-bold ${item.receivedQty >= item.orderedQty ? 'text-emerald-600' : item.receivedQty > 0 ? 'text-amber-600' : 'text-neutral-400'}`}>
+                        <tr key={item.id} className="border-t border-slate-100 dark:border-slate-800">
+                          <td className="p-2 font-medium text-slate-900 dark:text-slate-100">{item.productName}</td>
+                          <td className="p-2 text-center text-slate-700 dark:text-slate-300">{item.orderedQty}</td>
+                          <td className={`p-2 text-center font-bold ${item.receivedQty >= item.orderedQty ? 'text-emerald-600' : item.receivedQty > 0 ? 'text-amber-600' : 'text-slate-400'}`}>
                             {item.receivedQty}
                           </td>
-                          <td className="p-2 text-right">${item.unitCost.toFixed(2)}</td>
-                          <td className="p-2 text-right">${(item.orderedQty * item.unitCost).toFixed(2)}</td>
+                          <td className="p-2 text-right text-slate-700 dark:text-slate-300">${item.unitCost.toFixed(2)}</td>
+                          <td className="p-2 text-right text-slate-900 dark:text-slate-100 font-semibold">${(item.orderedQty * item.unitCost).toFixed(2)}</td>
                         </tr>
                       ))}
                     </tbody>
-                    <tfoot className="bg-neutral-50">
-                      <tr className="border-t border-neutral-200 font-bold">
-                        <td colSpan={4} className="p-2 text-right">Subtotal</td>
-                        <td className="p-2 text-right">${po.subtotal.toFixed(2)}</td>
+                    <tfoot className="bg-slate-50 dark:bg-slate-800/50">
+                      <tr className="border-t border-slate-200 dark:border-slate-700 font-bold">
+                        <td colSpan={4} className="p-2 text-right text-slate-700 dark:text-slate-300">Subtotal</td>
+                        <td className="p-2 text-right text-slate-900 dark:text-slate-100">${po.subtotal.toFixed(2)}</td>
                       </tr>
-                      {po.freight > 0 && <tr className="border-t border-neutral-100">
-                        <td colSpan={4} className="p-2 text-right text-neutral-500">Freight</td>
-                        <td className="p-2 text-right">${po.freight.toFixed(2)}</td>
+                      {po.freight > 0 && <tr className="border-t border-slate-100 dark:border-slate-800">
+                        <td colSpan={4} className="p-2 text-right text-slate-500">Freight</td>
+                        <td className="p-2 text-right text-slate-700 dark:text-slate-300">${po.freight.toFixed(2)}</td>
                       </tr>}
-                      {po.duties > 0 && <tr className="border-t border-neutral-100">
-                        <td colSpan={4} className="p-2 text-right text-neutral-500">Import Duties</td>
-                        <td className="p-2 text-right">${po.duties.toFixed(2)}</td>
+                      {po.duties > 0 && <tr className="border-t border-slate-100 dark:border-slate-800">
+                        <td colSpan={4} className="p-2 text-right text-slate-500">Import Duties</td>
+                        <td className="p-2 text-right text-slate-700 dark:text-slate-300">${po.duties.toFixed(2)}</td>
                       </tr>}
-                      <tr className="border-t-2 border-neutral-300 bg-neutral-800 text-white">
-                        <td colSpan={4} className="p-2 text-right font-black">TOTAL (Landed Cost)</td>
-                        <td className="p-2 text-right font-black">${po.total.toFixed(2)}</td>
+                      <tr className="border-t-2 border-slate-300 dark:border-slate-700 bg-slate-900 text-white dark:bg-slate-950 font-black">
+                        <td colSpan={4} className="p-2 text-right">TOTAL (Landed Cost)</td>
+                        <td className="p-2 text-right">${po.total.toFixed(2)}</td>
                       </tr>
                     </tfoot>
                   </table>

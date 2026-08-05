@@ -11,7 +11,7 @@ import {
   Users, MousePointerClick, Globe, Percent, Calendar, ArrowDownRight, BarChart3, Clock, Undo2,
   MessageSquare, Star, Search, Printer, SlidersHorizontal, RefreshCw, FileSpreadsheet, History, Check,
   Coins, Boxes, Truck, Building2, MapPin, Mail, Phone, Barcode, Receipt, BookOpen, Calculator,
-  PanelLeftClose, PanelLeftOpen, Upload, X, FileText, ArrowLeft, Wrench, ClipboardList
+  PanelLeftClose, PanelLeftOpen, Upload, X, FileText, ArrowLeft, Wrench, ClipboardList, Navigation, Zap
 } from 'lucide-react';
 import { InvoiceModal } from './InvoiceModal';
 import { convertOrderToInvoice, printInvoiceDirect, downloadInvoiceHtmlFile, printHtmlContent } from '../utils/invoicePrinter';
@@ -267,7 +267,91 @@ export default function DashboardView({
   });
   const [currentSimulatedUser, setCurrentSimulatedUser] = useState(DEFAULT_STAFF_PROFILES[0]);
   const [tabHistory, setTabHistory] = useState<string[]>(['metrics']);
-  const [hoverMenu, setHoverMenu] = useState<'sales' | 'operations' | null>(null);
+  const [hoverMenu, setHoverMenu] = useState<'sales' | 'inventory' | 'procurement' | 'intelligence' | null>(null);
+  const [showCustomizePanel, setShowCustomizePanel] = useState(false);
+
+  // ----- ALL TABS REGISTRY -----
+  const ALL_TABS = [
+    { id: 'metrics',           label: 'Dashboard',           icon: BarChart3,      group: 'Core' },
+    { id: 'products',          label: 'Products',            icon: Package,        group: 'Core' },
+    { id: 'orders',            label: 'Orders',              icon: ShoppingCart,   group: 'Core' },
+    { id: 'customers',         label: 'Customers',           icon: Users,          group: 'Core' },
+    { id: 'invoices',          label: 'Invoicing',           icon: FileText,       group: 'Core' },
+    { id: 'inventory',         label: 'Inventory',           icon: Boxes,          group: 'Core' },
+    { id: 'purchase-orders',   label: 'Purchase Orders',     icon: ClipboardList,  group: 'Procurement' },
+    { id: 'suppliers',         label: 'Suppliers',           icon: Award,          group: 'Procurement' },
+    { id: 'warehouses',        label: 'Warehouses',          icon: Building2,      group: 'Operations' },
+    { id: 'bi',                label: 'Business Intelligence',icon: Activity,      group: 'Intelligence' },
+    { id: 'reports',           label: 'ERP Reports',         icon: FileSpreadsheet,group: 'Intelligence' },
+    { id: 'payroll',           label: 'Staff & Payroll',     icon: Coins,          group: 'HR' },
+    { id: 'shipping',          label: 'Shipments',           icon: Truck,          group: 'Operations' },
+    { id: 'finance',           label: 'Finance & Accounting',icon: DollarSign,     group: 'Finance' },
+    { id: 'ebay',              label: 'Marketplace & Stores',icon: Globe,          group: 'Commerce' },
+    // extras (not pinned by default)
+    { id: 'commercial-sales',  label: 'Commercial Sales',    icon: DollarSign,     group: 'Sales' },
+    { id: 'massive-inventory', label: '100k SKU Catalog',    icon: Package,        group: 'Operations' },
+    { id: 'wms',               label: 'WMS Suite',           icon: Building2,      group: 'Operations' },
+    { id: 'procurement',       label: 'Global Procurement',  icon: Truck,          group: 'Procurement' },
+    { id: 'pricing-matrix',    label: 'Pricing Matrix',      icon: Calculator,     group: 'Sales' },
+    { id: 'logistics-dispatch',label: 'Logistics Dispatch',  icon: Navigation,     group: 'Operations' },
+    { id: 'automation',        label: 'Workflow Automation', icon: Zap,            group: 'Intelligence' },
+    { id: 'users',             label: 'Staff Accounts',      icon: ShieldCheck,    group: 'HR' },
+    { id: 'repairs',           label: 'Repairs',             icon: Wrench,         group: 'Operations' },
+    { id: 'returns',           label: 'Returns',             icon: Undo2,          group: 'Core' },
+    { id: 'analytics',         label: 'Analytics',           icon: TrendingUp,     group: 'Intelligence' },
+    { id: 'stock-units',       label: 'Stock Units',         icon: Barcode,        group: 'Operations' },
+    { id: 'trade-accounts',    label: 'B2B Trade Accounts',  icon: Building2,      group: 'Sales' },
+    { id: 'refurb',            label: 'Refurb & Grading',    icon: Wrench,         group: 'Operations' },
+    { id: 'distribution',      label: 'Wholesale & Reseller',icon: Truck,          group: 'Sales' },
+    { id: 'coupons',           label: 'Coupons & Promos',    icon: Tag,            group: 'Commerce' },
+    { id: 'segments',          label: 'Customer Segments',   icon: Users,          group: 'Commerce' },
+    { id: 'upsells',           label: 'Upsell Rules',        icon: TrendingUp,     group: 'Commerce' },
+    { id: 'categories',        label: 'Categories',          icon: Tag,            group: 'Catalog' },
+    { id: 'collections',       label: 'Collections',         icon: Boxes,          group: 'Catalog' },
+    { id: 'reviews',           label: 'Product Reviews',     icon: Star,           group: 'Commerce' },
+    { id: 'stores',            label: 'Branch Locations',    icon: MapPin,         group: 'Commerce' },
+  ] as const;
+
+  type TabId = typeof ALL_TABS[number]['id'];
+
+  const DEFAULT_PINNED: TabId[] = [
+    'metrics','products','orders','customers','invoices','inventory',
+    'purchase-orders','suppliers','warehouses','bi','reports',
+    'payroll','shipping','finance','ebay',
+  ];
+
+  const [pinnedTabs, setPinnedTabs] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('pinnedTabs');
+      if (saved) {
+        const parsed = JSON.parse(saved) as string[];
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return [...DEFAULT_PINNED];
+  });
+
+  const savePinnedTabs = (tabs: string[]) => {
+    setPinnedTabs(tabs);
+    try { localStorage.setItem('pinnedTabs', JSON.stringify(tabs)); } catch {}
+  };
+
+  const togglePin = (id: string) => {
+    if (id === 'metrics') return; // Dashboard always pinned
+    const updated = pinnedTabs.includes(id)
+      ? pinnedTabs.filter(t => t !== id)
+      : [...pinnedTabs, id];
+    savePinnedTabs(updated);
+  };
+
+  const resetToDefault = () => savePinnedTabs([...DEFAULT_PINNED]);
+
+  const pinnedTabObjects = pinnedTabs
+    .map(id => ALL_TABS.find(t => t.id === id))
+    .filter(Boolean) as typeof ALL_TABS[number][];
+
+  const TAB_GROUPS = Array.from(new Set(ALL_TABS.map(t => t.group)));
+
 
   const handleGoBack = () => {
     if (tabHistory.length > 1) {
@@ -1930,51 +2014,124 @@ export default function DashboardView({
               ERP Reports
             </button>
 
+            {/* CATEGORY 1: Sales, B2B & Pricing Dropdown */}
             <div
-              className="relative"
+              className="relative group"
               onMouseEnter={() => setHoverMenu('sales')}
               onMouseLeave={() => setHoverMenu(null)}
             >
               <button
                 type="button"
-                className="h-7 rounded-md bg-white px-2 font-mono text-[10px] font-bold uppercase tracking-wider text-emerald-700 outline-none flex items-center gap-1.5"
+                onClick={() => setHoverMenu(hoverMenu === 'sales' ? null : 'sales')}
+                className="h-7 rounded-md bg-white px-2.5 font-mono text-[10px] font-bold uppercase tracking-wider text-emerald-700 outline-none flex items-center gap-1.5 cursor-pointer shadow-sm hover:bg-slate-50 active:scale-95"
               >
-                <span>Sales & Service</span>
-                <span className="text-[9px] leading-none text-emerald-600">v</span>
+                <span>Sales, B2B &amp; Pricing</span>
+                <span className="text-[9px] leading-none text-emerald-600 font-bold">▾</span>
               </button>
               {hoverMenu === 'sales' && (
-                <div className="absolute left-0 top-full z-30 mt-1 min-w-[170px] rounded-md border border-blue-200 bg-white py-1 shadow-lg">
-                  <button type="button" onClick={() => { setActiveTab('finance'); setHoverMenu(null); }} className="w-full px-3 py-1.5 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-700 hover:bg-blue-50">Finance</button>
-                  <button type="button" onClick={() => { setActiveTab('invoices'); setHoverMenu(null); }} className="w-full px-3 py-1.5 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-700 hover:bg-blue-50">Invoices</button>
-                  <button type="button" onClick={() => { setActiveTab('orders'); setHoverMenu(null); }} className="w-full px-3 py-1.5 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-700 hover:bg-blue-50">Orders</button>
-                  <button type="button" onClick={() => { setActiveTab('customers'); setHoverMenu(null); }} className="w-full px-3 py-1.5 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-700 hover:bg-blue-50">Customers</button>
-                  <button type="button" onClick={() => { setActiveTab('returns'); setHoverMenu(null); }} className="w-full px-3 py-1.5 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-700 hover:bg-blue-50">Returns</button>
-                  <button type="button" onClick={() => { setActiveTab('shipping'); setHoverMenu(null); }} className="w-full px-3 py-1.5 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-700 hover:bg-blue-50">Shipping</button>
+                <div className="absolute left-0 top-full z-50 pt-0.5 min-w-[210px]">
+                  <div className="rounded-xl border border-slate-300 bg-white py-1 shadow-2xl space-y-0.5 font-sans">
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('commercial-sales'); setHoverMenu(null); }} onClick={() => { setActiveTab('commercial-sales'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Commercial B2B Sales &amp; Quotes</button>
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('pricing-matrix'); setHoverMenu(null); }} onClick={() => { setActiveTab('pricing-matrix'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">14-Dimension Pricing Matrix</button>
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('distribution'); setHoverMenu(null); }} onClick={() => { setActiveTab('distribution'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Wholesale &amp; Reseller Ops</button>
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('orders'); setHoverMenu(null); }} onClick={() => { setActiveTab('orders'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Orders Directory</button>
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('invoices'); setHoverMenu(null); }} onClick={() => { setActiveTab('invoices'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Invoices &amp; Billing</button>
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('customers'); setHoverMenu(null); }} onClick={() => { setActiveTab('customers'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Customer CRM</button>
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('trade-accounts'); setHoverMenu(null); }} onClick={() => { setActiveTab('trade-accounts'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">B2B Trade Accounts</button>
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('coupons'); setHoverMenu(null); }} onClick={() => { setActiveTab('coupons'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Coupons &amp; Promo Codes</button>
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('segments'); setHoverMenu(null); }} onClick={() => { setActiveTab('segments'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Customer Segments</button>
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('upsells'); setHoverMenu(null); }} onClick={() => { setActiveTab('upsells'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Upsell &amp; Cross-Sell Rules</button>
+                  </div>
                 </div>
               )}
             </div>
 
+            {/* CATEGORY 2: Inventory, WMS & Logistics Dropdown */}
             <div
-              className="relative"
-              onMouseEnter={() => setHoverMenu('operations')}
+              className="relative group"
+              onMouseEnter={() => setHoverMenu('inventory')}
               onMouseLeave={() => setHoverMenu(null)}
             >
               <button
                 type="button"
-                className="h-7 rounded-md bg-white px-2 font-mono text-[10px] font-bold uppercase tracking-wider text-emerald-700 outline-none flex items-center gap-1.5"
+                onClick={() => setHoverMenu(hoverMenu === 'inventory' ? null : 'inventory')}
+                className="h-7 rounded-md bg-white px-2.5 font-mono text-[10px] font-bold uppercase tracking-wider text-emerald-700 outline-none flex items-center gap-1.5 cursor-pointer shadow-sm hover:bg-slate-50 active:scale-95"
               >
-                <span>Operations</span>
-                <span className="text-[9px] leading-none text-emerald-600">v</span>
+                <span>Inventory, WMS &amp; Logistics</span>
+                <span className="text-[9px] leading-none text-emerald-600 font-bold">▾</span>
               </button>
-              {hoverMenu === 'operations' && (
-                <div className="absolute left-0 top-full z-30 mt-1 min-w-[190px] rounded-md border border-blue-200 bg-white py-1 shadow-lg">
-                  <button type="button" onClick={() => { setActiveTab('inventory'); setHoverMenu(null); }} className="w-full px-3 py-1.5 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-700 hover:bg-blue-50">Inventory</button>
-                  <button type="button" onClick={() => { setActiveTab('repairs'); setHoverMenu(null); }} className="w-full px-3 py-1.5 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-700 hover:bg-blue-50">Repairs</button>
-                  <button type="button" onClick={() => { setActiveTab('purchase-orders'); setHoverMenu(null); }} className="w-full px-3 py-1.5 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-700 hover:bg-blue-50">Purchase Orders</button>
-                  <button type="button" onClick={() => { setActiveTab('stock-units'); setHoverMenu(null); }} className="w-full px-3 py-1.5 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-700 hover:bg-blue-50">Stock Units</button>
-                  <button type="button" onClick={() => { setActiveTab('warehouses'); setHoverMenu(null); }} className="w-full px-3 py-1.5 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-700 hover:bg-blue-50">Warehouses</button>
-                  <button type="button" onClick={() => { setActiveTab('trade-accounts'); setHoverMenu(null); }} className="w-full px-3 py-1.5 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-700 hover:bg-blue-50">B2B Trade Accounts</button>
-                  <button type="button" onClick={() => { setActiveTab('refurb'); setHoverMenu(null); }} className="w-full px-3 py-1.5 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-700 hover:bg-blue-50">Refurb &amp; Grading</button>
+              {hoverMenu === 'inventory' && (
+                <div className="absolute left-0 top-full z-50 pt-0.5 min-w-[220px]">
+                  <div className="rounded-xl border border-slate-300 bg-white py-1 shadow-2xl space-y-0.5 font-sans">
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('massive-inventory'); setHoverMenu(null); }} onClick={() => { setActiveTab('massive-inventory'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">100,000+ SKU Catalog</button>
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('wms'); setHoverMenu(null); }} onClick={() => { setActiveTab('wms'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Warehouse Management (WMS)</button>
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('logistics-dispatch'); setHoverMenu(null); }} onClick={() => { setActiveTab('logistics-dispatch'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Logistics &amp; Courier Dispatch</button>
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('warehouses'); setHoverMenu(null); }} onClick={() => { setActiveTab('warehouses'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Multi-Warehouse Locations</button>
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('stock-units'); setHoverMenu(null); }} onClick={() => { setActiveTab('stock-units'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Stock Units &amp; Serials</button>
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('inventory'); setHoverMenu(null); }} onClick={() => { setActiveTab('inventory'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Inventory Stockpools</button>
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('refurb'); setHoverMenu(null); }} onClick={() => { setActiveTab('refurb'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Refurb &amp; Grading</button>
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('products'); setHoverMenu(null); }} onClick={() => { setActiveTab('products'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Product Catalog</button>
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('categories'); setHoverMenu(null); }} onClick={() => { setActiveTab('categories'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Categories Manager</button>
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('collections'); setHoverMenu(null); }} onClick={() => { setActiveTab('collections'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Collections Manager</button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* CATEGORY 3: Purchasing & Vendors Dropdown */}
+            <div
+              className="relative group"
+              onMouseEnter={() => setHoverMenu('procurement')}
+              onMouseLeave={() => setHoverMenu(null)}
+            >
+              <button
+                type="button"
+                onClick={() => setHoverMenu(hoverMenu === 'procurement' ? null : 'procurement')}
+                className="h-7 rounded-md bg-white px-2.5 font-mono text-[10px] font-bold uppercase tracking-wider text-emerald-700 outline-none flex items-center gap-1.5 cursor-pointer shadow-sm hover:bg-slate-50 active:scale-95"
+              >
+                <span>Purchasing &amp; Vendors</span>
+                <span className="text-[9px] leading-none text-emerald-600 font-bold">▾</span>
+              </button>
+              {hoverMenu === 'procurement' && (
+                <div className="absolute left-0 top-full z-50 pt-0.5 min-w-[210px]">
+                  <div className="rounded-xl border border-slate-300 bg-white py-1 shadow-2xl space-y-0.5 font-sans">
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('procurement'); setHoverMenu(null); }} onClick={() => { setActiveTab('procurement'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Global Procurement &amp; RFQs</button>
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('suppliers'); setHoverMenu(null); }} onClick={() => { setActiveTab('suppliers'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Supplier Scorecards</button>
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('purchase-orders'); setHoverMenu(null); }} onClick={() => { setActiveTab('purchase-orders'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Purchase Orders</button>
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('shipping'); setHoverMenu(null); }} onClick={() => { setActiveTab('shipping'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Inbound Goods Receiving (GRN)</button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* CATEGORY 4: Financials, HR & Intelligence Dropdown */}
+            <div
+              className="relative group"
+              onMouseEnter={() => setHoverMenu('intelligence')}
+              onMouseLeave={() => setHoverMenu(null)}
+            >
+              <button
+                type="button"
+                onClick={() => setHoverMenu(hoverMenu === 'intelligence' ? null : 'intelligence')}
+                className="h-7 rounded-md bg-white px-2.5 font-mono text-[10px] font-bold uppercase tracking-wider text-emerald-700 outline-none flex items-center gap-1.5 cursor-pointer shadow-sm hover:bg-slate-50 active:scale-95"
+              >
+                <span>Financials, HR &amp; Intelligence</span>
+                <span className="text-[9px] leading-none text-emerald-600 font-bold">▾</span>
+              </button>
+              {hoverMenu === 'intelligence' && (
+                <div className="absolute left-0 top-full z-50 pt-0.5 min-w-[230px]">
+                  <div className="rounded-xl border border-slate-300 bg-white py-1 shadow-2xl space-y-0.5 font-sans">
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('bi'); setHoverMenu(null); }} onClick={() => { setActiveTab('bi'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Executive Business Intelligence</button>
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('reports'); setHoverMenu(null); }} onClick={() => { setActiveTab('reports'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">300+ ERP Reports</button>
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('finance'); setHoverMenu(null); }} onClick={() => { setActiveTab('finance'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Finance &amp; GL Accounting</button>
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('payroll'); setHoverMenu(null); }} onClick={() => { setActiveTab('payroll'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">HR Staff &amp; Payroll</button>
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('automation'); setHoverMenu(null); }} onClick={() => { setActiveTab('automation'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Visual Workflow Automation</button>
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('repairs'); setHoverMenu(null); }} onClick={() => { setActiveTab('repairs'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Repairs &amp; Warranty Jobs</button>
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('ebay'); setHoverMenu(null); }} onClick={() => { setActiveTab('ebay'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Marketplace (eBay Integration)</button>
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('stores'); setHoverMenu(null); }} onClick={() => { setActiveTab('stores'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Multi-Store Branch Locations</button>
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('reviews'); setHoverMenu(null); }} onClick={() => { setActiveTab('reviews'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Product Reviews</button>
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('users'); setHoverMenu(null); }} onClick={() => { setActiveTab('users'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Staff Accounts &amp; Admin RBAC</button>
+                  </div>
                 </div>
               )}
             </div>
@@ -1988,46 +2145,124 @@ export default function DashboardView({
             </button>
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-1.5 pb-2">
-            {[
-              { id: 'metrics', label: 'Dashboard', count: null, icon: BarChart3, color: 'bg-[#706d6d] text-white shadow-black/10', activeBorder: 'border-[#706d6d]' },
-              { id: 'finance', label: 'Finance', count: financeTransactions.length, icon: DollarSign, color: 'bg-[#706d6d] text-white shadow-black/10', activeBorder: 'border-[#706d6d]' },
-              { id: 'invoices', label: 'Invoices', count: orders.length, icon: FileText, color: 'bg-[#706d6d] text-white shadow-black/10', activeBorder: 'border-[#706d6d]' },
-              { id: 'analytics', label: 'Analytics', count: null, icon: TrendingUp, color: 'bg-[#706d6d] text-white shadow-black/10', activeBorder: 'border-[#706d6d]' },
-              { id: 'inventory', label: 'Inventory', count: products.length, icon: Package, color: 'bg-[#706d6d] text-white shadow-black/10', activeBorder: 'border-[#706d6d]' },
-              { id: 'products', label: 'Products', count: products.length, icon: Package, color: 'bg-[#706d6d] text-white shadow-black/10', activeBorder: 'border-[#706d6d]' },
-              { id: 'orders', label: 'Orders', count: orders.length, icon: ShoppingCart, color: 'bg-[#706d6d] text-white shadow-black/10', activeBorder: 'border-[#706d6d]' },
-              { id: 'customers', label: 'Customers', count: customers.length, icon: Users, color: 'bg-[#706d6d] text-white shadow-black/10', activeBorder: 'border-[#706d6d]' },
-              { id: 'returns', label: 'Returns', count: returns.length, icon: Undo2, color: 'bg-[#706d6d] text-white shadow-black/10', activeBorder: 'border-[#706d6d]' },
-              { id: 'shipping', label: 'Shipping', count: shipments.length, icon: Truck, color: 'bg-[#706d6d] text-white shadow-black/10', activeBorder: 'border-[#706d6d]' },
-              { id: 'repairs', label: 'Repairs', count: repairJobs.length, icon: Wrench, color: 'bg-[#0d6efd] text-white shadow-blue-500/10', activeBorder: 'border-[#0d6efd]' },
-              { id: 'purchase-orders', label: 'Purchase Orders', count: purchaseOrders.length, icon: ClipboardList, color: 'bg-[#0d6efd] text-white shadow-blue-500/10', activeBorder: 'border-[#0d6efd]' },
-              { id: 'stock-units', label: 'Stock Units', count: stockUnits.length, icon: Barcode, color: 'bg-[#0d6efd] text-white shadow-blue-500/10', activeBorder: 'border-[#0d6efd]' },
-              { id: 'warehouses', label: 'Warehouses', count: warehouses.length, icon: Building2, color: 'bg-[#0d6efd] text-white shadow-blue-500/10', activeBorder: 'border-[#0d6efd]' },
-              { id: 'trade-accounts', label: 'B2B Trade Accounts', count: customers.filter(c => c.tradeAccount || c.type === 'Trade' || c.company).length, icon: Building2, color: 'bg-indigo-600 text-white shadow-indigo-500/10', activeBorder: 'border-indigo-600' },
-              { id: 'refurb', label: 'Refurb & Grading', count: stockUnits.filter(u => u.status === 'In Repair').length, icon: Wrench, color: 'bg-indigo-600 text-white shadow-indigo-500/10', activeBorder: 'border-indigo-600' },
-            ].map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  type="button"
-                  key={tab.id}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setActiveTab(tab.id as any);
-                  }}
-                  className={`flex items-center gap-1.5 px-4 py-1.5 transition-all duration-200 rounded-lg whitespace-nowrap flex-shrink-0 border ${
-                    isActive 
-                      ? 'bg-[#f59e0b] text-slate-950 border-[#d97706] font-black shadow-xl scale-[1.03] ring-2 ring-amber-300/60' 
-                      : 'bg-[#107ed9] text-white hover:bg-[#2490e8] border-[#107ed9] shadow-sm'
-                  }`}
-                >
-                  <Icon className={`h-3 w-3 shrink-0 ${isActive ? 'text-slate-950' : 'text-white'}`} />
-                  <span className="tracking-wider text-[10px] uppercase font-bold">{tab.label}</span>
-                </button>
-              );
-            })}
+          {/* ═══ CUSTOMIZABLE TAB BAR ═══ */}
+          <div className="relative">
+            {/* Tab buttons row */}
+            <div className="flex flex-wrap items-center justify-center gap-1.5 pb-2 pr-[84px]">
+              {pinnedTabObjects.map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <div key={tab.id} className="flex-shrink-0">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); setActiveTab(tab.id as any); }}
+                      className={`flex items-center gap-1.5 px-3.5 py-1.5 transition-all duration-200 rounded-lg whitespace-nowrap border ${
+                        isActive
+                          ? 'bg-[#f59e0b] text-slate-950 border-[#d97706] font-black shadow-xl scale-[1.03] ring-2 ring-amber-300/60'
+                          : 'bg-[#107ed9] text-white hover:bg-[#2490e8] border-[#107ed9] shadow-sm'
+                      }`}
+                    >
+                      <Icon className={`h-3 w-3 shrink-0 ${isActive ? 'text-slate-950' : 'text-white'}`} />
+                      <span className="tracking-wider text-[10px] uppercase font-bold">{tab.label}</span>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Customize button — pinned top-right of tab bar */}
+            <div className="absolute right-0 top-0 flex items-start">
+              <button
+                type="button"
+                title="Customize tab bar"
+                onClick={() => setShowCustomizePanel(p => !p)}
+                className={`flex items-center gap-1 h-8 px-2.5 rounded-lg border text-[10px] font-bold uppercase tracking-wider transition-all shadow-sm ${
+                  showCustomizePanel
+                    ? 'bg-amber-500 text-white border-amber-600 ring-2 ring-amber-300/50'
+                    : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50 hover:text-slate-800'
+                }`}
+              >
+                <SlidersHorizontal className="h-3 w-3" />
+                <span>Edit</span>
+              </button>
+            </div>
+
+            {/* ═══ CUSTOMIZE PANEL ═══ */}
+            {showCustomizePanel && (
+              <div className="absolute right-0 top-10 z-[200] w-[480px] max-w-[95vw] rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
+                {/* Header */}
+                <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-slate-800 to-slate-700">
+                  <div>
+                    <p className="text-white font-bold text-sm">Customize Your Tab Bar</p>
+                    <p className="text-slate-400 text-[10px] mt-0.5">{pinnedTabs.length} tabs pinned · Click any module to add or remove</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={resetToDefault}
+                      className="text-[10px] font-bold uppercase tracking-wider text-amber-400 hover:text-amber-300 transition-colors"
+                    >Reset defaults</button>
+                    <button
+                      type="button"
+                      onClick={() => setShowCustomizePanel(false)}
+                      className="h-6 w-6 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+                {/* Module grid by group */}
+                <div className="p-3 max-h-[440px] overflow-y-auto space-y-3">
+                  {TAB_GROUPS.map(group => (
+                    <div key={group}>
+                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1.5 px-1">{group}</p>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {ALL_TABS.filter(t => t.group === group).map(tab => {
+                          const isPinned = pinnedTabs.includes(tab.id);
+                          const isForced = tab.id === 'metrics';
+                          const Icon = tab.icon;
+                          return (
+                            <button
+                              key={tab.id}
+                              type="button"
+                              disabled={isForced}
+                              onClick={() => togglePin(tab.id)}
+                              className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border text-left transition-all duration-150 ${
+                                isPinned
+                                  ? 'bg-blue-50 border-blue-300 ring-1 ring-blue-400'
+                                  : 'bg-slate-50 border-slate-200 hover:bg-slate-100 hover:border-slate-300'
+                              } ${isForced ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+                            >
+                              <div className={`h-6 w-6 rounded-md flex items-center justify-center flex-shrink-0 ${
+                                isPinned ? 'bg-blue-600' : 'bg-slate-300'
+                              }`}>
+                                <Icon className="h-3 w-3 text-white" />
+                              </div>
+                              <span className={`text-[10px] font-bold uppercase tracking-wide leading-tight ${
+                                isPinned ? 'text-blue-800' : 'text-slate-600'
+                              }`}>{tab.label}</span>
+                              {isPinned && (
+                                <span className="ml-auto text-blue-500 text-[11px] font-black flex-shrink-0">✓</span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {/* Footer */}
+                <div className="px-4 py-2.5 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+                  <p className="text-[10px] text-slate-500">Click any module above to add or remove it from your tab bar</p>
+                  <button
+                    type="button"
+                    onClick={() => setShowCustomizePanel(false)}
+                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold uppercase tracking-wider rounded-lg transition-colors"
+                  >Done</button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

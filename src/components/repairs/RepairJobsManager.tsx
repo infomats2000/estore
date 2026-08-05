@@ -183,14 +183,14 @@ export default function RepairJobsManager({
       {/* Stats Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: 'Open Jobs', value: stats.open, color: 'border-indigo-300 bg-indigo-50', textColor: 'text-indigo-700' },
-          { label: 'In Progress', value: stats.inProgress, color: 'border-blue-300 bg-blue-50', textColor: 'text-blue-700' },
-          { label: 'Ready for Collection', value: stats.ready, color: 'border-emerald-300 bg-emerald-50', textColor: 'text-emerald-700' },
-          { label: 'This Month', value: stats.thisMonth, color: 'border-amber-300 bg-amber-50', textColor: 'text-amber-700' },
+          { label: 'Open Jobs', value: stats.open, color: 'border-indigo-300 bg-indigo-50 dark:border-indigo-800 dark:bg-indigo-950/40', textColor: 'text-indigo-700 dark:text-indigo-400' },
+          { label: 'In Progress', value: stats.inProgress, color: 'border-blue-300 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/40', textColor: 'text-blue-700 dark:text-blue-400' },
+          { label: 'Ready for Collection', value: stats.ready, color: 'border-emerald-300 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/40', textColor: 'text-emerald-700 dark:text-emerald-400' },
+          { label: 'This Month', value: stats.thisMonth, color: 'border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/40', textColor: 'text-amber-700 dark:text-amber-400' },
         ].map(s => (
-          <div key={s.label} className={`border ${s.color} rounded-xl p-4`}>
+          <div key={s.label} className={`border ${s.color} rounded-xl p-4 shadow-xs`}>
             <div className={`text-2xl font-black ${s.textColor}`}>{s.value}</div>
-            <div className="text-xs font-bold uppercase tracking-wider text-neutral-500 mt-1">{s.label}</div>
+            <div className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mt-1">{s.label}</div>
           </div>
         ))}
       </div>
@@ -198,23 +198,23 @@ export default function RepairJobsManager({
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-48">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <input
             value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search by customer, device, serial…"
-            className="w-full pl-9 pr-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+            className="w-full pl-9 pr-3 py-2 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg text-sm focus:outline-none focus:border-blue-500 text-slate-900 dark:text-slate-100"
           />
         </div>
         <select
           value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-          className="border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+          className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 text-slate-900 dark:text-slate-100"
         >
           <option value="All">All Statuses</option>
           {[...STATUS_ORDER, 'Cancelled'].map(s => <option key={s} value={s}>{s}</option>)}
         </select>
         <button
           onClick={() => openForm()}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors"
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors shadow-xs"
           id="repair-new-job-btn"
         >
           <Plus className="h-4 w-4" /> New Job
@@ -224,7 +224,7 @@ export default function RepairJobsManager({
       {/* Job List */}
       <div className="space-y-3">
         {filtered.length === 0 && (
-          <div className="text-center py-16 text-neutral-400 border border-dashed border-neutral-300 rounded-xl">
+          <div className="text-center py-16 text-slate-400 dark:text-slate-500 border border-dashed border-slate-300 dark:border-slate-800 rounded-xl">
             <Wrench className="h-10 w-10 mx-auto mb-3 opacity-30" />
             <p className="font-bold text-sm uppercase tracking-wider">No repair jobs found</p>
           </div>
@@ -236,7 +236,7 @@ export default function RepairJobsManager({
           const canAdvance = statusIdx >= 0 && statusIdx < STATUS_ORDER.length - 1;
 
           return (
-            <div key={job.id} className="bg-white border border-neutral-200 rounded-xl shadow-sm overflow-hidden">
+            <div key={job.id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs overflow-hidden">
               {/* Job Row */}
               <div
                 className="flex flex-wrap items-center gap-3 p-4 cursor-pointer hover:bg-neutral-50 transition-colors"

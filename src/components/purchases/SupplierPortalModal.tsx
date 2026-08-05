@@ -83,19 +83,19 @@ export default function SupplierPortalModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 animate-fade-in">
-      <div className="bg-slate-900 w-full max-w-5xl rounded-3xl border border-slate-800 text-white flex flex-col max-h-[92vh] overflow-hidden shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fade-in">
+      <div className="bg-white dark:bg-slate-900 w-full max-w-5xl rounded-3xl border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white flex flex-col max-h-[92vh] overflow-hidden shadow-2xl">
         {/* Header */}
-        <div className="bg-slate-950 p-5 border-b border-slate-800 flex items-center justify-between">
+        <div className="bg-slate-50 dark:bg-slate-950 p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-purple-600/20 border border-purple-500/30 rounded-2xl">
-              <Building2 className="w-6 h-6 text-purple-400" />
+            <div className="p-3 bg-purple-50 dark:bg-purple-600/20 border border-purple-200 dark:border-purple-500/30 rounded-2xl">
+              <Building2 className="w-6 h-6 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
-              <span className="text-[10px] font-mono font-bold text-purple-300 uppercase tracking-widest bg-purple-950 px-2 py-0.5 rounded border border-purple-800">
+              <span className="text-[10px] font-mono font-bold text-purple-700 dark:text-purple-300 uppercase tracking-widest bg-purple-50 dark:bg-purple-950 px-2 py-0.5 rounded border border-purple-200 dark:border-purple-800">
                 B2B SUPPLIER SELF-SERVICE PORTAL
               </span>
-              <h2 className="text-lg font-black tracking-tight mt-0.5">Vendor Fulfillment &amp; Dispatch Workspace</h2>
+              <h2 className="text-lg font-black tracking-tight mt-0.5 text-slate-900 dark:text-white">Vendor Fulfillment &amp; Dispatch Workspace</h2>
             </div>
           </div>
 
@@ -103,7 +103,7 @@ export default function SupplierPortalModal({
             <select
               value={selectedSupplierId}
               onChange={e => setSelectedSupplierId(e.target.value)}
-              className="bg-slate-900 border border-slate-700 px-3 py-1.5 text-xs font-mono rounded-xl text-slate-200"
+              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-mono rounded-xl text-slate-800 dark:text-slate-200"
             >
               {suppliers.map(s => (
                 <option key={s.id} value={s.name}>{s.name}</option>
@@ -111,7 +111,7 @@ export default function SupplierPortalModal({
               <option value="">All Suppliers</option>
             </select>
 
-            <button type="button" onClick={onClose} className="p-2 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white">
+            <button type="button" onClick={onClose} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -121,7 +121,7 @@ export default function SupplierPortalModal({
         <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left 1-Col: Issued POs List */}
           <div className="space-y-3">
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-400">Issued Purchase Orders ({vendorOrders.length})</h3>
+            <h3 className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Issued Purchase Orders ({vendorOrders.length})</h3>
 
             <div className="space-y-2 max-h-[65vh] overflow-y-auto pr-1">
               {vendorOrders.map(po => (
@@ -130,19 +130,19 @@ export default function SupplierPortalModal({
                   onClick={() => handleSelectPO(po)}
                   className={`p-4 rounded-2xl border transition-all cursor-pointer ${
                     selectedPo?.id === po.id
-                      ? 'bg-slate-950 border-purple-500/50 shadow-md'
-                      : 'bg-slate-950/40 border-slate-800 hover:border-slate-700'
+                      ? 'bg-white dark:bg-slate-950 border-purple-500 shadow-md'
+                      : 'bg-slate-50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
                   }`}
                 >
                   <div className="flex justify-between items-start">
-                    <span className="px-2 py-0.5 text-[10px] font-mono font-bold uppercase bg-purple-950 text-purple-300 rounded border border-purple-800">{po.id}</span>
-                    <span className="text-xs font-mono font-bold text-emerald-400">${po.total.toLocaleString('en-AU', { minimumFractionDigits: 2 })}</span>
+                    <span className="px-2 py-0.5 text-[10px] font-mono font-bold uppercase bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300 rounded border border-purple-200 dark:border-purple-800">{po.id}</span>
+                    <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">${po.total.toLocaleString('en-AU', { minimumFractionDigits: 2 })}</span>
                   </div>
 
-                  <h4 className="font-bold text-xs text-slate-100 mt-2 line-clamp-1">{po.supplierName}</h4>
-                  <div className="text-[11px] font-mono text-slate-400 mt-1 flex justify-between">
+                  <h4 className="font-bold text-xs text-slate-900 dark:text-slate-100 mt-2 line-clamp-1">{po.supplierName}</h4>
+                  <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-1 flex justify-between">
                     <span>Expected: {po.expectedDelivery || 'TBD'}</span>
-                    <span className="text-amber-400 font-bold">{po.status}</span>
+                    <span className="text-amber-600 dark:text-amber-400 font-bold">{po.status}</span>
                   </div>
                 </div>
               ))}
@@ -152,11 +152,11 @@ export default function SupplierPortalModal({
           {/* Right 2-Cols: Selected PO Fulfillment Workspace */}
           <div className="lg:col-span-2 space-y-4">
             {selectedPo ? (
-              <div className="bg-slate-950 p-6 rounded-3xl border border-slate-800 space-y-5">
-                <div className="flex flex-wrap justify-between items-center border-b border-slate-800 pb-3 gap-2">
+              <div className="bg-slate-50 dark:bg-slate-950 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-5">
+                <div className="flex flex-wrap justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-3 gap-2">
                   <div>
-                    <span className="px-2.5 py-1 text-xs font-mono font-bold bg-purple-950 text-purple-300 rounded-lg border border-purple-800">{selectedPo.id}</span>
-                    <h3 className="text-sm font-bold text-slate-100 mt-1">{selectedPo.supplierName}</h3>
+                    <span className="px-2.5 py-1 text-xs font-mono font-bold bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300 rounded-lg border border-purple-200 dark:border-purple-800">{selectedPo.id}</span>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mt-1">{selectedPo.supplierName}</h3>
                   </div>
 
                   <div className="flex gap-2">
@@ -170,23 +170,23 @@ export default function SupplierPortalModal({
                 </div>
 
                 {/* Line Items Table */}
-                <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-x-auto">
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-x-auto">
                   <table className="w-full text-left font-mono text-xs">
                     <thead>
-                      <tr className="border-b border-slate-800 text-slate-400 text-[10px] uppercase">
+                      <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-[10px] uppercase bg-slate-100 dark:bg-slate-900">
                         <th className="p-3">Product Name</th>
                         <th className="p-3">Ordered Qty</th>
                         <th className="p-3">Agreed Cost</th>
                         <th className="p-3 text-right">Total</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                    <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60 text-slate-700 dark:text-slate-300">
                       {selectedPo.items.map(item => (
                         <tr key={item.id}>
-                          <td className="p-3 font-bold text-slate-100">{item.productName}</td>
+                          <td className="p-3 font-bold text-slate-900 dark:text-slate-100">{item.productName}</td>
                           <td className="p-3">{item.orderedQty} units</td>
                           <td className="p-3">${item.unitCost.toFixed(2)}</td>
-                          <td className="p-3 text-right font-bold text-emerald-400">${item.totalCost.toFixed(2)}</td>
+                          <td className="p-3 text-right font-bold text-emerald-600 dark:text-emerald-400">${item.totalCost.toFixed(2)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -194,13 +194,13 @@ export default function SupplierPortalModal({
                 </div>
 
                 {/* Vendor Form: Shipment Milestones, Tracking, and Invoices */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-800 font-mono text-xs">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-200 dark:border-slate-800 font-mono text-xs">
                   <div className="space-y-1.5">
-                    <label className="text-slate-400 uppercase text-[10px] font-bold block">Fulfillment Status</label>
+                    <label className="text-slate-500 dark:text-slate-400 uppercase text-[10px] font-bold block">Fulfillment Status</label>
                     <select
                       value={status}
                       onChange={e => setStatus(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-700 px-3 py-2 rounded-xl text-slate-200 font-bold"
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl text-slate-900 dark:text-slate-200 font-bold"
                     >
                       <option value="Sent">Sent (Pending Vendor)</option>
                       <option value="Confirmed">Confirmed &amp; Accepted</option>
@@ -211,35 +211,35 @@ export default function SupplierPortalModal({
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-slate-400 uppercase text-[10px] font-bold block">Carrier Freight Company</label>
+                    <label className="text-slate-500 dark:text-slate-400 uppercase text-[10px] font-bold block">Carrier Freight Company</label>
                     <input
                       type="text"
                       placeholder="e.g. DHL Express, Australia Post, Toll"
                       value={carrier}
                       onChange={e => setCarrier(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-700 px-3 py-2 rounded-xl text-white"
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl text-slate-900 dark:text-white"
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-slate-400 uppercase text-[10px] font-bold block">Upload Tracking Reference Number</label>
+                    <label className="text-slate-500 dark:text-slate-400 uppercase text-[10px] font-bold block">Upload Tracking Reference Number</label>
                     <input
                       type="text"
                       placeholder="e.g. DHL-8819203912"
                       value={trackingNumber}
                       onChange={e => setTrackingNumber(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-700 px-3 py-2 rounded-xl text-emerald-400 font-bold"
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl text-emerald-600 dark:text-emerald-400 font-bold"
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-slate-400 uppercase text-[10px] font-bold block">Supplier Tax Invoice Number</label>
+                    <label className="text-slate-500 dark:text-slate-400 uppercase text-[10px] font-bold block">Supplier Tax Invoice Number</label>
                     <input
                       type="text"
                       placeholder="e.g. DELL-INV-9921"
                       value={invoiceNumber}
                       onChange={e => setInvoiceNumber(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-700 px-3 py-2 rounded-xl text-blue-300 font-bold"
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl text-blue-600 dark:text-blue-300 font-bold"
                     />
                   </div>
                 </div>
@@ -255,9 +255,9 @@ export default function SupplierPortalModal({
                 </div>
               </div>
             ) : (
-              <div className="bg-slate-950 p-12 rounded-3xl border border-slate-800 text-center space-y-3 text-slate-400">
-                <Truck className="w-10 h-10 mx-auto text-purple-400 opacity-60" />
-                <h4 className="font-bold text-sm text-slate-200">Select a Purchase Order</h4>
+              <div className="bg-slate-50 dark:bg-slate-950 p-12 rounded-3xl border border-slate-200 dark:border-slate-800 text-center space-y-3 text-slate-500 dark:text-slate-400">
+                <Truck className="w-10 h-10 mx-auto text-purple-500 opacity-60" />
+                <h4 className="font-bold text-sm text-slate-900 dark:text-slate-200">Select a Purchase Order</h4>
                 <p className="text-xs max-w-sm mx-auto">Select an issued PO from the left panel to update fulfillment status, upload tracking numbers, and submit tax invoices.</p>
               </div>
             )}

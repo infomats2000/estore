@@ -189,40 +189,40 @@ export default function AccountingFinanceManager({
     <div className="space-y-6">
       {/* Top Banner Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
-          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">NET OPERATING PROFIT</span>
-          <div className="text-2xl font-black text-emerald-400 mt-1">${pnlReport.netProfit.toLocaleString('en-AU', { minimumFractionDigits: 2 })}</div>
-          <span className="text-[11px] text-slate-400 mt-1 block">Gross Revenue: ${pnlReport.totalRevenue.toLocaleString('en-AU')}</span>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-xs">
+          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">NET OPERATING PROFIT</span>
+          <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">${pnlReport.netProfit.toLocaleString('en-AU', { minimumFractionDigits: 2 })}</div>
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block">Gross Revenue: ${pnlReport.totalRevenue.toLocaleString('en-AU')}</span>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
-          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">NET BALANCE SHEET EQUITY</span>
-          <div className="text-2xl font-black text-blue-400 mt-1">${balanceSheet.totalEquity.toLocaleString('en-AU', { minimumFractionDigits: 2 })}</div>
-          <span className="text-[11px] text-slate-400 mt-1 block">Total Assets: ${balanceSheet.totalAssets.toLocaleString('en-AU')}</span>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-xs">
+          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">NET BALANCE SHEET EQUITY</span>
+          <div className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">${balanceSheet.totalEquity.toLocaleString('en-AU', { minimumFractionDigits: 2 })}</div>
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block">Total Assets: ${balanceSheet.totalAssets.toLocaleString('en-AU')}</span>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
-          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">ATO ATO BAS (1A - 1B NET GST)</span>
-          <div className="text-2xl font-black text-purple-400 mt-1">${basReport.netGstPayable.toLocaleString('en-AU', { minimumFractionDigits: 2 })}</div>
-          <span className="text-[11px] text-slate-400 mt-1 block">GST Sales 1A: ${basReport.gstOnSales1A.toLocaleString('en-AU')}</span>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-xs">
+          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">ATO ATO BAS (1A - 1B NET GST)</span>
+          <div className="text-2xl font-black text-purple-600 dark:text-purple-400 mt-1">${basReport.netGstPayable.toLocaleString('en-AU', { minimumFractionDigits: 2 })}</div>
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block">GST Sales 1A: ${basReport.gstOnSales1A.toLocaleString('en-AU')}</span>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
-          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">TRIAL BALANCE STATUS</span>
-          <div className="text-xl font-black text-emerald-400 mt-1 flex items-center gap-1.5">
-            <ShieldCheck className="w-5 h-5 text-emerald-400" />
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-xs">
+          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">TRIAL BALANCE STATUS</span>
+          <div className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-1 flex items-center gap-1.5">
+            <ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
             <span>{trialBalance.isBalanced ? 'Balanced (100%)' : 'Imbalance Alert'}</span>
           </div>
-          <span className="text-[11px] text-slate-400 mt-1 block font-mono">Debits = Credits (${trialBalance.totalDebit.toLocaleString('en-AU')})</span>
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block font-mono">Debits = Credits (${trialBalance.totalDebit.toLocaleString('en-AU')})</span>
         </div>
       </div>
 
       {/* Navigation Tabs Bar */}
-      <div className="bg-slate-900 p-2 rounded-2xl border border-slate-800 flex flex-wrap gap-2">
+      <div className="bg-white dark:bg-slate-900 p-2 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-wrap gap-2 shadow-xs">
         <button
           onClick={() => setActiveTab('statements')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-            activeTab === 'statements' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+            activeTab === 'statements' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white'
           }`}
         >
           <FileText className="w-4 h-4" /> Financial Statements &amp; ATO BAS
@@ -231,7 +231,7 @@ export default function AccountingFinanceManager({
         <button
           onClick={() => setActiveTab('journals')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-            activeTab === 'journals' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+            activeTab === 'journals' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white'
           }`}
         >
           <BookOpen className="w-4 h-4" /> General Ledger &amp; Journals
@@ -240,7 +240,7 @@ export default function AccountingFinanceManager({
         <button
           onClick={() => setActiveTab('ap_ar')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-            activeTab === 'ap_ar' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+            activeTab === 'ap_ar' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white'
           }`}
         >
           <Layers className="w-4 h-4" /> AP &amp; AR Aging Ledgers
@@ -249,7 +249,7 @@ export default function AccountingFinanceManager({
         <button
           onClick={() => setActiveTab('assets')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-            activeTab === 'assets' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+            activeTab === 'assets' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white'
           }`}
         >
           <Building2 className="w-4 h-4" /> Fixed Assets &amp; Depreciation
@@ -258,7 +258,7 @@ export default function AccountingFinanceManager({
         <button
           onClick={() => setActiveTab('reconcile')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-            activeTab === 'reconcile' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+            activeTab === 'reconcile' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white'
           }`}
         >
           <Landmark className="w-4 h-4" /> Bank Feed Reconciliation
@@ -267,7 +267,7 @@ export default function AccountingFinanceManager({
         <button
           onClick={() => setActiveTab('loans')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-            activeTab === 'loans' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+            activeTab === 'loans' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white'
           }`}
         >
           <CreditCard className="w-4 h-4" /> Credit Cards &amp; Loans
@@ -278,48 +278,48 @@ export default function AccountingFinanceManager({
       {activeTab === 'statements' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Balance Sheet */}
-          <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-sm font-black uppercase text-slate-100 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-blue-400" /> Statement of Financial Position (Balance Sheet)
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-4 shadow-xs">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <h3 className="text-sm font-black uppercase text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Statement of Financial Position (Balance Sheet)
               </h3>
-              <span className="text-[10px] font-mono text-emerald-400 font-bold bg-emerald-950/60 px-2.5 py-1 rounded-lg border border-emerald-800">
+              <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1 rounded-lg border border-emerald-200 dark:border-emerald-800">
                 Assets = Liabilities + Equity
               </span>
             </div>
 
             <div className="space-y-3 font-mono text-xs">
               <div className="space-y-1">
-                <span className="font-bold text-slate-400 uppercase text-[10px] block">Current &amp; Non-Current Assets</span>
+                <span className="font-bold text-slate-500 dark:text-slate-400 uppercase text-[10px] block">Current &amp; Non-Current Assets</span>
                 {balanceSheet.currentAssets.concat(balanceSheet.nonCurrentAssets).map(a => (
-                  <div key={a.code} className="flex justify-between py-1 border-b border-slate-800/60 text-slate-300">
+                  <div key={a.code} className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800/60 text-slate-700 dark:text-slate-300">
                     <span>{a.code} - {a.name}</span>
-                    <strong className="text-emerald-400">${a.amount.toLocaleString('en-AU', { minimumFractionDigits: 2 })}</strong>
+                    <strong className="text-emerald-600 dark:text-emerald-400">${a.amount.toLocaleString('en-AU', { minimumFractionDigits: 2 })}</strong>
                   </div>
                 ))}
-                <div className="flex justify-between py-2 border-t-2 border-slate-700 text-slate-100 font-black">
+                <div className="flex justify-between py-2 border-t-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-black">
                   <span>TOTAL ASSETS</span>
-                  <span className="text-emerald-400">${balanceSheet.totalAssets.toLocaleString('en-AU', { minimumFractionDigits: 2 })}</span>
+                  <span className="text-emerald-600 dark:text-emerald-400">${balanceSheet.totalAssets.toLocaleString('en-AU', { minimumFractionDigits: 2 })}</span>
                 </div>
               </div>
 
               <div className="space-y-1 pt-2">
-                <span className="font-bold text-slate-400 uppercase text-[10px] block">Liabilities &amp; Net Equity</span>
+                <span className="font-bold text-slate-500 dark:text-slate-400 uppercase text-[10px] block">Liabilities &amp; Net Equity</span>
                 {balanceSheet.currentLiabilities.concat(balanceSheet.nonCurrentLiabilities).map(l => (
-                  <div key={l.code} className="flex justify-between py-1 border-b border-slate-800/60 text-slate-300">
+                  <div key={l.code} className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800/60 text-slate-700 dark:text-slate-300">
                     <span>{l.code} - {l.name}</span>
-                    <strong className="text-rose-400">${l.amount.toLocaleString('en-AU', { minimumFractionDigits: 2 })}</strong>
+                    <strong className="text-rose-600 dark:text-rose-400">${l.amount.toLocaleString('en-AU', { minimumFractionDigits: 2 })}</strong>
                   </div>
                 ))}
                 {balanceSheet.equity.map(e => (
-                  <div key={e.code} className="flex justify-between py-1 border-b border-slate-800/60 text-slate-300">
+                  <div key={e.code} className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800/60 text-slate-700 dark:text-slate-300">
                     <span>{e.code} - {e.name}</span>
-                    <strong className="text-blue-400">${e.amount.toLocaleString('en-AU', { minimumFractionDigits: 2 })}</strong>
+                    <strong className="text-blue-600 dark:text-blue-400">${e.amount.toLocaleString('en-AU', { minimumFractionDigits: 2 })}</strong>
                   </div>
                 ))}
-                <div className="flex justify-between py-2 border-t-2 border-slate-700 text-slate-100 font-black">
+                <div className="flex justify-between py-2 border-t-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-black">
                   <span>TOTAL LIABILITIES &amp; EQUITY</span>
-                  <span className="text-blue-400">${balanceSheet.totalLiabilitiesAndEquity.toLocaleString('en-AU', { minimumFractionDigits: 2 })}</span>
+                  <span className="text-blue-600 dark:text-blue-400">${balanceSheet.totalLiabilitiesAndEquity.toLocaleString('en-AU', { minimumFractionDigits: 2 })}</span>
                 </div>
               </div>
             </div>
@@ -328,66 +328,66 @@ export default function AccountingFinanceManager({
           {/* Profit & Loss & ATO BAS Summary */}
           <div className="space-y-6">
             {/* Profit & Loss */}
-            <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800 space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                <h3 className="text-sm font-black uppercase text-slate-100 flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-emerald-400" /> Income Statement (Profit &amp; Loss)
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-4 shadow-xs">
+              <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+                <h3 className="text-sm font-black uppercase text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> Income Statement (Profit &amp; Loss)
                 </h3>
-                <span className="text-xs font-mono font-bold text-emerald-400">Net Profit: ${pnlReport.netProfit.toLocaleString('en-AU')}</span>
+                <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">Net Profit: ${pnlReport.netProfit.toLocaleString('en-AU')}</span>
               </div>
 
               <div className="space-y-2 font-mono text-xs">
-                <div className="flex justify-between py-1 text-slate-300">
+                <div className="flex justify-between py-1 text-slate-700 dark:text-slate-300">
                   <span>Total Sales Revenue</span>
-                  <strong className="text-emerald-400">${pnlReport.totalRevenue.toLocaleString('en-AU')}</strong>
+                  <strong className="text-emerald-600 dark:text-emerald-400">${pnlReport.totalRevenue.toLocaleString('en-AU')}</strong>
                 </div>
-                <div className="flex justify-between py-1 text-slate-300">
+                <div className="flex justify-between py-1 text-slate-700 dark:text-slate-300">
                   <span>Cost of Goods Sold (COGS)</span>
-                  <strong className="text-rose-400">-${pnlReport.totalCOGS.toLocaleString('en-AU')}</strong>
+                  <strong className="text-rose-600 dark:text-rose-400">-${pnlReport.totalCOGS.toLocaleString('en-AU')}</strong>
                 </div>
-                <div className="flex justify-between py-1.5 border-t border-b border-slate-800 text-slate-100 font-bold">
+                <div className="flex justify-between py-1.5 border-t border-b border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 font-bold">
                   <span>GROSS PROFIT</span>
-                  <span className="text-blue-400">${pnlReport.grossProfit.toLocaleString('en-AU')}</span>
+                  <span className="text-blue-600 dark:text-blue-400">${pnlReport.grossProfit.toLocaleString('en-AU')}</span>
                 </div>
-                <div className="flex justify-between py-1 text-slate-300">
+                <div className="flex justify-between py-1 text-slate-700 dark:text-slate-300">
                   <span>Total Operating Expenses (Opex)</span>
-                  <strong className="text-rose-400">-${pnlReport.totalExpenses.toLocaleString('en-AU')}</strong>
+                  <strong className="text-rose-600 dark:text-rose-400">-${pnlReport.totalExpenses.toLocaleString('en-AU')}</strong>
                 </div>
-                <div className="flex justify-between py-2 border-t-2 border-slate-700 text-slate-100 font-black">
+                <div className="flex justify-between py-2 border-t-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-black">
                   <span>NET OPERATING PROFIT</span>
-                  <span className="text-emerald-400">${pnlReport.netProfit.toLocaleString('en-AU')}</span>
+                  <span className="text-emerald-600 dark:text-emerald-400">${pnlReport.netProfit.toLocaleString('en-AU')}</span>
                 </div>
               </div>
             </div>
 
             {/* ATO BAS & GST Report */}
-            <div className="bg-gradient-to-b from-purple-950/40 to-slate-900 p-6 rounded-3xl border border-purple-900/50 space-y-4">
-              <div className="flex items-center justify-between border-b border-purple-800/50 pb-3">
-                <h3 className="text-sm font-black uppercase text-purple-200 flex items-center gap-2">
-                  <Calculator className="w-4 h-4 text-purple-400" /> Australian ATO Business Activity Statement (BAS)
+            <div className="bg-gradient-to-b from-purple-50 to-white dark:from-purple-950/40 dark:to-slate-900 p-6 rounded-3xl border border-purple-200 dark:border-purple-900/50 space-y-4 shadow-xs">
+              <div className="flex items-center justify-between border-b border-purple-200 dark:border-purple-800/50 pb-3">
+                <h3 className="text-sm font-black uppercase text-purple-900 dark:text-purple-200 flex items-center gap-2">
+                  <Calculator className="w-4 h-4 text-purple-600 dark:text-purple-400" /> Australian ATO Business Activity Statement (BAS)
                 </h3>
-                <span className="text-[10px] font-mono text-purple-300 font-bold">{basReport.reportingPeriod}</span>
+                <span className="text-[10px] font-mono text-purple-700 dark:text-purple-300 font-bold">{basReport.reportingPeriod}</span>
               </div>
 
               <div className="grid grid-cols-2 gap-3 font-mono text-xs">
-                <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800">
-                  <span className="text-[10px] text-slate-400 block">G1 TOTAL SALES</span>
-                  <strong className="text-slate-100 text-sm">${basReport.totalSalesG1.toLocaleString('en-AU', { minimumFractionDigits: 2 })}</strong>
+                <div className="bg-white dark:bg-slate-950 p-3 rounded-2xl border border-purple-100 dark:border-slate-800">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block">G1 TOTAL SALES</span>
+                  <strong className="text-slate-900 dark:text-slate-100 text-sm">${basReport.totalSalesG1.toLocaleString('en-AU', { minimumFractionDigits: 2 })}</strong>
                 </div>
 
-                <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800">
-                  <span className="text-[10px] text-slate-400 block">1A GST COLLECTED</span>
-                  <strong className="text-purple-300 text-sm">${basReport.gstOnSales1A.toLocaleString('en-AU', { minimumFractionDigits: 2 })}</strong>
+                <div className="bg-white dark:bg-slate-950 p-3 rounded-2xl border border-purple-100 dark:border-slate-800">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block">1A GST COLLECTED</span>
+                  <strong className="text-purple-700 dark:text-purple-300 text-sm">${basReport.gstOnSales1A.toLocaleString('en-AU', { minimumFractionDigits: 2 })}</strong>
                 </div>
 
-                <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800">
-                  <span className="text-[10px] text-slate-400 block">1B GST CLAIMABLE ON PURCHASES</span>
-                  <strong className="text-blue-300 text-sm">${basReport.gstOnPurchases1B.toLocaleString('en-AU', { minimumFractionDigits: 2 })}</strong>
+                <div className="bg-white dark:bg-slate-950 p-3 rounded-2xl border border-purple-100 dark:border-slate-800">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block">1B GST CLAIMABLE ON PURCHASES</span>
+                  <strong className="text-blue-600 dark:text-blue-300 text-sm">${basReport.gstOnPurchases1B.toLocaleString('en-AU', { minimumFractionDigits: 2 })}</strong>
                 </div>
 
-                <div className="bg-slate-950 p-3 rounded-2xl border border-purple-800/60">
-                  <span className="text-[10px] text-purple-400 font-bold block">NET GST PAYABLE TO ATO</span>
-                  <strong className="text-emerald-400 text-sm">${basReport.netGstPayable.toLocaleString('en-AU', { minimumFractionDigits: 2 })}</strong>
+                <div className="bg-white dark:bg-slate-950 p-3 rounded-2xl border border-purple-200 dark:border-purple-800/60">
+                  <span className="text-[10px] text-purple-700 dark:text-purple-400 font-bold block">NET GST PAYABLE TO ATO</span>
+                  <strong className="text-emerald-600 dark:text-emerald-400 text-sm">${basReport.netGstPayable.toLocaleString('en-AU', { minimumFractionDigits: 2 })}</strong>
                 </div>
               </div>
             </div>
@@ -399,7 +399,7 @@ export default function AccountingFinanceManager({
       {activeTab === 'journals' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-black uppercase tracking-wider text-slate-200">Double-Entry General Ledger &amp; Journal Records</h3>
+            <h3 className="text-sm font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">Double-Entry General Ledger &amp; Journal Records</h3>
             <button
               onClick={() => setShowJnlModal(true)}
               className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-lg shadow-blue-600/20 flex items-center gap-2"
@@ -408,33 +408,33 @@ export default function AccountingFinanceManager({
             </button>
           </div>
 
-          <div className="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden">
-            <div className="p-4 bg-slate-950 border-b border-slate-800 flex justify-between font-mono text-xs text-slate-400">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs">
+            <div className="p-4 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 flex justify-between font-mono text-xs text-slate-500 dark:text-slate-400">
               <span>JOURNAL ENTRY AUDIT TRAIL</span>
               <span>DOUBLE-ENTRY STATUS: BALANCED</span>
             </div>
 
-            <div className="divide-y divide-slate-800">
+            <div className="divide-y divide-slate-200 dark:divide-slate-800">
               {journals.map(jnl => (
                 <div key={jnl.id} className="p-5 space-y-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-3">
-                      <span className="px-2.5 py-1 bg-blue-950 text-blue-300 text-xs font-mono font-bold rounded-lg border border-blue-800">{jnl.id}</span>
-                      <span className="text-xs font-bold text-slate-200">{jnl.description}</span>
+                      <span className="px-2.5 py-1 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 text-xs font-mono font-bold rounded-lg border border-blue-200 dark:border-blue-800">{jnl.id}</span>
+                      <span className="text-xs font-bold text-slate-900 dark:text-slate-200">{jnl.description}</span>
                     </div>
-                    <div className="text-right font-mono text-xs text-slate-400">
+                    <div className="text-right font-mono text-xs text-slate-500 dark:text-slate-400">
                       <span>Ref: {jnl.reference} &bull; {jnl.date}</span>
                     </div>
                   </div>
 
                   {/* Lines Table */}
-                  <div className="bg-slate-950 rounded-2xl border border-slate-800/80 p-3 space-y-1 font-mono text-xs">
+                  <div className="bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800/80 p-3 space-y-1 font-mono text-xs">
                     {jnl.lines.map((l, idx) => (
-                      <div key={idx} className="flex justify-between text-slate-300 py-0.5">
+                      <div key={idx} className="flex justify-between text-slate-700 dark:text-slate-300 py-0.5">
                         <span>{l.accountCode} - {l.accountName}</span>
                         <div className="flex gap-6">
-                          <span className="w-24 text-right text-emerald-400 font-bold">{l.debit > 0 ? `$${l.debit.toFixed(2)} DR` : '-'}</span>
-                          <span className="w-24 text-right text-blue-400 font-bold">{l.credit > 0 ? `$${l.credit.toFixed(2)} CR` : '-'}</span>
+                          <span className="w-24 text-right text-emerald-600 dark:text-emerald-400 font-bold">{l.debit > 0 ? `$${l.debit.toFixed(2)} DR` : '-'}</span>
+                          <span className="w-24 text-right text-blue-600 dark:text-blue-400 font-bold">{l.credit > 0 ? `$${l.credit.toFixed(2)} CR` : '-'}</span>
                         </div>
                       </div>
                     ))}
@@ -449,50 +449,50 @@ export default function AccountingFinanceManager({
       {/* TAB 3: AP & AR AGING */}
       {activeTab === 'ap_ar' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800 space-y-4">
-            <h3 className="text-sm font-black uppercase text-slate-100 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-emerald-400" /> Accounts Receivable (AR Customer Debtors)
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-4 shadow-xs">
+            <h3 className="text-sm font-black uppercase text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> Accounts Receivable (AR Customer Debtors)
             </h3>
             <div className="space-y-2 font-mono text-xs">
-              <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800 flex justify-between">
-                <span className="text-slate-400">Current (0-30 Days):</span>
-                <strong className="text-emerald-400">$18,450.00</strong>
+              <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 flex justify-between">
+                <span className="text-slate-600 dark:text-slate-400">Current (0-30 Days):</span>
+                <strong className="text-emerald-600 dark:text-emerald-400">$18,450.00</strong>
               </div>
-              <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800 flex justify-between">
-                <span className="text-slate-400">31 - 60 Days Overdue:</span>
-                <strong className="text-amber-400">$6,800.00</strong>
+              <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 flex justify-between">
+                <span className="text-slate-600 dark:text-slate-400">31 - 60 Days Overdue:</span>
+                <strong className="text-amber-600 dark:text-amber-400">$6,800.00</strong>
               </div>
-              <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800 flex justify-between">
-                <span className="text-slate-400">61 - 90+ Days Overdue:</span>
-                <strong className="text-rose-400">$3,200.00</strong>
+              <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 flex justify-between">
+                <span className="text-slate-600 dark:text-slate-400">61 - 90+ Days Overdue:</span>
+                <strong className="text-rose-600 dark:text-rose-400">$3,200.00</strong>
               </div>
-              <div className="flex justify-between pt-2 text-slate-100 font-black border-t border-slate-800">
+              <div className="flex justify-between pt-2 text-slate-900 dark:text-slate-100 font-black border-t border-slate-200 dark:border-slate-800">
                 <span>TOTAL AR OUTSTANDING</span>
-                <span className="text-emerald-400">$28,450.00</span>
+                <span className="text-emerald-600 dark:text-emerald-400">$28,450.00</span>
               </div>
             </div>
           </div>
 
-          <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800 space-y-4">
-            <h3 className="text-sm font-black uppercase text-slate-100 flex items-center gap-2">
-              <TrendingDown className="w-4 h-4 text-rose-400" /> Accounts Payable (AP Supplier Creditors)
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-4 shadow-xs">
+            <h3 className="text-sm font-black uppercase text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <TrendingDown className="w-4 h-4 text-rose-600 dark:text-rose-400" /> Accounts Payable (AP Supplier Creditors)
             </h3>
             <div className="space-y-2 font-mono text-xs">
-              <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800 flex justify-between">
-                <span className="text-slate-400">Current (0-30 Days):</span>
-                <strong className="text-emerald-400">$12,120.00</strong>
+              <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 flex justify-between">
+                <span className="text-slate-600 dark:text-slate-400">Current (0-30 Days):</span>
+                <strong className="text-emerald-600 dark:text-emerald-400">$12,120.00</strong>
               </div>
-              <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800 flex justify-between">
-                <span className="text-slate-400">31 - 60 Days Due:</span>
-                <strong className="text-amber-400">$4,200.00</strong>
+              <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 flex justify-between">
+                <span className="text-slate-600 dark:text-slate-400">31 - 60 Days Due:</span>
+                <strong className="text-amber-600 dark:text-amber-400">$4,200.00</strong>
               </div>
-              <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800 flex justify-between">
-                <span className="text-slate-400">61 - 90+ Days Due:</span>
-                <strong className="text-rose-400">$2,000.00</strong>
+              <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 flex justify-between">
+                <span className="text-slate-600 dark:text-slate-400">61 - 90+ Days Due:</span>
+                <strong className="text-rose-600 dark:text-rose-400">$2,000.00</strong>
               </div>
-              <div className="flex justify-between pt-2 text-slate-100 font-black border-t border-slate-800">
+              <div className="flex justify-between pt-2 text-slate-900 dark:text-slate-100 font-black border-t border-slate-200 dark:border-slate-800">
                 <span>TOTAL AP DUE</span>
-                <span className="text-rose-400">$18,320.00</span>
+                <span className="text-rose-600 dark:text-rose-400">$18,320.00</span>
               </div>
             </div>
           </div>
@@ -503,7 +503,7 @@ export default function AccountingFinanceManager({
       {activeTab === 'assets' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-black uppercase text-slate-200">Fixed Asset Register &amp; Depreciation Schedules</h3>
+            <h3 className="text-sm font-black uppercase text-slate-800 dark:text-slate-200">Fixed Asset Register &amp; Depreciation Schedules</h3>
             <button
               onClick={handleRunDepreciation}
               className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-lg shadow-emerald-600/20 flex items-center gap-2"
@@ -514,21 +514,21 @@ export default function AccountingFinanceManager({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {assets.map(ast => (
-              <div key={ast.id} className="bg-slate-900 p-5 rounded-3xl border border-slate-800 space-y-3">
+              <div key={ast.id} className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-3 shadow-xs">
                 <div className="flex justify-between items-start">
                   <div>
-                    <span className="px-2 py-0.5 text-[10px] font-mono font-bold uppercase bg-blue-950 text-blue-300 rounded border border-blue-800">{ast.category}</span>
-                    <h4 className="font-bold text-sm text-slate-100 mt-1">{ast.assetName}</h4>
-                    <span className="text-[11px] font-mono text-slate-400">{ast.assetTag} &bull; Purchased {ast.purchaseDate}</span>
+                    <span className="px-2 py-0.5 text-[10px] font-mono font-bold uppercase bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 rounded border border-blue-200 dark:border-blue-800">{ast.category}</span>
+                    <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100 mt-1">{ast.assetName}</h4>
+                    <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">{ast.assetTag} &bull; Purchased {ast.purchaseDate}</span>
                   </div>
-                  <span className="text-sm font-mono font-black text-emerald-400">${ast.bookValue.toLocaleString('en-AU')} Book Val</span>
+                  <span className="text-sm font-mono font-black text-emerald-600 dark:text-emerald-400">${ast.bookValue.toLocaleString('en-AU')} Book Val</span>
                 </div>
 
-                <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800/80 font-mono text-xs grid grid-cols-2 gap-2 text-slate-400">
-                  <div>Cost Price: <strong className="text-slate-200">${ast.costPrice.toLocaleString('en-AU')}</strong></div>
-                  <div>Salvage Val: <strong className="text-slate-200">${ast.salvageValue.toLocaleString('en-AU')}</strong></div>
-                  <div>Acc. Dep: <strong className="text-rose-400">-${ast.accumulatedDepreciation.toLocaleString('en-AU')}</strong></div>
-                  <div>Method: <strong className="text-blue-300">{ast.depreciationMethod}</strong></div>
+                <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-200 dark:border-slate-800/80 font-mono text-xs grid grid-cols-2 gap-2 text-slate-600 dark:text-slate-400">
+                  <div>Cost Price: <strong className="text-slate-900 dark:text-slate-200">${ast.costPrice.toLocaleString('en-AU')}</strong></div>
+                  <div>Salvage Val: <strong className="text-slate-900 dark:text-slate-200">${ast.salvageValue.toLocaleString('en-AU')}</strong></div>
+                  <div>Acc. Dep: <strong className="text-rose-600 dark:text-rose-400">-${ast.accumulatedDepreciation.toLocaleString('en-AU')}</strong></div>
+                  <div>Method: <strong className="text-blue-600 dark:text-blue-300">{ast.depreciationMethod}</strong></div>
                 </div>
               </div>
             ))}
@@ -539,23 +539,23 @@ export default function AccountingFinanceManager({
       {/* TAB 5: BANK RECONCILIATION */}
       {activeTab === 'reconcile' && (
         <div className="space-y-4">
-          <h3 className="text-sm font-black uppercase text-slate-200">Bank Statement Feeds &amp; Reconciliation Matcher</h3>
+          <h3 className="text-sm font-black uppercase text-slate-800 dark:text-slate-200">Bank Statement Feeds &amp; Reconciliation Matcher</h3>
 
-          <div className="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden divide-y divide-slate-800">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden divide-y divide-slate-200 dark:divide-slate-800 shadow-xs">
             {bankItems.map(item => (
               <div key={item.id} className="p-4 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <div className={`p-2.5 rounded-xl border ${item.type === 'Deposit' ? 'bg-emerald-950 border-emerald-800 text-emerald-400' : 'bg-rose-950 border-rose-800 text-rose-400'}`}>
+                  <div className={`p-2.5 rounded-xl border ${item.type === 'Deposit' ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-950 dark:border-emerald-800 dark:text-emerald-400' : 'bg-rose-50 border-rose-200 text-rose-700 dark:bg-rose-950 dark:border-rose-800 dark:text-rose-400'}`}>
                     {item.type === 'Deposit' ? <ArrowDownRight className="w-5 h-5" /> : <ArrowUpRight className="w-5 h-5" />}
                   </div>
                   <div>
-                    <h4 className="font-bold text-xs text-slate-200">{item.description}</h4>
-                    <span className="text-[11px] font-mono text-slate-400">{item.date} &bull; CBA Account</span>
+                    <h4 className="font-bold text-xs text-slate-900 dark:text-slate-200">{item.description}</h4>
+                    <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">{item.date} &bull; CBA Account</span>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-4">
-                  <span className={`font-mono text-sm font-black ${item.type === 'Deposit' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  <span className={`font-mono text-sm font-black ${item.type === 'Deposit' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                     {item.type === 'Deposit' ? '+' : '-'}${item.amount.toFixed(2)}
                   </span>
                   <button
@@ -566,7 +566,7 @@ export default function AccountingFinanceManager({
                     }}
                     className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-all ${
                       item.matched
-                        ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800'
                         : 'bg-blue-600 hover:bg-blue-500 text-white border-blue-500 shadow-md'
                     }`}
                   >
@@ -583,24 +583,24 @@ export default function AccountingFinanceManager({
       {activeTab === 'loans' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {loans.map(loan => (
-            <div key={loan.id} className="bg-slate-900 p-6 rounded-3xl border border-slate-800 space-y-4">
-              <div className="flex justify-between items-start border-b border-slate-800 pb-3">
+            <div key={loan.id} className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-4 shadow-xs">
+              <div className="flex justify-between items-start border-b border-slate-200 dark:border-slate-800 pb-3">
                 <div>
-                  <span className="px-2.5 py-0.5 text-[10px] font-mono font-bold uppercase bg-purple-950 text-purple-300 rounded border border-purple-800">COMMERCIAL LOAN</span>
-                  <h4 className="font-bold text-sm text-slate-100 mt-1">{loan.lenderName}</h4>
-                  <span className="text-[11px] font-mono text-slate-400">{loan.accountNumber}</span>
+                  <span className="px-2.5 py-0.5 text-[10px] font-mono font-bold uppercase bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300 rounded border border-purple-200 dark:border-purple-800">COMMERCIAL LOAN</span>
+                  <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100 mt-1">{loan.lenderName}</h4>
+                  <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">{loan.accountNumber}</span>
                 </div>
-                <span className="text-base font-mono font-black text-purple-400">${loan.remainingBalance.toLocaleString('en-AU')} Owing</span>
+                <span className="text-base font-mono font-black text-purple-600 dark:text-purple-400">${loan.remainingBalance.toLocaleString('en-AU')} Owing</span>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 font-mono text-xs text-slate-400">
-                <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+              <div className="grid grid-cols-2 gap-3 font-mono text-xs text-slate-600 dark:text-slate-400">
+                <div className="bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800">
                   <span>Interest Rate:</span>
-                  <strong className="text-slate-200 block text-sm">{loan.interestRatePercent}% p.a.</strong>
+                  <strong className="text-slate-900 dark:text-slate-200 block text-sm">{loan.interestRatePercent}% p.a.</strong>
                 </div>
-                <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                <div className="bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800">
                   <span>Monthly Repayment:</span>
-                  <strong className="text-emerald-400 block text-sm">${loan.monthlyPayment.toLocaleString('en-AU')}</strong>
+                  <strong className="text-emerald-600 dark:text-emerald-400 block text-sm">${loan.monthlyPayment.toLocaleString('en-AU')}</strong>
                 </div>
               </div>
             </div>
@@ -610,9 +610,9 @@ export default function AccountingFinanceManager({
 
       {/* Post Journal Modal Sub-Overlay */}
       {showJnlModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 animate-fade-in">
-          <div className="bg-slate-900 w-full max-w-xl rounded-3xl border border-slate-800 p-6 space-y-4 text-white">
-            <h3 className="font-black text-sm uppercase text-slate-100 border-b border-slate-800 pb-3">Post Double-Entry Journal Record</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-xl rounded-3xl border border-slate-200 dark:border-slate-800 p-6 space-y-4 text-slate-900 dark:text-white shadow-2xl">
+            <h3 className="font-black text-sm uppercase text-slate-900 dark:text-slate-100 border-b border-slate-200 dark:border-slate-800 pb-3">Post Double-Entry Journal Record</h3>
 
             <div className="space-y-3">
               <input
@@ -620,17 +620,17 @@ export default function AccountingFinanceManager({
                 placeholder="Journal Reference (e.g. ADJ-0091)"
                 value={jnlRef}
                 onChange={e => setJnlRef(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 px-3 py-2 text-xs rounded-xl text-white"
+                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-3 py-2 text-xs rounded-xl text-slate-900 dark:text-white"
               />
               <input
                 type="text"
                 placeholder="Journal Description"
                 value={jnlDesc}
                 onChange={e => setJnlDesc(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 px-3 py-2 text-xs rounded-xl text-white"
+                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-3 py-2 text-xs rounded-xl text-slate-900 dark:text-white"
               />
 
-              <div className="space-y-2 pt-2 border-t border-slate-800 font-mono text-xs">
+              <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-800 font-mono text-xs">
                 {jnlLines.map((l, idx) => (
                   <div key={idx} className="flex gap-2 items-center">
                     <select
@@ -640,7 +640,7 @@ export default function AccountingFinanceManager({
                         copy[idx].accountCode = e.target.value;
                         setJnlLines(copy);
                       }}
-                      className="flex-1 bg-slate-950 border border-slate-800 px-2 py-1.5 text-xs rounded-xl text-slate-200"
+                      className="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-2 py-1.5 text-xs rounded-xl text-slate-900 dark:text-slate-200"
                     >
                       {chartOfAccounts.map(a => (
                         <option key={a.code} value={a.code}>{a.code} - {a.name}</option>
@@ -656,7 +656,7 @@ export default function AccountingFinanceManager({
                         copy[idx].debit = e.target.value;
                         setJnlLines(copy);
                       }}
-                      className="w-24 bg-slate-950 border border-slate-800 px-2 py-1.5 text-xs rounded-xl text-emerald-400"
+                      className="w-24 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-2 py-1.5 text-xs rounded-xl text-emerald-600 dark:text-emerald-400 font-bold"
                     />
 
                     <input
@@ -668,7 +668,7 @@ export default function AccountingFinanceManager({
                         copy[idx].credit = e.target.value;
                         setJnlLines(copy);
                       }}
-                      className="w-24 bg-slate-950 border border-slate-800 px-2 py-1.5 text-xs rounded-xl text-blue-400"
+                      className="w-24 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-2 py-1.5 text-xs rounded-xl text-blue-600 dark:text-blue-400 font-bold"
                     />
                   </div>
                 ))}
@@ -686,7 +686,7 @@ export default function AccountingFinanceManager({
               <button
                 type="button"
                 onClick={() => setShowJnlModal(false)}
-                className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold text-xs"
+                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-xs"
               >
                 Cancel
               </button>
