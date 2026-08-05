@@ -266,7 +266,21 @@ export default function DashboardView({
     return 'metrics';
   });
   const [currentSimulatedUser, setCurrentSimulatedUser] = useState(DEFAULT_STAFF_PROFILES[0]);
+  const [tabHistory, setTabHistory] = useState<string[]>(['metrics']);
   const [hoverMenu, setHoverMenu] = useState<'sales' | 'operations' | null>(null);
+
+  const handleGoBack = () => {
+    if (tabHistory.length > 1) {
+      const updated = [...tabHistory];
+      updated.pop(); // Remove current
+      const prevTab = updated[updated.length - 1];
+      setTabHistory(updated);
+      setActiveTab(prevTab as any);
+      try { window.location.hash = prevTab; } catch (e) {}
+    } else {
+      window.history.back();
+    }
+  };
 
   // INVOICING & PRINTING SYSTEM STATE
 
@@ -1849,6 +1863,23 @@ export default function DashboardView({
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 text-left" id="dashboard-view-main">
       
+      {/* UNIVERSAL BACK BUTTON & WORKSPACE BREADCRUMB BAR */}
+      <div className="mb-4 bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-white shadow-md">
+        <button
+          type="button"
+          onClick={handleGoBack}
+          className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-blue-400 hover:text-blue-300 font-mono font-bold text-xs rounded-xl flex items-center gap-2 border border-slate-700 transition-all shadow-sm active:scale-95"
+          title="Click to return to previous page or workspace"
+        >
+          <ArrowLeft className="w-4 h-4" /> ← Back to Previous Page
+        </button>
+
+        <div className="font-mono text-[11px] text-slate-400 flex items-center gap-2">
+          <span className="text-slate-500 uppercase font-bold">Active Module Workspace:</span>
+          <span className="px-2.5 py-0.5 bg-blue-950 text-blue-300 rounded border border-blue-800 font-bold uppercase">{activeTab}</span>
+        </div>
+      </div>
+
       {/* HORIZONTAL TOP NAVIGATION */}
       <div className="mb-8 space-y-4">
         {/* Store Operations Group */}
@@ -2010,8 +2041,12 @@ export default function DashboardView({
         <div className="space-y-8" id="dashboard-tab-metrics">
           {/* Top Scorecard Grid - Bootstrap Colorful Palettes */}
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
-            {/* Total Revenue card - Emerald + Light Grey */}
-            <div className="rounded-lg bg-gradient-to-br from-slate-100 via-slate-50 to-emerald-50 text-slate-950 p-3 shadow-lg shadow-emerald-300/60 border-2 border-teal-400 transform transition-transform hover:-translate-y-0.5">
+            {/* Total Revenue card - Commercial Sales */}
+            <div 
+              onClick={() => setActiveTab('commercial-sales')}
+              className="rounded-lg bg-gradient-to-br from-slate-100 via-slate-50 to-emerald-50 text-slate-950 p-3 shadow-lg shadow-emerald-300/60 border-2 border-teal-400 transform transition-all cursor-pointer hover:scale-[1.03] hover:shadow-2xl"
+              title="Click to view Commercial Sales & Orders"
+            >
               <div className="flex justify-between items-start">
                 <span className="font-mono text-[9px] uppercase font-bold tracking-widest text-teal-800">Gross Revenue</span>
                 <div className="bg-emerald-200 p-1.5 rounded-md">
@@ -2023,14 +2058,18 @@ export default function DashboardView({
               </div>
               <div className="mt-2 pt-1.5 border-t border-emerald-300 flex items-center justify-between text-[9px] font-mono font-bold uppercase tracking-wider text-slate-700">
                 <span className="flex items-center gap-1">
-                  <ArrowUpRight className="h-2.5 w-2.5 text-emerald-600" /> Active Store
+                  <ArrowUpRight className="h-2.5 w-2.5 text-emerald-600" /> Commercial Sales
                 </span>
-                <span className="bg-emerald-200 px-2 py-0.5 rounded-full text-emerald-900">LIVE</span>
+                <span className="bg-emerald-200 px-2 py-0.5 rounded-full text-emerald-900 font-black">VIEW DETAILS ➔</span>
               </div>
             </div>
 
-            {/* Total Sales count card - Emerald + Light Grey */}
-            <div className="rounded-lg bg-gradient-to-br from-slate-100 via-slate-50 to-emerald-50 text-slate-950 p-3 shadow-lg shadow-emerald-300/60 border-2 border-blue-400 transform transition-transform hover:-translate-y-0.5">
+            {/* Total Sales count card - Orders */}
+            <div 
+              onClick={() => setActiveTab('orders')}
+              className="rounded-lg bg-gradient-to-br from-slate-100 via-slate-50 to-emerald-50 text-slate-950 p-3 shadow-lg shadow-emerald-300/60 border-2 border-blue-400 transform transition-all cursor-pointer hover:scale-[1.03] hover:shadow-2xl"
+              title="Click to view Orders Directory"
+            >
               <div className="flex justify-between items-start">
                 <span className="font-mono text-[9px] uppercase font-bold tracking-widest text-blue-800">Checkouts</span>
                 <div className="bg-emerald-200 p-1.5 rounded-md">
@@ -2042,12 +2081,16 @@ export default function DashboardView({
               </div>
               <div className="mt-2 pt-1.5 border-t border-emerald-300 flex items-center justify-between text-[9px] font-mono font-bold uppercase tracking-wider text-slate-700">
                 <span>Realtime Pipeline</span>
-                <span className="bg-emerald-200 px-2 py-0.5 rounded-full text-emerald-900">100% SUCCESS</span>
+                <span className="bg-blue-200 px-2 py-0.5 rounded-full text-blue-900 font-black">VIEW ORDERS ➔</span>
               </div>
             </div>
 
-            {/* Average Order Value card - Emerald + Light Grey */}
-            <div className="rounded-lg bg-gradient-to-br from-slate-100 via-slate-50 to-emerald-50 text-slate-950 p-3 shadow-lg shadow-emerald-300/60 border-2 border-violet-400 transform transition-transform hover:-translate-y-0.5">
+            {/* Average Order Value card - Finance */}
+            <div 
+              onClick={() => setActiveTab('finance')}
+              className="rounded-lg bg-gradient-to-br from-slate-100 via-slate-50 to-emerald-50 text-slate-950 p-3 shadow-lg shadow-emerald-300/60 border-2 border-violet-400 transform transition-all cursor-pointer hover:scale-[1.03] hover:shadow-2xl"
+              title="Click to view Financial Accounting"
+            >
               <div className="flex justify-between items-start">
                 <span className="font-mono text-[9px] uppercase font-bold tracking-widest text-violet-800">Avg Order Value</span>
                 <div className="bg-emerald-200 p-1.5 rounded-md">
@@ -2059,12 +2102,16 @@ export default function DashboardView({
               </div>
               <div className="mt-2 pt-1.5 border-t border-emerald-300 flex items-center justify-between text-[9px] font-mono font-bold uppercase tracking-wider text-slate-700">
                 <span>Cart Density</span>
-                <span className="bg-emerald-200 px-2 py-0.5 rounded-full text-emerald-900">INDEX</span>
+                <span className="bg-violet-200 px-2 py-0.5 rounded-full text-violet-900 font-black">FINANCE ➔</span>
               </div>
             </div>
 
-            {/* Catalog sizes - Emerald + Light Grey */}
-            <div className="rounded-lg bg-gradient-to-br from-slate-100 via-slate-50 to-emerald-50 text-slate-950 p-3 shadow-lg shadow-emerald-300/60 border-2 border-amber-400 transform transition-transform hover:-translate-y-0.5">
+            {/* Catalog sizes - Products */}
+            <div 
+              onClick={() => setActiveTab('products')}
+              className="rounded-lg bg-gradient-to-br from-slate-100 via-slate-50 to-emerald-50 text-slate-950 p-3 shadow-lg shadow-emerald-300/60 border-2 border-amber-400 transform transition-all cursor-pointer hover:scale-[1.03] hover:shadow-2xl"
+              title="Click to view Products Catalog"
+            >
               <div className="flex justify-between items-start">
                 <span className="font-mono text-[9px] uppercase font-bold tracking-widest text-amber-800">Store Products</span>
                 <div className="bg-emerald-200 p-1.5 rounded-md">
@@ -2076,12 +2123,16 @@ export default function DashboardView({
               </div>
               <div className="mt-2 pt-1.5 border-t border-emerald-300 flex items-center justify-between text-[9px] font-mono font-bold uppercase tracking-wider text-slate-700">
                 <span>Active Catalog</span>
-                <span className="bg-emerald-200 px-2 py-0.5 rounded-full text-emerald-900">READY</span>
+                <span className="bg-amber-200 px-2 py-0.5 rounded-full text-amber-900 font-black">CATALOG ➔</span>
               </div>
             </div>
 
-            {/* Low stock alert box - Emerald + Light Grey */}
-            <div className="rounded-lg bg-gradient-to-br from-slate-100 via-slate-50 to-emerald-50 text-slate-950 p-3 shadow-lg shadow-emerald-300/60 border-2 border-rose-400 transform transition-transform hover:-translate-y-0.5">
+            {/* Low stock alert box - Massive Inventory */}
+            <div 
+              onClick={() => setActiveTab('massive-inventory')}
+              className="rounded-lg bg-gradient-to-br from-slate-100 via-slate-50 to-emerald-50 text-slate-950 p-3 shadow-lg shadow-emerald-300/60 border-2 border-rose-400 transform transition-all cursor-pointer hover:scale-[1.03] hover:shadow-2xl"
+              title="Click to view 100,000+ SKU Massive Inventory Suite"
+            >
               <div className="flex justify-between items-start">
                 <span className="font-mono text-[9px] uppercase font-bold tracking-widest text-rose-800">Low Stock Alerts</span>
                 <div className="bg-emerald-200 p-1.5 rounded-md">
@@ -2093,15 +2144,20 @@ export default function DashboardView({
               </div>
               <div className="mt-2 pt-1.5 border-t border-emerald-300 flex items-center justify-between text-[9px] font-mono font-bold uppercase tracking-wider text-slate-700">
                 <span>Threshold &lt;= 5</span>
-                <span className={`${lowStockCount > 0 ? 'bg-rose-200 text-rose-800' : 'bg-emerald-200 text-emerald-900'} px-2 py-0.5 rounded-full`}>{lowStockCount > 0 ? 'ATTN NEEDED' : 'HEALTHY'}</span>
+                <span className={`${lowStockCount > 0 ? 'bg-rose-200 text-rose-800' : 'bg-emerald-200 text-emerald-900'} px-2 py-0.5 rounded-full font-black`}>VIEW STOCK ➔</span>
               </div>
             </div>
           </div>
 
           {/* HIGH-LEVEL STORE PERFORMANCE OVERVIEW - BOOTSTRAP COLORFUL BENTO */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3" id="performance-overview-bento">
-            {/* Sales Target Goal Card */}
-            <div className="rounded-xl border-2 border-blue-200 dark:border-blue-900/60 bg-gradient-to-br from-blue-50/80 to-indigo-50/80 dark:from-slate-900 dark:to-blue-950/40 p-4 flex flex-col justify-between shadow-sm" id="bento-target">
+            {/* Sales Target Goal Card - BI */}
+            <div 
+              onClick={() => setActiveTab('bi')}
+              className="rounded-xl border-2 border-blue-200 dark:border-blue-900/60 bg-gradient-to-br from-blue-50/80 to-indigo-50/80 dark:from-slate-900 dark:to-blue-950/40 p-4 flex flex-col justify-between shadow-sm cursor-pointer hover:scale-[1.02] hover:shadow-xl transition-all" 
+              id="bento-target"
+              title="Click to view Executive Business Intelligence"
+            >
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-mono text-[9px] uppercase font-black tracking-wider text-blue-700 dark:text-blue-300">Monthly Sales Goal Target</span>
@@ -2126,8 +2182,13 @@ export default function DashboardView({
               </div>
             </div>
 
-            {/* Best Sellers Card */}
-            <div className="rounded-xl border-2 border-amber-400 bg-gradient-to-br from-amber-400 via-amber-500 to-yellow-500 text-slate-950 p-4 flex flex-col justify-between shadow-sm" id="bento-bestseller">
+            {/* Best Sellers Card - Products */}
+            <div 
+              onClick={() => setActiveTab('products')}
+              className="rounded-xl border-2 border-amber-400 bg-gradient-to-br from-amber-400 via-amber-500 to-yellow-500 text-slate-950 p-4 flex flex-col justify-between shadow-sm cursor-pointer hover:scale-[1.02] hover:shadow-xl transition-all" 
+              id="bento-bestseller"
+              title="Click to view Products Catalog"
+            >
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-mono text-[9px] uppercase font-black tracking-wider text-slate-950">Best Performing ITEM</span>
@@ -2149,12 +2210,17 @@ export default function DashboardView({
                 )}
               </div>
               <div className="mt-3 flex items-center gap-1.5 text-[9px] font-mono font-black text-slate-950 uppercase tracking-widest bg-white/40 px-2.5 py-1 rounded-md w-fit">
-                <Sparkles className="h-3 w-3 text-slate-950" /> TOP SELLING HARDWARE
+                <Sparkles className="h-3 w-3 text-slate-950" /> TOP SELLING HARDWARE ➔
               </div>
             </div>
 
-            {/* Operational Pipeline / Fulfillment Card */}
-            <div className="rounded-xl border-2 border-emerald-200 dark:border-emerald-900/60 bg-gradient-to-br from-emerald-50/80 to-teal-50/80 dark:from-slate-900 dark:to-emerald-950/40 p-4 flex flex-col justify-between shadow-sm" id="bento-fulfillment">
+            {/* Operational Pipeline / Fulfillment Card - WMS */}
+            <div 
+              onClick={() => setActiveTab('wms')}
+              className="rounded-xl border-2 border-emerald-200 dark:border-emerald-900/60 bg-gradient-to-br from-emerald-50/80 to-teal-50/80 dark:from-slate-900 dark:to-emerald-950/40 p-4 flex flex-col justify-between shadow-sm cursor-pointer hover:scale-[1.02] hover:shadow-xl transition-all" 
+              id="bento-fulfillment"
+              title="Click to view Warehouse Management System (WMS)"
+            >
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-mono text-[9px] uppercase font-black tracking-wider text-emerald-700 dark:text-emerald-300">Fulfillment Efficiency</span>
@@ -2176,7 +2242,7 @@ export default function DashboardView({
               <div className="mt-3 pt-2 border-t border-emerald-200 dark:border-emerald-800/80 flex items-center justify-between text-[8px] font-mono font-black text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">
                 <span className="bg-emerald-100 dark:bg-emerald-900/60 px-2 py-0.5 rounded-md">Pending: {pendingCount}</span>
                 <span className="bg-emerald-100 dark:bg-emerald-900/60 px-2 py-0.5 rounded-md">Processing: {processingCount}</span>
-                <span className="bg-emerald-200 dark:bg-emerald-800/80 text-emerald-950 dark:text-emerald-100 px-2 py-0.5 rounded-md">Shipped: {shippedCount + deliveredCount}</span>
+                <span className="bg-emerald-200 dark:bg-emerald-800/80 text-emerald-950 dark:text-emerald-100 px-2 py-0.5 rounded-md">VIEW WMS ➔</span>
               </div>
             </div>
           </div>
