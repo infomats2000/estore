@@ -22,6 +22,7 @@ import PurchaseOrdersManager from './purchases/PurchaseOrdersManager';
 import StockUnitsManager from './stock/StockUnitsManager';
 import WarehousesManager from './warehouse/WarehousesManager';
 import B2BTradeManager from './b2b/B2BTradeManager';
+import RefurbGradingManager from './stock/RefurbGradingManager';
 
 const FinanceManager = lazy(() => import('./FinanceManager'));
 const UserManager = lazy(() => import('./UserManager'));
@@ -226,14 +227,14 @@ export default function DashboardView({
   onUpdateProductStock,
 }: DashboardViewProps) {
   
-  const [activeTab, setActiveTab] = useState<'metrics' | 'analytics' | 'inventory' | 'categories' | 'collections' | 'orders' | 'invoices' | 'customers' | 'returns' | 'coupons' | 'segments' | 'upsells' | 'reviews' | 'suppliers' | 'shipping' | 'pos' | 'finance' | 'users' | 'repairs' | 'purchase-orders' | 'stock-units' | 'warehouses' | 'trade-accounts'>(() => {
+  const [activeTab, setActiveTab] = useState<'metrics' | 'analytics' | 'inventory' | 'categories' | 'collections' | 'orders' | 'invoices' | 'customers' | 'returns' | 'coupons' | 'segments' | 'upsells' | 'reviews' | 'suppliers' | 'shipping' | 'pos' | 'finance' | 'users' | 'repairs' | 'purchase-orders' | 'stock-units' | 'warehouses' | 'trade-accounts' | 'refurb'>(() => {
     try {
       const hash = window.location.hash.replace('#', '');
       const validTabs = [
         'metrics', 'analytics', 'inventory', 'categories', 'collections', 'orders', 'invoices',
         'customers', 'returns', 'coupons', 'segments', 'upsells', 'reviews',
         'suppliers', 'shipping', 'pos', 'finance', 'users',
-        'repairs', 'purchase-orders', 'stock-units', 'warehouses', 'trade-accounts'
+        'repairs', 'purchase-orders', 'stock-units', 'warehouses', 'trade-accounts', 'refurb'
       ];
       if (hash && validTabs.includes(hash)) {
         return hash as any;
@@ -1835,7 +1836,7 @@ export default function DashboardView({
             <span className="font-mono text-[9px] uppercase font-black text-slate-500 dark:text-slate-400 tracking-wider flex items-center gap-1.5">
               <SlidersHorizontal className="h-3 w-3 text-emerald-600 dark:text-emerald-400" /> Store Operations
             </span>
-            <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-[8px] px-2 py-0.5 rounded-full font-mono font-bold">10 MODULES</span>
+            <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-[8px] px-2 py-0.5 rounded-full font-mono font-bold">16 MODULES</span>
           </div>
           <div className="flex flex-wrap items-center gap-1.5 pb-2">
             {[
@@ -1854,6 +1855,7 @@ export default function DashboardView({
               { id: 'stock-units', label: 'Stock Units', count: stockUnits.length, icon: Barcode, color: 'bg-[#0d6efd] text-white shadow-blue-500/10', activeBorder: 'border-[#0d6efd]' },
               { id: 'warehouses', label: 'Warehouses', count: warehouses.length, icon: Building2, color: 'bg-[#0d6efd] text-white shadow-blue-500/10', activeBorder: 'border-[#0d6efd]' },
               { id: 'trade-accounts', label: 'B2B Trade Accounts', count: customers.filter(c => c.tradeAccount || c.type === 'Trade' || c.company).length, icon: Building2, color: 'bg-indigo-600 text-white shadow-indigo-500/10', activeBorder: 'border-indigo-600' },
+              { id: 'refurb', label: 'Refurb & Grading', count: stockUnits.filter(u => u.status === 'In Repair').length, icon: Wrench, color: 'bg-indigo-600 text-white shadow-indigo-500/10', activeBorder: 'border-indigo-600' },
             ].map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -6934,6 +6936,16 @@ export default function DashboardView({
             storeSettings={storeSettings}
             onUpdateCustomer={onUpdateCustomer}
             onUpdateProduct={onUpdateProduct}
+          />
+        )}
+
+        {/* REFURBISHMENT GRADING MODULE */}
+        {activeTab === 'refurb' && (
+          <RefurbGradingManager
+            products={products}
+            stockUnits={stockUnits}
+            onUpdateStockUnit={onUpdateStockUnit!}
+            onShowAlert={onShowAlert}
           />
         )}
       </div>

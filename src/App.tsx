@@ -388,11 +388,84 @@ export default function App() {
     } catch { return []; }
   });
 
+  const INITIAL_STOCK_UNITS: StockUnit[] = [
+    {
+      id: 'SU-001',
+      serialNumber: 'SN-THINK-X1-88902',
+      productId: 'P-001',
+      productName: 'Refurbished Enterprise ThinkPad - i5 / 16GB / 256GB SSD',
+      purchaseOrderId: 'PO-2026-001',
+      status: 'In Repair',
+      costPrice: 220.00,
+      receivedDate: '2026-07-28',
+      locationId: 'WH-MAIN',
+      locationName: 'Main Logistics Hub',
+      binLocation: 'BIN-A1-02',
+      auditLog: [
+        { date: '2026-07-28', action: 'Received via GRN Intake', performedBy: 'Receiving Officer' }
+      ]
+    },
+    {
+      id: 'SU-002',
+      serialNumber: 'SN-POWER-LPT-99301',
+      productId: 'P-002',
+      productName: 'Powerhouse Developer Laptop - i7 / 32GB / 1TB NVMe',
+      purchaseOrderId: 'PO-2026-001',
+      status: 'In Repair',
+      costPrice: 380.00,
+      receivedDate: '2026-07-28',
+      locationId: 'WH-MAIN',
+      locationName: 'Main Logistics Hub',
+      binLocation: 'BIN-B1-04',
+      auditLog: [
+        { date: '2026-07-28', action: 'Received via GRN Intake', performedBy: 'Receiving Officer' }
+      ]
+    },
+    {
+      id: 'SU-003',
+      serialNumber: 'SN-DESK-PRO-10022',
+      productId: 'P-003',
+      productName: 'Refurbished Enterprise Workstation Rig - i9 / 64GB RAM / 2TB NVMe',
+      purchaseOrderId: 'PO-2026-002',
+      status: 'In Stock',
+      grade: 'A',
+      costPrice: 870.00,
+      receivedDate: '2026-07-15',
+      locationId: 'WH-MAIN',
+      locationName: 'Main Logistics Hub',
+      binLocation: 'BIN-C2-01',
+      refurbSession: {
+        inspectedAt: '2026-07-16',
+        inspectedBy: 'Senior Refurb Tech',
+        passedChecks: ['cos-01', 'cos-03', 'cos-04', 'cos-05', 'cos-06', 'cos-07', 'cos-08', 'cos-10', 'dsp-01', 'dsp-02', 'dsp-03', 'dsp-04', 'dsp-05', 'dsp-07', 'dsp-08', 'dsp-09', 'dsp-10', 'hw-01', 'hw-02', 'hw-03', 'hw-04', 'hw-05', 'hw-06', 'hw-07', 'hw-08', 'hw-09', 'hw-10', 'pwr-01', 'pwr-02', 'pwr-03', 'pwr-04', 'pwr-05', 'pwr-06', 'pwr-07', 'pwr-08', 'pwr-09', 'pwr-10', 'con-01', 'con-02', 'con-03', 'con-04', 'con-05', 'con-06', 'con-07', 'con-08', 'con-09', 'con-10'],
+        batteryHealth: 88,
+        calculatedGrade: 'A',
+        purchaseCost: 650.00,
+        partsUsed: [
+          { partName: 'Replacement DDR4 32GB RAM module', cost: 120.00 }
+        ],
+        laborHours: 2.0,
+        laborRate: 50.0,
+        refurbPartsCost: 120.00,
+        refurbLaborCost: 100.00,
+        trueCOGS: 870.00
+      },
+      auditLog: [
+        { date: '2026-07-16', action: 'Graded Refurbished A', performedBy: 'Senior Refurb Tech', notes: 'Replaced faulty RAM module. System stable.' },
+        { date: '2026-07-15', action: 'Received via GRN Intake', performedBy: 'Receiving Officer' }
+      ]
+    }
+  ];
+
   const [stockUnits, setStockUnits] = useState<StockUnit[]>(() => {
     try {
       const saved = localStorage.getItem('techseller_stock_units_v4');
-      return saved ? JSON.parse(saved) : [];
-    } catch { return []; }
+      if (saved) {
+        const data = JSON.parse(saved);
+        if (Array.isArray(data) && data.length > 0) return data;
+      }
+      return INITIAL_STOCK_UNITS;
+    } catch { return INITIAL_STOCK_UNITS; }
   });
 
   const [warehouses, setWarehouses] = useState<WarehouseLocation[]>(() => {

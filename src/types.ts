@@ -525,6 +525,7 @@ export interface StockUnit {
   locationId?: string;
   locationName?: string;
   binLocation?: string;
+  refurbSession?: RefurbInspectionSession;
 }
 
 // ============================================================
@@ -634,5 +635,33 @@ export interface ShrinkageRecord {
   date: string;
   reportedBy: string;
   actionTaken: 'Stock Adjusted' | 'Insurance Claim Filed' | 'Written Off';
+  notes?: string;
+}
+
+// ============================================================
+// ERP PHASE 4 — REFURBISHMENT GRADING & COSTING WORKFLOW
+// ============================================================
+
+export type RefurbGrade = 'A+' | 'A' | 'B' | 'C' | 'D';
+export type RefurbChecklistCategory = 'Cosmetic' | 'Display' | 'Core Hardware' | 'Power' | 'Connectivity';
+
+export interface RefurbPartUsed {
+  partName: string;
+  cost: number;
+}
+
+export interface RefurbInspectionSession {
+  inspectedAt: string;
+  inspectedBy: string;
+  passedChecks: string[]; // List of passed checkpoint IDs (out of 50)
+  batteryHealth: number; // Battery health % (1-100)
+  calculatedGrade: RefurbGrade;
+  purchaseCost: number;
+  partsUsed: RefurbPartUsed[];
+  laborHours: number;
+  laborRate: number;
+  refurbPartsCost: number;
+  refurbLaborCost: number;
+  trueCOGS: number;
   notes?: string;
 }
