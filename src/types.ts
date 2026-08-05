@@ -1448,6 +1448,32 @@ export interface EnterpriseSupplierScorecard {
   assignedAccountManager: string;
 }
 
+export type StaffUserRole = 
+  | 'Admin' 
+  | 'Sales Executive' 
+  | 'Warehouse Manager' 
+  | 'Procurement Officer' 
+  | 'Accountant' 
+  | 'Custom Staff';
+
+export interface ERPFeaturePermission {
+  featureKey: string;
+  category: string;
+  label: string;
+  description: string;
+}
+
+export interface StaffUserProfile {
+  id: string;
+  name: string;
+  email: string;
+  role: StaffUserRole;
+  active: boolean;
+  allowedFeatures: string[];
+  createdAt: string;
+  lastLogin: string;
+}
+
 export interface ReportFilterParams {
   preset: ReportDatePreset;
   startDate: string;

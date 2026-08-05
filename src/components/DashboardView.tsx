@@ -38,6 +38,8 @@ import EnterpriseProcurementManager from './procurement/EnterpriseProcurementMan
 import WMSSystemManager from './wms/WMSSystemManager';
 import LogisticsDispatchManager from './logistics/LogisticsDispatchManager';
 import EnterpriseSupplierManager from './suppliers/EnterpriseSupplierManager';
+import StaffManagementSuite from './staff/StaffManagementSuite';
+import { DEFAULT_STAFF_PROFILES, hasFeaturePermission } from '../utils/staffPermissionEngine';
 
 const FinanceManager = lazy(() => import('./FinanceManager'));
 const UserManager = lazy(() => import('./UserManager'));
@@ -263,6 +265,7 @@ export default function DashboardView({
     }
     return 'metrics';
   });
+  const [currentSimulatedUser, setCurrentSimulatedUser] = useState(DEFAULT_STAFF_PROFILES[0]);
   const [hoverMenu, setHoverMenu] = useState<'sales' | 'operations' | null>(null);
 
   // INVOICING & PRINTING SYSTEM STATE
@@ -7144,6 +7147,15 @@ export default function DashboardView({
         {/* ENTERPRISE SUPPLIER PERFORMANCE & VENDOR SCORECARD SUITE */}
         {activeTab === 'suppliers' && (
           <EnterpriseSupplierManager
+            onShowAlert={onShowAlert}
+          />
+        )}
+
+        {/* GRANULAR RBAC STAFF MANAGEMENT & FEATURE ACCESS CONTROL SUITE */}
+        {activeTab === 'users' && (
+          <StaffManagementSuite
+            currentSimulatedUser={currentSimulatedUser}
+            onSelectSimulatedUser={setCurrentSimulatedUser}
             onShowAlert={onShowAlert}
           />
         )}
