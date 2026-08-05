@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { 
   X, CreditCard, Ship, CheckCircle, ArrowRight, ShieldCheck, 
-  FileText, Truck, Wallet, Smartphone, Landmark, Check, RefreshCw, AlertCircle
+  FileText, Truck, Wallet, Smartphone, Landmark, Check, RefreshCw, AlertCircle, Building2
 } from 'lucide-react';
 import { CartItem, Coupon, Order, CustomerProfile } from '../types';
 import { convertOrderToInvoice, printInvoiceDirect, downloadInvoiceHtmlFile } from '../utils/invoicePrinter';
 import { redirectToCheckout } from '../lib/stripe';
 import { buildCheckoutOrderPayload, submitCheckoutOrder } from '../utils/checkout';
+import { getAvailableCredit, isCreditHold } from '../utils/pricing';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -23,7 +24,7 @@ interface CheckoutModalProps {
 }
 
 type ShippingMethod = 'standard' | 'express' | 'overnight';
-type PaymentMethodType = 'card' | 'wallet' | 'paypal' | 'applepay' | 'stripe';
+type PaymentMethodType = 'card' | 'wallet' | 'paypal' | 'applepay' | 'stripe' | 'trade_credit';
 
 export default function CheckoutModal({
   isOpen,
@@ -62,6 +63,9 @@ export default function CheckoutModal({
   const [cardNumber, setCardNumber] = useState('4111 2222 3333 4444');
   const [expiry, setExpiry] = useState('12/28');
   const [cvv, setCvv] = useState('888');
+
+  // Trade Credit PO State
+  const [poNumber, setPoNumber] = useState('');
 
   // Payment authorization states
   const [isProcessingAuth, setIsProcessingAuth] = useState(false);
@@ -170,8 +174,36 @@ export default function CheckoutModal({
       customerCity: city,
       customerPhone: phone,
       date: new Date().toISOString().split('T')[0],
-      paymentMethod: paymentMethodText
+      paymentMethod: paymentMethodText,
+      poNumber: poNumber.trim() || undefined
     };
+
+    // If trade credit payment, update credit balance and ledger
+    if (paymentMethod === 'trade_credit' && customerProfile.tradeAccount) {
+      const currentBal = customerProfile.tradeAccount.creditBalance || 0;
+      const newBal = currentBal + localTotal;
+      customerProfile.tradeAccount.creditBalance = newBal;
+
+      const newLedgerEntry = {
+        id: `LEDG-ORD-${orderId}`,
+        customerId: customerProfile.id,
+        customerName: customerProfile.name,
+        companyName: customerProfile.tradeAccount.companyName,
+        date: new Date().toISOString().split('T')[0],
+        dueDate: customerProfile.tradeAccount.creditTerms === 'Net 7' ? new Date(Date.now() + 7*86400000).toISOString().split('T')[0] :
+                 customerProfile.tradeAccount.creditTerms === 'Net 14' ? new Date(Date.now() + 14*86400000).toISOString().split('T')[0] :
+                 customerProfile.tradeAccount.creditTerms === 'Net 60' ? new Date(Date.now() + 60*86400000).toISOString().split('T')[0] :
+                 new Date(Date.now() + 30*86400000).toISOString().split('T')[0],
+        type: 'Invoice Charge' as const,
+        amount: localTotal,
+        runningBalance: newBal,
+        reference: orderId,
+        description: `E-Commerce Purchase Order ${orderId}${poNumber ? ` (PO #${poNumber})` : ''}`,
+        status: 'Current' as const
+      };
+
+      customerProfile.tradeLedger = [newLedgerEntry, ...(customerProfile.tradeLedger || [])];
+    }
 
     setPlacedOrder(order);
     setEarnedPoints(points);
@@ -513,7 +545,16 @@ export default function CheckoutModal({
                 <p className="font-sans text-[10px] uppercase tracking-wider text-neutral-400 mb-4">Choose your preferred gateway integration for secure checkout processing.</p>
 
                 {/* Tab layout */}
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 border border-neutral-400 dark:border-neutral-700 p-1 bg-neutral-50 dark:bg-neutral-950 font-mono text-[9px] uppercase tracking-wider font-bold">
+                <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 border border-neutral-400 dark:border-neutral-700 p-1 bg-neutral-50 dark:bg-neutral-950 font-mono text-[9px] uppercase tracking-wider font-bold">
+                  {customerProfile.tradeAccount && (
+                    <button 
+                      type="button"
+                      onClick={() => setPaymentMethod('trade_credit')}
+                      className={`py-2 px-1 text-center transition-all ${paymentMethod === 'trade_credit' ? 'bg-indigo-600 text-white shadow-xs border border-indigo-700 font-extrabold' : 'text-indigo-400 hover:text-indigo-200'}`}
+                    >
+                      B2B Net 30
+                    </button>
+                  )}
                   <button 
                     type="button"
                     onClick={() => setPaymentMethod('stripe')}
@@ -533,14 +574,14 @@ export default function CheckoutModal({
                     onClick={() => setPaymentMethod('wallet')}
                     className={`py-2 px-1 text-center transition-all ${paymentMethod === 'wallet' ? 'bg-white dark:bg-neutral-800 text-neutral-950 dark:text-white shadow-xs border border-neutral-400 dark:border-neutral-700' : 'text-neutral-400 hover:text-neutral-950 dark:hover:text-neutral-100'}`}
                   >
-                    Veloce Wallet
+                    Wallet
                   </button>
                   <button 
                     type="button"
                     onClick={() => setPaymentMethod('paypal')}
                     className={`py-2 px-1 text-center transition-all ${paymentMethod === 'paypal' ? 'bg-white dark:bg-neutral-800 text-neutral-950 dark:text-white shadow-xs border border-neutral-400 dark:border-neutral-700' : 'text-neutral-400 hover:text-neutral-950 dark:hover:text-neutral-100'}`}
                   >
-                    PayPal Express
+                    PayPal
                   </button>
                   <button 
                     type="button"
@@ -561,6 +602,68 @@ export default function CheckoutModal({
                     {error}
                   </div>
                 )}
+
+                {/* B2B TRADE CREDIT PAYMENT PANEL */}
+                {paymentMethod === 'trade_credit' && customerProfile.tradeAccount && (() => {
+                  const avail = getAvailableCredit(customerProfile);
+                  const hold = isCreditHold(customerProfile);
+
+                  return (
+                    <div className="space-y-4 animate-fade-in p-5 border border-indigo-500/50 bg-indigo-950/20 text-left">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-5 w-5 text-indigo-400" />
+                        <div>
+                          <h5 className="font-sans text-xs font-bold uppercase tracking-wider text-white">
+                            {customerProfile.tradeAccount.companyName}
+                          </h5>
+                          <span className="font-mono text-[9px] uppercase text-indigo-300">
+                            Account: {customerProfile.tradeAccount.accountNumber} &bull; Terms: {customerProfile.tradeAccount.creditTerms}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 border-y border-indigo-900/60 py-3 font-mono text-xs">
+                        <div>
+                          <span className="text-slate-400 block text-[9px] uppercase">Available Credit Line:</span>
+                          <span className={`font-bold ${avail < localTotal ? 'text-rose-400' : 'text-emerald-400'}`}>
+                            ${avail.toFixed(2)} AUD
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block text-[9px] uppercase">Order Total Due:</span>
+                          <span className="font-bold text-white">${localTotal.toFixed(2)} AUD</span>
+                        </div>
+                      </div>
+
+                      {hold ? (
+                        <div className="p-3 bg-rose-950/60 border border-rose-800 text-rose-300 font-mono text-[10px] font-bold uppercase">
+                          ⚠️ ACCOUNT ON CREDIT HOLD: Credit purchases are disabled due to overdue invoices.
+                        </div>
+                      ) : avail < localTotal ? (
+                        <div className="p-3 bg-rose-950/60 border border-rose-800 text-rose-300 font-mono text-[10px] font-bold uppercase">
+                          ⚠️ INSUFFICIENT CREDIT LINE: Available credit ($${avail.toFixed(2)}) is less than total due ($${localTotal.toFixed(2)}).
+                        </div>
+                      ) : (
+                        <div className="p-3 bg-emerald-950/60 border border-emerald-800 text-emerald-300 font-mono text-[10px] font-bold uppercase">
+                          ✓ APPROVED FOR NET 30 CREDIT CHECKOUT
+                        </div>
+                      )}
+
+                      <div>
+                        <label className="block font-mono text-[10px] uppercase font-bold text-slate-300 mb-1">
+                          Purchase Order (PO) Number {customerProfile.tradeAccount.poRequired ? '(Required)' : '(Optional)'}
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. PO-2026-881"
+                          value={poNumber}
+                          onChange={(e) => setPoNumber(e.target.value)}
+                          className="w-full rounded-none border border-slate-700 bg-slate-950 p-2 font-mono text-xs text-white focus:border-indigo-500 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* 0. STRIPE PAYMENT INFO */}
                 {paymentMethod === 'stripe' && (

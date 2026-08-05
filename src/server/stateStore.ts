@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { DEFAULT_STORE_SETTINGS } from '../types';
 import { INITIAL_PRODUCTS, INITIAL_REVIEWS, INITIAL_COUPONS } from '../data/products';
+import { INITIAL_WAREHOUSES } from '../data/warehouses';
 
 const DATA_DIR = path.resolve(process.cwd(), 'data');
 const APP_STATE_FILE = path.join(DATA_DIR, 'app-state.json');
@@ -24,6 +25,8 @@ export interface AppStateStore {
   purchaseOrders: any[];
   repairJobs: any[];
   stockUnits: any[];
+  warehouses: any[];
+  stockTransfers: any[];
 }
 
 export interface AdminExtrasStore {
@@ -32,6 +35,13 @@ export interface AdminExtrasStore {
   shipments: any[];
   inventoryLogs: any[];
 }
+
+const ADMIN_EXTRAS_DEFAULTS: AdminExtrasStore = {
+  suppliers: [],
+  supplierOrders: [],
+  shipments: [],
+  inventoryLogs: []
+};
 
 const APP_STATE_DEFAULTS: AppStateStore = {
   storeSettings: DEFAULT_STORE_SETTINGS,
@@ -49,14 +59,9 @@ const APP_STATE_DEFAULTS: AppStateStore = {
   collections: ['Laptops', 'Apple Mac'],
   purchaseOrders: [],
   repairJobs: [],
-  stockUnits: []
-};
-
-const ADMIN_EXTRAS_DEFAULTS: AdminExtrasStore = {
-  suppliers: [],
-  supplierOrders: [],
-  shipments: [],
-  inventoryLogs: []
+  stockUnits: [],
+  warehouses: INITIAL_WAREHOUSES,
+  stockTransfers: []
 };
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value));

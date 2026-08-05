@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { Product, Supplier, StoreSettings } from '../../types';
+import { Product, Supplier, StoreSettings, StocktakeSession, ShrinkageRecord } from '../../types';
 import InventoryProducts from './InventoryProducts';
 import CategoriesManager from './CategoriesManager';
 import CollectionsManager from './CollectionsManager';
 import SuppliersManager from './SuppliersManager';
 import InventoryReports from './InventoryReports';
 import ProfitReports from './ProfitReports';
-import { Package, Layers, Sparkles, Truck, BarChart2, TrendingUp } from 'lucide-react';
+import StocktakeManager from './StocktakeManager';
+import { Package, Layers, Sparkles, Truck, BarChart2, TrendingUp, ClipboardCheck } from 'lucide-react';
 
 interface InventoryModuleProps {
   products: Product[];
@@ -28,6 +29,14 @@ interface InventoryModuleProps {
 
   suppliers: Supplier[];
   setSuppliers: React.Dispatch<React.SetStateAction<Supplier[]>>;
+
+  // Stocktake integration props
+  stocktakes: StocktakeSession[];
+  shrinkageRecords: ShrinkageRecord[];
+  onAddStocktake: (session: StocktakeSession) => void;
+  onUpdateStocktake: (session: StocktakeSession) => void;
+  onAddShrinkageRecord: (record: ShrinkageRecord) => void;
+  onUpdateProductStock: (productId: string, newStock: number, reason: string, notes?: string) => void;
 }
 
 export default function InventoryModule({
@@ -46,15 +55,22 @@ export default function InventoryModule({
   onAddCollection,
   onDeleteCollection,
   suppliers,
-  setSuppliers
+  setSuppliers,
+  stocktakes = [],
+  shrinkageRecords = [],
+  onAddStocktake,
+  onUpdateStocktake,
+  onAddShrinkageRecord,
+  onUpdateProductStock
 }: InventoryModuleProps) {
-  const [activeSubTab, setActiveSubTab] = useState<'products' | 'categories' | 'collections' | 'suppliers' | 'reports' | 'profit'>('products');
+  const [activeSubTab, setActiveSubTab] = useState<'products' | 'categories' | 'collections' | 'suppliers' | 'reports' | 'profit' | 'stocktake'>('products');
 
   const navItems = [
     { id: 'products', label: 'Products', icon: Package },
     { id: 'categories', label: 'Categories', icon: Layers },
     { id: 'collections', label: 'Collections', icon: Sparkles },
     { id: 'suppliers', label: 'Suppliers', icon: Truck },
+    { id: 'stocktake', label: 'Stocktake & Cycles', icon: ClipboardCheck },
     { id: 'reports', label: 'Reports', icon: BarChart2 },
     { id: 'profit', label: 'Profit & Margins', icon: TrendingUp },
   ] as const;
@@ -133,6 +149,18 @@ export default function InventoryModule({
           <ProfitReports
             products={products}
             categories={categories}
+          />
+        )}
+        {activeSubTab === 'stocktake' && (
+          <StocktakeManager
+            products={products}
+            categories={categories}
+            stocktakes={stocktakes}
+            shrinkageRecords={shrinkageRecords}
+            onAddStocktake={onAddStocktake}
+            onUpdateStocktake={onUpdateStocktake}
+            onAddShrinkageRecord={onAddShrinkageRecord}
+            onUpdateProductStock={onUpdateProductStock}
           />
         )}
       </div>

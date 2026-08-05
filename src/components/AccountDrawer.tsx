@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { 
   X, Wallet, Gift, ShoppingBag, Heart, Star, UserCheck, AlertCircle,
   Clock, Package, Truck, CheckCircle2, MapPin, RefreshCw, Activity, Calendar,
-  FileDown
+  FileDown, Building2, CreditCard, FileText, Lock, ShieldCheck, Printer
 } from 'lucide-react';
-import { CustomerProfile, Order, Product } from '../types';
+import { CustomerProfile, Order, Product, TradeAccount } from '../types';
 import { convertOrderToInvoice, printInvoiceDirect, downloadInvoiceHtmlFile } from '../utils/invoicePrinter';
+import { printStatementDirect } from '../utils/statementPrinter';
 
 interface AccountDrawerProps {
   isOpen: boolean;
@@ -20,6 +21,7 @@ interface AccountDrawerProps {
   onRemoveFromWishlist: (productId: string) => void;
   onUpdateOrderStatus?: (orderId: string, status: Order['status']) => void;
   onMoveAllToCart?: (products: Product[]) => void;
+  onUpdateCustomerProfile?: (updatedProfile: CustomerProfile) => void;
 }
 
 export default function AccountDrawer({
@@ -34,12 +36,19 @@ export default function AccountDrawer({
   onMoveToCart,
   onRemoveFromWishlist,
   onUpdateOrderStatus,
-  onMoveAllToCart
+  onMoveAllToCart,
+  onUpdateCustomerProfile
 }: AccountDrawerProps) {
   
-  const [activeTab, setActiveTab] = useState<'history' | 'wishlist' | 'loyalty'>('history');
+  const [activeTab, setActiveTab] = useState<'history' | 'wishlist' | 'loyalty' | 'trade'>('history');
   const [redeemSuccess, setRedeemSuccess] = useState('');
   const [selectedTrackingOrder, setSelectedTrackingOrder] = useState<Order | null>(null);
+
+  // Trade Application State
+  const [appCompany, setAppCompany] = useState('');
+  const [appAbn, setAppAbn] = useState('');
+  const [appRequestedLimit, setAppRequestedLimit] = useState('10000');
+  const [appSubmitted, setAppSubmitted] = useState(false);
 
   const handleDownloadInvoice = (order: Order) => {
     const inv = convertOrderToInvoice(order);
@@ -150,11 +159,19 @@ export default function AccountDrawer({
           </button>
           <button
             onClick={() => setActiveTab('loyalty')}
-            className={`border-b-2 py-3 px-4 font-bold tracking-widest transition-colors ${
+            className={`border-b-2 py-3 px-3 font-bold tracking-widest transition-colors ${
               activeTab === 'loyalty' ? 'border-neutral-950 text-neutral-950' : 'border-transparent text-neutral-400 hover:text-neutral-600'
             }`}
           >
-            Rewards Shop
+            Rewards
+          </button>
+          <button
+            onClick={() => setActiveTab('trade')}
+            className={`border-b-2 py-3 px-3 font-bold tracking-widest transition-colors ${
+              activeTab === 'trade' ? 'border-neutral-950 text-neutral-950' : 'border-transparent text-neutral-400 hover:text-neutral-600'
+            }`}
+          >
+            Trade Account
           </button>
         </div>
 
@@ -532,6 +549,222 @@ export default function AccountDrawer({
                   </button>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* B2B TRADE ACCOUNT TAB */}
+          {activeTab === 'trade' && (
+            <div className="space-y-4 text-left">
+              {customerProfile.tradeAccount ? (
+                <div className="space-y-4">
+                  {/* Account Header Badge */}
+                  <div className="border border-neutral-400 bg-neutral-50 p-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <Building2 className="h-4 w-4 text-neutral-800" />
+                          <h4 className="font-sans text-xs font-bold uppercase tracking-wider text-neutral-950">
+                            {customerProfile.tradeAccount.companyName}
+                          </h4>
+                        </div>
+                        <p className="font-mono text-[9px] uppercase tracking-widest text-neutral-500 mt-1">
+                          Account: {customerProfile.tradeAccount.accountNumber} &bull; ABN: {customerProfile.tradeAccount.abn || 'N/A'}
+                        </p>
+                      </div>
+
+                      <span className={`px-2 py-0.5 font-mono text-[8px] uppercase font-bold border ${
+                        customerProfile.tradeAccount.status === 'Active' ? 'bg-emerald-50 text-emerald-800 border-emerald-300' :
+                        customerProfile.tradeAccount.status === 'Credit Hold' ? 'bg-rose-50 text-rose-800 border-rose-300' :
+                        customerProfile.tradeAccount.status === 'Pending' ? 'bg-amber-50 text-amber-800 border-amber-300' :
+                        'bg-neutral-100 text-neutral-600 border-neutral-300'
+                      }`}>
+                        {customerProfile.tradeAccount.status}
+                      </span>
+                    </div>
+
+                    {/* Credit Gauge */}
+                    <div className="mt-4 pt-3 border-t border-neutral-300">
+                      <div className="flex justify-between font-mono text-[9px] font-bold uppercase mb-1">
+                        <span className="text-neutral-500">Credit Balance Owing: ${customerProfile.tradeAccount.creditBalance.toFixed(2)}</span>
+                        <span className="text-neutral-900">Limit: ${customerProfile.tradeAccount.creditLimit.toLocaleString()}</span>
+                      </div>
+                      <div className="h-2 w-full bg-neutral-200 overflow-hidden">
+                        <div 
+                          className="h-full bg-neutral-950 transition-all"
+                          style={{ width: `${Math.min(100, (customerProfile.tradeAccount.creditBalance / customerProfile.tradeAccount.creditLimit) * 100)}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between font-mono text-[8px] uppercase tracking-wider text-neutral-500 mt-1 font-bold">
+                        <span>Available: ${(customerProfile.tradeAccount.creditLimit - customerProfile.tradeAccount.creditBalance).toFixed(2)}</span>
+                        <span>Terms: {customerProfile.tradeAccount.creditTerms}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions & Price Tier */}
+                  <div className="flex items-center justify-between bg-white border border-neutral-400 p-3 font-sans text-xs">
+                    <div>
+                      <span className="font-mono text-[8px] uppercase tracking-widest text-neutral-400 font-bold block">Assigned Tier</span>
+                      <strong className="font-mono text-xs uppercase text-neutral-900">{customerProfile.tradeAccount.priceTier} Tier</strong>
+                    </div>
+
+                    <button
+                      onClick={() => printStatementDirect(customerProfile)}
+                      className="bg-neutral-950 hover:bg-neutral-800 text-white font-mono text-[9px] uppercase font-bold px-3 py-1.5 transition-colors flex items-center gap-1.5"
+                    >
+                      <Printer className="h-3 w-3" /> Print Statement
+                    </button>
+                  </div>
+
+                  {/* Account Ledger Table */}
+                  <div className="border border-neutral-400 bg-white">
+                    <div className="p-3 border-b border-neutral-300 font-sans text-[10px] font-bold uppercase tracking-wider text-neutral-900">
+                      Statement of Account Ledger
+                    </div>
+                    <div className="max-h-48 overflow-y-auto">
+                      <table className="w-full text-left font-sans text-[10px]">
+                        <thead className="bg-neutral-100 font-mono text-[8px] uppercase font-bold text-neutral-500 border-b border-neutral-300">
+                          <tr>
+                            <th className="py-2 px-3">Date</th>
+                            <th className="py-2 px-3">Ref</th>
+                            <th className="py-2 px-3 text-right">Amt</th>
+                            <th className="py-2 px-3 text-right">Balance</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-neutral-200 font-mono">
+                          {(!customerProfile.tradeLedger || customerProfile.tradeLedger.length === 0) ? (
+                            <tr>
+                              <td colSpan={4} className="py-4 text-center text-neutral-400">
+                                No ledger transactions logged.
+                              </td>
+                            </tr>
+                          ) : (
+                            customerProfile.tradeLedger.map(entry => (
+                              <tr key={entry.id}>
+                                <td className="py-2 px-3 text-neutral-600">{entry.date}</td>
+                                <td className="py-2 px-3 font-bold text-neutral-900">{entry.reference}</td>
+                                <td className={`py-2 px-3 text-right font-bold ${entry.amount > 0 ? 'text-neutral-900' : 'text-emerald-700'}`}>
+                                  {entry.amount > 0 ? `$${entry.amount.toFixed(2)}` : `-$${Math.abs(entry.amount).toFixed(2)}`}
+                                </td>
+                                <td className="py-2 px-3 text-right font-bold text-neutral-950">
+                                  ${entry.runningBalance.toFixed(2)}
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              ) : appSubmitted ? (
+                <div className="text-center py-8 bg-neutral-50 border border-neutral-400 p-6 space-y-3">
+                  <CheckCircle2 className="h-10 w-10 text-emerald-600 mx-auto" />
+                  <h4 className="font-sans text-xs font-bold uppercase tracking-wider text-neutral-950">
+                    B2B Trade Application Submitted!
+                  </h4>
+                  <p className="font-sans text-[10px] text-neutral-600 uppercase tracking-wide leading-relaxed">
+                    Thank you for applying. Our commercial credit team will review your ABN and business reference details. You will be notified once Net 30 trade terms are activated.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="bg-neutral-50 border border-neutral-400 p-4">
+                    <h4 className="font-sans text-xs font-bold uppercase tracking-wider text-neutral-950 flex items-center gap-2">
+                      <Building2 className="h-4 w-4" /> Apply for B2B Trade Credit Account
+                    </h4>
+                    <p className="font-sans text-[9px] uppercase tracking-wide text-neutral-500 mt-1 leading-relaxed">
+                      Unlock Net 30 payment terms, specialized Reseller & Wholesale pricing tiers, and priority dispatch on corporate purchase orders.
+                    </p>
+                  </div>
+
+                  <form 
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      if (!appCompany || !appAbn) return;
+
+                      const requestedLimit = parseFloat(appRequestedLimit) || 10000;
+
+                      const newTradeAcc: TradeAccount = {
+                        accountNumber: `TRD-${Math.floor(10000 + Math.random() * 90000)}`,
+                        companyName: appCompany,
+                        abn: appAbn,
+                        contactPerson: customerProfile.name,
+                        phone: customerProfile.phone,
+                        email: customerProfile.email,
+                        status: 'Pending',
+                        creditLimit: requestedLimit,
+                        creditBalance: 0,
+                        creditTerms: 'Net 30',
+                        priceTier: 'Reseller',
+                        poRequired: true,
+                        taxExempt: false,
+                        appliedDate: new Date().toISOString().split('T')[0],
+                        notes: 'Trade Account Application Submitted by Client'
+                      };
+
+                      const updatedCust: CustomerProfile = {
+                        ...customerProfile,
+                        company: appCompany,
+                        abn: appAbn,
+                        type: 'Trade',
+                        tradeAccount: newTradeAcc
+                      };
+
+                      if (onUpdateCustomerProfile) {
+                        onUpdateCustomerProfile(updatedCust);
+                      }
+                      setAppSubmitted(true);
+                    }}
+                    className="space-y-3 font-sans text-xs text-left"
+                  >
+                    <div>
+                      <label className="block font-mono text-[9px] uppercase font-bold text-neutral-700 mb-1">Company / Trading Name</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Apex Technology Solutions Pty Ltd"
+                        value={appCompany}
+                        onChange={(e) => setAppCompany(e.target.value)}
+                        className="w-full border border-neutral-400 bg-white p-2 font-sans text-xs outline-none focus:border-neutral-950"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-mono text-[9px] uppercase font-bold text-neutral-700 mb-1">ABN / Business Tax Number</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. 45 123 456 789"
+                        value={appAbn}
+                        onChange={(e) => setAppAbn(e.target.value)}
+                        className="w-full border border-neutral-400 bg-white p-2 font-mono text-xs outline-none focus:border-neutral-950"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-mono text-[9px] uppercase font-bold text-neutral-700 mb-1">Requested Credit Limit ($)</label>
+                      <select
+                        value={appRequestedLimit}
+                        onChange={(e) => setAppRequestedLimit(e.target.value)}
+                        className="w-full border border-neutral-400 bg-white p-2 font-mono text-xs outline-none focus:border-neutral-950"
+                      >
+                        <option value="5000">$5,000 Trade Credit Line</option>
+                        <option value="10000">$10,000 Commercial Line</option>
+                        <option value="25000">$25,000 Corporate Line</option>
+                        <option value="50000">$50,000 Enterprise Line</option>
+                      </select>
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="w-full bg-[#1a1a1a] hover:bg-neutral-800 text-white font-mono text-[10px] uppercase font-bold tracking-widest py-3 transition-colors mt-2"
+                    >
+                      Submit Trade Account Application
+                    </button>
+                  </form>
+                </div>
+              )}
             </div>
           )}
 

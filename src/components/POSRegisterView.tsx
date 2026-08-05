@@ -1,28 +1,37 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, ShoppingCart, Plus, Minus, Trash2, Printer, Check, DollarSign, CreditCard, RotateCcw, X, Scan, Sparkles } from 'lucide-react';
-import { Product, StoreSettings, CartItem, Invoice } from '../types';
+import { Search, ShoppingCart, Plus, Minus, Trash2, Printer, Check, DollarSign, CreditCard, RotateCcw, X, Scan, Sparkles, Building2 } from 'lucide-react';
+import { Product, StoreSettings, CartItem, Invoice, CustomerProfile } from '../types';
 import { convertOrderToInvoice, printInvoiceDirect } from '../utils/invoicePrinter';
+import { calculateEffectivePrice, getAvailableCredit, isCreditHold } from '../utils/pricing';
 
 interface POSRegisterViewProps {
   products: Product[];
   categories: string[];
   storeSettings?: StoreSettings;
+  customers?: CustomerProfile[];
   onCompleteSale: (items: CartItem[], total: number, paymentMethod: string, notes: string) => void;
+  onUpdateCustomerProfile?: (updated: CustomerProfile) => void;
 }
 
 export default function POSRegisterView({
   products,
   categories,
   storeSettings,
-  onCompleteSale
+  customers = [],
+  onCompleteSale,
+  onUpdateCustomerProfile
 }: POSRegisterViewProps) {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [barcodeInput, setBarcodeInput] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
 
+  // B2B Customer Selection in POS
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
+  const [posPoNumber, setPosPoNumber] = useState<string>('');
+
   // Payment states
-  const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'EFTPOS Card' | 'Split'>('Cash');
+  const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'EFTPOS Card' | 'On Account / Trade Credit'>('Cash');
   const [cashTendered, setCashTendered] = useState<string>('');
   const [saleCompleted, setSaleCompleted] = useState(false);
   const [lastCompletedOrder, setLastCompletedOrder] = useState<any | null>(null);
@@ -239,8 +248,28 @@ export default function POSRegisterView({
         </div>
 
         {/* RIGHT: Register Cart & Payment Pad */}
-        <div className="w-96 bg-white flex flex-col border-l border-neutral-300">
-          <div className="p-4 bg-neutral-50 border-b border-neutral-300 font-mono text-xs uppercase font-bold text-neutral-900 flex justify-between items-center">
+        <div className="w-96 bg-white flex flex-col border-l border-neutral-300 text-left">
+          {/* Customer Selector Header */}
+          <div className="p-3 bg-neutral-100 border-b border-neutral-300">
+            <div className="flex items-center gap-2 mb-1">
+              <Building2 className="h-3.5 w-3.5 text-neutral-700" />
+              <label className="font-mono text-[9px] uppercase font-bold text-neutral-600">Assign B2B / Retail Customer:</label>
+            </div>
+            <select
+              value={selectedCustomerId}
+              onChange={(e) => setSelectedCustomerId(e.target.value)}
+              className="w-full bg-white border border-neutral-300 p-1.5 font-sans text-xs text-neutral-900 focus:border-neutral-900 focus:outline-none"
+            >
+              <option value="">-- Guest Retail Customer --</option>
+              {customers.map(c => (
+                <option key={c.id} value={c.id}>
+                  {c.tradeAccount?.companyName || c.company || c.name} {c.tradeAccount?.priceTier ? `(${c.tradeAccount.priceTier} Tier)` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="p-3 bg-neutral-50 border-b border-neutral-300 font-mono text-xs uppercase font-bold text-neutral-900 flex justify-between items-center">
             <span>Register Receipt Cart</span>
             <span className="bg-blue-600 text-white px-2 py-0.5 text-[10px]">{cart.length} ITEMS</span>
           </div>
@@ -254,36 +283,42 @@ export default function POSRegisterView({
                 <p className="text-[11px]">Scan a barcode or tap products to add to current ticket</p>
               </div>
             ) : (
-              cart.map(item => (
-                <div key={item.id} className="pt-3 first:pt-0 flex items-center justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <h5 className="font-sans text-xs font-bold text-neutral-900 truncate">{item.product.name}</h5>
-                    <span className="font-mono text-[11px] text-neutral-500">
-                      ${(item.product.discountPrice || item.product.price).toFixed(2)} each
+              cart.map(item => {
+                const selectedCust = customers.find(c => c.id === selectedCustomerId);
+                const calc = calculateEffectivePrice(item.product, selectedCust, item.quantity);
+                const isDiscounted = calc.unitPrice < item.product.price;
+
+                return (
+                  <div key={item.id} className="pt-3 first:pt-0 flex items-center justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <h5 className="font-sans text-xs font-bold text-neutral-900 truncate">{item.product.name}</h5>
+                      <span className="font-mono text-[11px] text-neutral-600 font-bold block">
+                        ${calc.unitPrice.toFixed(2)} each {isDiscounted && <span className="text-[9px] text-indigo-600">({calc.discountLabel})</span>}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleUpdateQuantity(item.product.id, -1)}
+                        className="h-7 w-7 bg-neutral-200 flex items-center justify-center font-bold text-neutral-700 hover:bg-neutral-300"
+                      >
+                        <Minus className="h-3 w-3" />
+                      </button>
+                      <span className="font-mono text-xs font-bold w-5 text-center">{item.quantity}</span>
+                      <button
+                        onClick={() => handleUpdateQuantity(item.product.id, 1)}
+                        className="h-7 w-7 bg-neutral-200 flex items-center justify-center font-bold text-neutral-700 hover:bg-neutral-300"
+                      >
+                        <Plus className="h-3 w-3" />
+                      </button>
+                    </div>
+
+                    <span className="font-mono text-xs font-black text-neutral-900 w-16 text-right">
+                      ${calc.lineTotal.toFixed(2)}
                     </span>
                   </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleUpdateQuantity(item.product.id, -1)}
-                      className="h-7 w-7 bg-neutral-200 flex items-center justify-center font-bold text-neutral-700 hover:bg-neutral-300"
-                    >
-                      <Minus className="h-3 w-3" />
-                    </button>
-                    <span className="font-mono text-xs font-bold w-5 text-center">{item.quantity}</span>
-                    <button
-                      onClick={() => handleUpdateQuantity(item.product.id, 1)}
-                      className="h-7 w-7 bg-neutral-200 flex items-center justify-center font-bold text-neutral-700 hover:bg-neutral-300"
-                    >
-                      <Plus className="h-3 w-3" />
-                    </button>
-                  </div>
-
-                  <span className="font-mono text-xs font-black text-neutral-900 w-16 text-right">
-                    ${((item.product.discountPrice || item.product.price) * item.quantity).toFixed(2)}
-                  </span>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
 
@@ -351,28 +386,69 @@ export default function POSRegisterView({
             </div>
           ) : (
             <div className="p-4 bg-neutral-50 border-t border-neutral-300 space-y-3">
-              {/* Payment Method Switcher */}
-              <div className="grid grid-cols-2 gap-2">
+              {/* Payment Method Selector */}
+              <div className="grid grid-cols-3 gap-1.5">
                 <button
                   type="button"
                   onClick={() => setPaymentMethod('Cash')}
-                  className={`py-2 font-mono text-xs font-bold uppercase border flex items-center justify-center gap-1.5 ${
+                  className={`py-2 font-mono text-[10px] font-bold uppercase border flex items-center justify-center gap-1 ${
                     paymentMethod === 'Cash' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white border-neutral-300 text-neutral-700'
                   }`}
                 >
-                  <DollarSign className="h-4 w-4" /> Cash
+                  <DollarSign className="h-3.5 w-3.5" /> Cash
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setPaymentMethod('EFTPOS Card')}
-                  className={`py-2 font-mono text-xs font-bold uppercase border flex items-center justify-center gap-1.5 ${
+                  className={`py-2 font-mono text-[10px] font-bold uppercase border flex items-center justify-center gap-1 ${
                     paymentMethod === 'EFTPOS Card' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white border-neutral-300 text-neutral-700'
                   }`}
                 >
-                  <CreditCard className="h-4 w-4" /> EFTPOS Card
+                  <CreditCard className="h-3.5 w-3.5" /> Card
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('On Account / Trade Credit')}
+                  className={`py-2 font-mono text-[10px] font-bold uppercase border flex items-center justify-center gap-1 ${
+                    paymentMethod === 'On Account / Trade Credit' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white border-neutral-300 text-neutral-700'
+                  }`}
+                >
+                  <Building2 className="h-3.5 w-3.5" /> Net 30
                 </button>
               </div>
+
+              {/* Trade Credit Fields & PO Number */}
+              {paymentMethod === 'On Account / Trade Credit' && (() => {
+                const selCust = customers.find(c => c.id === selectedCustomerId);
+                const avail = getAvailableCredit(selCust);
+                const hold = isCreditHold(selCust);
+
+                return (
+                  <div className="space-y-2 bg-indigo-50 border border-indigo-200 p-2.5 text-left font-mono text-[10px]">
+                    {!selCust?.tradeAccount ? (
+                      <span className="text-rose-600 font-bold block">⚠️ Please select a customer with an active B2B Trade Account above.</span>
+                    ) : hold ? (
+                      <span className="text-rose-600 font-bold block">⚠️ ACCOUNT ON CREDIT HOLD. Credit orders disabled.</span>
+                    ) : (
+                      <>
+                        <div className="flex justify-between font-bold text-indigo-900">
+                          <span>Avail Credit: ${avail.toFixed(2)}</span>
+                          <span>Terms: {selCust.tradeAccount.creditTerms}</span>
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="PO Number (Required for Net 30)..."
+                          value={posPoNumber}
+                          onChange={(e) => setPosPoNumber(e.target.value)}
+                          className="w-full bg-white border border-indigo-300 p-1.5 text-xs text-neutral-900 outline-none"
+                        />
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Cash Quick Buttons if Cash payment selected */}
               {paymentMethod === 'Cash' && (
@@ -415,7 +491,63 @@ export default function POSRegisterView({
 
               {/* Charge / Complete Sale Button */}
               <button
-                onClick={handleCheckout}
+                onClick={() => {
+                  if (cart.length === 0) return;
+                  const selCust = customers.find(c => c.id === selectedCustomerId);
+
+                  if (paymentMethod === 'On Account / Trade Credit') {
+                    if (!selCust?.tradeAccount) {
+                      alert('Please select a customer with an active B2B Trade Account to charge on account.');
+                      return;
+                    }
+                    if (isCreditHold(selCust)) {
+                      alert('This account is on Credit Hold due to past-due invoices. Cannot complete sale on account.');
+                      return;
+                    }
+                    const avail = getAvailableCredit(selCust);
+                    if (total > avail) {
+                      alert(`Sale total ($${total.toFixed(2)}) exceeds available trade credit limit ($${avail.toFixed(2)}).`);
+                      return;
+                    }
+                    if (selCust.tradeAccount.poRequired && !posPoNumber.trim()) {
+                      alert('PO Number is required for this trade account.');
+                      return;
+                    }
+
+                    // Update customer credit balance & add trade ledger charge
+                    const currentBal = selCust.tradeAccount.creditBalance || 0;
+                    const newBal = currentBal + total;
+                    const updatedCust: CustomerProfile = {
+                      ...selCust,
+                      tradeAccount: {
+                        ...selCust.tradeAccount,
+                        creditBalance: newBal
+                      },
+                      tradeLedger: [
+                        {
+                          id: `LEDG-POS-${Date.now()}`,
+                          customerId: selCust.id,
+                          customerName: selCust.name,
+                          companyName: selCust.tradeAccount.companyName,
+                          date: new Date().toISOString().split('T')[0],
+                          type: 'Invoice Charge',
+                          amount: total,
+                          runningBalance: newBal,
+                          reference: `POS-${Math.floor(1000 + Math.random() * 9000)}`,
+                          description: `POS Counter Sale (PO #${posPoNumber || 'N/A'})`,
+                          status: 'Current'
+                        },
+                        ...(selCust.tradeLedger || [])
+                      ]
+                    };
+
+                    if (onUpdateCustomerProfile) {
+                      onUpdateCustomerProfile(updatedCust);
+                    }
+                  }
+
+                  handleCheckout();
+                }}
                 disabled={cart.length === 0}
                 className="w-full bg-neutral-950 hover:bg-neutral-800 disabled:opacity-50 text-white font-mono text-sm font-black uppercase tracking-wider py-3.5 flex items-center justify-center gap-2 cursor-pointer shadow-lg"
               >

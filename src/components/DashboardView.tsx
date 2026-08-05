@@ -16,10 +16,12 @@ import {
 import { InvoiceModal } from './InvoiceModal';
 import { convertOrderToInvoice, printInvoiceDirect, downloadInvoiceHtmlFile, printHtmlContent } from '../utils/invoicePrinter';
 import { buildCustomInvoiceSyncPayload } from '../utils/customInvoice';
-import { Product, Order, Coupon, ReturnRequest, Review, CustomerSegment, UpsellRule, Supplier, SupplierOrder, Shipment, FinanceTransaction, User, Invoice, StoreSettings, CustomerProfile, PurchaseOrder, RepairJob, StockUnit } from '../types';
+import { Product, Order, Coupon, ReturnRequest, Review, CustomerSegment, UpsellRule, Supplier, SupplierOrder, Shipment, FinanceTransaction, User, Invoice, StoreSettings, CustomerProfile, PurchaseOrder, RepairJob, StockUnit, WarehouseLocation, StockTransfer, StocktakeSession, ShrinkageRecord } from '../types';
 import RepairJobsManager from './repairs/RepairJobsManager';
 import PurchaseOrdersManager from './purchases/PurchaseOrdersManager';
 import StockUnitsManager from './stock/StockUnitsManager';
+import WarehousesManager from './warehouse/WarehousesManager';
+import B2BTradeManager from './b2b/B2BTradeManager';
 
 const FinanceManager = lazy(() => import('./FinanceManager'));
 const UserManager = lazy(() => import('./UserManager'));
@@ -131,6 +133,22 @@ interface DashboardViewProps {
   stockUnits?: StockUnit[];
   onAddStockUnit?: (unit: StockUnit) => void;
   onUpdateStockUnit?: (unit: StockUnit) => void;
+  warehouses?: WarehouseLocation[];
+  onAddWarehouse?: (warehouse: WarehouseLocation) => void;
+  onUpdateWarehouse?: (warehouse: WarehouseLocation) => void;
+  onDeleteWarehouse?: (id: string) => void;
+  stockTransfers?: StockTransfer[];
+  onAddStockTransfer?: (transfer: StockTransfer) => void;
+  onUpdateStockTransfer?: (transfer: StockTransfer) => void;
+  onCompleteStockTransfer?: (transferId: string) => void;
+
+  // Stocktake Props
+  stocktakes?: StocktakeSession[];
+  shrinkageRecords?: ShrinkageRecord[];
+  onAddStocktake?: (session: StocktakeSession) => void;
+  onUpdateStocktake?: (session: StocktakeSession) => void;
+  onAddShrinkageRecord?: (record: ShrinkageRecord) => void;
+  onUpdateProductStock?: (productId: string, newStock: number, reason: string, notes?: string) => void;
 }
 
 const COLORS = ['#0d6efd', '#198754', '#0dcaf0', '#ffc107', '#dc3545', '#6610f2', '#fd7e14', '#20c997', '#6f42c1'];
@@ -192,16 +210,30 @@ export default function DashboardView({
   stockUnits = [],
   onAddStockUnit,
   onUpdateStockUnit,
+  warehouses = [],
+  onAddWarehouse,
+  onUpdateWarehouse,
+  onDeleteWarehouse,
+  stockTransfers = [],
+  onAddStockTransfer,
+  onUpdateStockTransfer,
+  onCompleteStockTransfer,
+  stocktakes = [],
+  shrinkageRecords = [],
+  onAddStocktake,
+  onUpdateStocktake,
+  onAddShrinkageRecord,
+  onUpdateProductStock,
 }: DashboardViewProps) {
   
-  const [activeTab, setActiveTab] = useState<'metrics' | 'analytics' | 'inventory' | 'categories' | 'collections' | 'orders' | 'invoices' | 'customers' | 'returns' | 'coupons' | 'segments' | 'upsells' | 'reviews' | 'suppliers' | 'shipping' | 'pos' | 'finance' | 'users' | 'repairs' | 'purchase-orders' | 'stock-units'>(() => {
+  const [activeTab, setActiveTab] = useState<'metrics' | 'analytics' | 'inventory' | 'categories' | 'collections' | 'orders' | 'invoices' | 'customers' | 'returns' | 'coupons' | 'segments' | 'upsells' | 'reviews' | 'suppliers' | 'shipping' | 'pos' | 'finance' | 'users' | 'repairs' | 'purchase-orders' | 'stock-units' | 'warehouses' | 'trade-accounts'>(() => {
     try {
       const hash = window.location.hash.replace('#', '');
       const validTabs = [
         'metrics', 'analytics', 'inventory', 'categories', 'collections', 'orders', 'invoices',
         'customers', 'returns', 'coupons', 'segments', 'upsells', 'reviews',
         'suppliers', 'shipping', 'pos', 'finance', 'users',
-        'repairs', 'purchase-orders', 'stock-units'
+        'repairs', 'purchase-orders', 'stock-units', 'warehouses', 'trade-accounts'
       ];
       if (hash && validTabs.includes(hash)) {
         return hash as any;
@@ -262,7 +294,7 @@ export default function DashboardView({
         'metrics', 'analytics', 'inventory', 'categories', 'collections', 'orders', 'invoices',
         'customers', 'returns', 'coupons', 'segments', 'upsells', 'reviews',
         'suppliers', 'shipping', 'pos', 'finance', 'users',
-        'repairs', 'purchase-orders', 'stock-units'
+        'repairs', 'purchase-orders', 'stock-units', 'warehouses', 'trade-accounts'
       ];
       if (hash && validTabs.includes(hash)) {
         setActiveTab(hash as any);
@@ -790,7 +822,7 @@ export default function DashboardView({
       setNewCustPhone(customer.phone);
       setNewCustAddress(customer.address);
       setNewCustCity(customer.city);
-      setNewCustType(customer.type);
+      setNewCustType(customer.type === 'Trade' ? 'Wholesale' : customer.type);
       setNewCustCompany(customer.company || '');
       setNewCustABN(customer.abn || '');
       setNewCustNotes(customer.notes || '');
@@ -1820,6 +1852,8 @@ export default function DashboardView({
               { id: 'repairs', label: 'Repairs', count: repairJobs.length, icon: Wrench, color: 'bg-[#0d6efd] text-white shadow-blue-500/10', activeBorder: 'border-[#0d6efd]' },
               { id: 'purchase-orders', label: 'Purchase Orders', count: purchaseOrders.length, icon: ClipboardList, color: 'bg-[#0d6efd] text-white shadow-blue-500/10', activeBorder: 'border-[#0d6efd]' },
               { id: 'stock-units', label: 'Stock Units', count: stockUnits.length, icon: Barcode, color: 'bg-[#0d6efd] text-white shadow-blue-500/10', activeBorder: 'border-[#0d6efd]' },
+              { id: 'warehouses', label: 'Warehouses', count: warehouses.length, icon: Building2, color: 'bg-[#0d6efd] text-white shadow-blue-500/10', activeBorder: 'border-[#0d6efd]' },
+              { id: 'trade-accounts', label: 'B2B Trade Accounts', count: customers.filter(c => c.tradeAccount || c.type === 'Trade' || c.company).length, icon: Building2, color: 'bg-indigo-600 text-white shadow-indigo-500/10', activeBorder: 'border-indigo-600' },
             ].map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -2450,23 +2484,29 @@ export default function DashboardView({
       {/* LIVE INVENTORY MANAGEMENT TAB */}
       {activeTab === 'inventory' && (
         <InventoryModule
-  products={products}
-  onAddProduct={onAddProduct}
-  onUpdateProduct={onUpdateProduct}
-  onDeleteProduct={onDeleteProduct}
-  onClearAllProducts={onClearAllProducts}
-  onUpdateStoreSettings={onUpdateStoreSettings}
-  storeSettings={storeSettings}
-  categories={categories}
-  onAddCategory={onAddCategory}
-  onEditCategory={onEditCategory}
-  onDeleteCategory={onDeleteCategory}
-  collections={collections}
-  onAddCollection={onAddCollection}
-  onDeleteCollection={onDeleteCollection}
-  suppliers={suppliers}
-  setSuppliers={setSuppliers}
-/>
+          products={products}
+          onAddProduct={onAddProduct}
+          onUpdateProduct={onUpdateProduct}
+          onDeleteProduct={onDeleteProduct}
+          onClearAllProducts={onClearAllProducts}
+          onUpdateStoreSettings={onUpdateStoreSettings}
+          storeSettings={storeSettings}
+          categories={categories}
+          onAddCategory={onAddCategory}
+          onEditCategory={onEditCategory}
+          onDeleteCategory={onDeleteCategory}
+          collections={collections}
+          onAddCollection={onAddCollection}
+          onDeleteCollection={onDeleteCollection}
+          suppliers={suppliers}
+          setSuppliers={setSuppliers}
+          stocktakes={stocktakes}
+          shrinkageRecords={shrinkageRecords}
+          onAddStocktake={onAddStocktake!}
+          onUpdateStocktake={onUpdateStocktake!}
+          onAddShrinkageRecord={onAddShrinkageRecord!}
+          onUpdateProductStock={onUpdateProductStock!}
+        />
       )}
       {activeTab === 'orders' && (() => {
         const query = orderSearchQuery.toLowerCase().trim();
@@ -5745,6 +5785,36 @@ export default function DashboardView({
         </div>
       )}
 
+      {/* WAREHOUSES & BIN MANAGEMENT TAB */}
+      {activeTab === 'warehouses' && (
+        <div className="space-y-6" id="dashboard-tab-warehouses">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 shadow-lg">
+              <Building2 className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h2 className="font-black text-lg uppercase tracking-widest text-neutral-900">Multi-Location Warehouse & Bin Management</h2>
+              <p className="text-xs text-neutral-500">Track hardware locations across warehouses, showrooms, repair bays, and stock transfers</p>
+            </div>
+          </div>
+          <WarehousesManager
+            warehouses={warehouses}
+            onAddWarehouse={onAddWarehouse || (() => {})}
+            onUpdateWarehouse={onUpdateWarehouse || (() => {})}
+            onDeleteWarehouse={onDeleteWarehouse || (() => {})}
+            stockTransfers={stockTransfers}
+            onAddStockTransfer={onAddStockTransfer || (() => {})}
+            onUpdateStockTransfer={onUpdateStockTransfer || (() => {})}
+            onCompleteStockTransfer={onCompleteStockTransfer || (() => {})}
+            products={products}
+            stockUnits={stockUnits}
+            orders={orders}
+            storeSettings={storeSettings}
+            onShowAlert={onShowAlert}
+          />
+        </div>
+      )}
+
       {/* FINANCE MANAGER MODULE */}
       {activeTab === 'finance' && (
         <div className="bg-white dark:bg-neutral-900 p-5 rounded-2xl border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-neutral-100 shadow-sm">
@@ -6856,7 +6926,17 @@ export default function DashboardView({
         );
       })()}
 
-        </div>
+        {/* B2B TRADE ACCOUNTS MODULE */}
+        {activeTab === 'trade-accounts' && (
+          <B2BTradeManager
+            customers={customers}
+            products={products}
+            storeSettings={storeSettings}
+            onUpdateCustomer={onUpdateCustomer}
+            onUpdateProduct={onUpdateProduct}
+          />
+        )}
+      </div>
 
       {/* CUSTOM PRODUCT DELETE CONFIRMATION MODAL */}
       {productToDelete && (

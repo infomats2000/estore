@@ -1,3 +1,19 @@
+export type PriceTierType = 'Retail' | 'Reseller' | 'Wholesale' | 'Government';
+export type CreditTermType = 'Net 7' | 'Net 14' | 'Net 30' | 'Net 60' | 'Prepaid / COD';
+export type TradeAccountStatus = 'Pending' | 'Active' | 'Credit Hold' | 'Suspended' | 'Rejected';
+
+export interface VolumeDiscount {
+  minQty: number;
+  discountPercent?: number;
+  unitPrice?: number;
+}
+
+export interface ProductTierPrices {
+  Reseller?: number;
+  Wholesale?: number;
+  Government?: number;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -18,6 +34,9 @@ export interface Product {
   colors?: string[];
   sizes?: string[];
   serialNumbers?: string[];
+  locationStock?: Record<string, number>;
+  tierPrices?: ProductTierPrices;
+  volumeDiscounts?: VolumeDiscount[];
 }
 
 export interface InventoryLog {
@@ -122,6 +141,43 @@ export interface Coupon {
   minPurchase?: number;
 }
 
+export interface TradeLedgerEntry {
+  id: string;
+  customerId: string;
+  customerName: string;
+  companyName?: string;
+  date: string;
+  dueDate?: string;
+  type: 'Invoice Charge' | 'Payment Received' | 'Credit Adjustment' | 'Refund';
+  amount: number; // positive for charge, negative for payment
+  runningBalance: number;
+  reference: string; // Order # or Invoice # or Receipt #
+  description: string;
+  status?: 'Current' | 'Overdue' | 'Paid';
+  paymentMethod?: string;
+}
+
+export interface TradeAccount {
+  accountNumber: string; // e.g. TRD-10042
+  companyName: string;
+  abn: string;
+  contactPerson?: string;
+  phone?: string;
+  email?: string;
+  status: TradeAccountStatus;
+  creditLimit: number;
+  creditBalance: number; // current owing balance
+  creditTerms: CreditTermType;
+  priceTier: PriceTierType;
+  customDiscountPercent?: number;
+  poRequired: boolean;
+  taxExempt: boolean;
+  appliedDate: string;
+  approvedDate?: string;
+  lastReminderSent?: string;
+  notes?: string;
+}
+
 export interface CustomerProfile {
   id: string;
   name: string;
@@ -129,7 +185,7 @@ export interface CustomerProfile {
   phone: string;
   address: string;
   city: string;
-  type: 'Retail' | 'Wholesale';
+  type: 'Retail' | 'Wholesale' | 'Trade';
   registrationDate: string;
   company?: string;
   abn?: string;
@@ -138,6 +194,8 @@ export interface CustomerProfile {
   wishlist: string[]; // array of product IDs
   priceDropNotifications?: string[]; // array of product IDs for price drop alerts
   notes?: string;
+  tradeAccount?: TradeAccount;
+  tradeLedger?: TradeLedgerEntry[];
 }
 
 export interface ReturnRequest {
@@ -464,5 +522,117 @@ export interface StockUnit {
   notes?: string;
   auditLog: StockUnitAuditEntry[];
   receivedDate: string;
+  locationId?: string;
+  locationName?: string;
+  binLocation?: string;
 }
 
+// ============================================================
+// ERP PHASE 2 — MULTI-LOCATION WAREHOUSE & BIN MANAGEMENT
+// ============================================================
+
+export interface WarehouseBin {
+  id: string;
+  code: string; // e.g. "A-01-12"
+  zone?: string;
+  rack?: string;
+  shelf?: string;
+  binNumber?: string;
+  notes?: string;
+}
+
+export interface WarehouseLocation {
+  id: string;
+  code: string; // e.g. "WH-MAIN", "WH-SHOWROOM", "WH-REPAIR"
+  name: string; // e.g. "Main Logistics Hub", "Sydney Showroom", "Repair Bay"
+  address?: string;
+  contactPerson?: string;
+  phone?: string;
+  email?: string;
+  isDefault?: boolean;
+  bins: WarehouseBin[];
+}
+
+export interface StockTransferItem {
+  productId: string;
+  productName: string;
+  quantity: number;
+  stockUnitIds?: string[];
+}
+
+export interface StockTransfer {
+  id: string;
+  fromLocationId: string;
+  fromLocationName: string;
+  toLocationId: string;
+  toLocationName: string;
+  status: 'Draft' | 'Pending' | 'In Transit' | 'Completed' | 'Cancelled';
+  transferDate: string;
+  completedDate?: string;
+  requestedBy?: string;
+  reason?: string;
+  items: StockTransferItem[];
+  notes?: string;
+}
+
+// ============================================================
+// ERP PHASE 3 — STOCKTAKE & CYCLE COUNTING
+// ============================================================
+
+export type StocktakeType = 'Full Stocktake' | 'Category Cycle Count' | 'Location Cycle Count' | 'Spot Audit';
+export type StocktakeStatus = 'Draft' | 'In Progress' | 'Under Review' | 'Completed' | 'Cancelled';
+
+export interface StocktakeItem {
+  productId: string;
+  productName: string;
+  sku: string;
+  barcode: string;
+  category: string;
+  locationId?: string;
+  expectedQty: number;
+  countedQty: number;
+  variance: number;
+  unitCost: number;
+  varianceValue: number;
+  notes?: string;
+  status: 'Pending' | 'Matched' | 'Discrepancy' | 'Adjusted' | 'Written Off';
+  scannedAt?: string;
+}
+
+export interface StocktakeSession {
+  id: string;
+  title: string;
+  type: StocktakeType;
+  status: StocktakeStatus;
+  categoryFilter?: string;
+  locationId?: string;
+  locationName?: string;
+  startDate: string;
+  completedDate?: string;
+  conductedBy: string;
+  items: StocktakeItem[];
+  totalExpectedUnits: number;
+  totalCountedUnits: number;
+  netVarianceUnits: number;
+  netVarianceValue: number;
+  shrinkageUnits: number;
+  shrinkageValue: number;
+  notes?: string;
+}
+
+export interface ShrinkageRecord {
+  id: string;
+  stocktakeId?: string;
+  productId: string;
+  productName: string;
+  category: string;
+  locationName?: string;
+  quantity: number;
+  unitCost: number;
+  totalCostValue: number;
+  reason: 'Shrinkage / Theft' | 'Damaged / Broken' | 'Expired / Obsolete' | 'Sample / Demo Usage' | 'Data Entry Error';
+  date: string;
+  reportedBy: string;
+  actionTaken: 'Stock Adjusted' | 'Insurance Claim Filed' | 'Written Off';
+  notes?: string;
+}

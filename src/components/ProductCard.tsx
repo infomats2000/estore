@@ -1,6 +1,7 @@
 import React from 'react';
-import { Heart, Star, Plus, Eye, Shield, Check } from 'lucide-react';
-import { Product } from '../types';
+import { Heart, Star, Plus, Eye, Shield, Check, Tag } from 'lucide-react';
+import { Product, CustomerProfile } from '../types';
+import { calculateEffectivePrice } from '../utils/pricing';
 
 interface ProductCardProps {
   product: Product;
@@ -11,6 +12,7 @@ interface ProductCardProps {
   onBuyNow?: (product: Product) => void;
   onToggleCompare?: (product: Product) => void;
   isCompared?: boolean;
+  customerProfile?: CustomerProfile;
 }
 
 export default function ProductCard({
@@ -21,7 +23,8 @@ export default function ProductCard({
   onToggleWishlist,
   onBuyNow,
   onToggleCompare,
-  isCompared = false
+  isCompared = false,
+  customerProfile
 }: ProductCardProps) {
   
   const hasDiscount = product.discountPrice !== undefined && product.discountPrice < product.price;
@@ -140,48 +143,64 @@ export default function ProductCard({
         </h3>
 
         {/* Price & Action button */}
-        <div className="mt-auto flex items-end justify-between pt-3 border-t border-slate-100 dark:border-slate-800">
-          <div className="text-left font-sans" id={`price-${product.id}`}>
-            {hasDiscount ? (
-              <div className="flex items-baseline gap-2">
-                <span className="text-xl font-black text-emerald-600 dark:text-emerald-400">${product.discountPrice?.toFixed(2)}</span>
-                <span className="text-xs text-slate-400 dark:text-slate-500 line-through font-semibold">${product.price.toFixed(2)}</span>
-              </div>
-            ) : (
-              <span className="text-xl font-black text-slate-900 dark:text-white">${product.price.toFixed(2)}</span>
-            )}
-          </div>
+        {(() => {
+          const b2bCalc = calculateEffectivePrice(product, customerProfile, 1);
 
-          {/* Action buttons group */}
-          <div className="flex items-center gap-2">
-            {/* Buy Now Button */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                if (onBuyNow) onBuyNow(product);
-              }}
-              disabled={isOutOfStock}
-              className="flex h-9 px-3 items-center justify-center rounded-lg bg-slate-900 dark:bg-white font-sans text-xs font-extrabold uppercase tracking-wider text-white dark:text-slate-900 hover:bg-indigo-600 dark:hover:bg-slate-200 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed transition-colors shadow-sm"
-              title="Buy Now (Instant Checkout)"
-              id={`buy-now-${product.id}`}
-            >
-              Buy Now
-            </button>
-            {/* Add to Cart Button */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onQuickAdd(product);
-              }}
-              disabled={isOutOfStock}
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed shadow-sm"
-              title="Add to Cart"
-              id={`quick-add-${product.id}`}
-            >
-              <Plus className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
+          return (
+            <div className="mt-auto flex items-end justify-between pt-3 border-t border-slate-100 dark:border-slate-800">
+              <div className="text-left font-sans" id={`price-${product.id}`}>
+                {b2bCalc.tierApplied ? (
+                  <div>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-xl font-black text-indigo-600 dark:text-indigo-400">${b2bCalc.unitPrice.toFixed(2)}</span>
+                      <span className="text-xs text-slate-400 dark:text-slate-500 line-through font-semibold">${product.price.toFixed(2)}</span>
+                    </div>
+                    <span className="inline-flex items-center gap-1 font-mono text-[9px] uppercase font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/80 px-1.5 py-0.5 rounded border border-indigo-200 dark:border-indigo-800 mt-1">
+                      <Tag className="h-2.5 w-2.5" /> {b2bCalc.tierApplied} B2B Price
+                    </span>
+                  </div>
+                ) : hasDiscount ? (
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-xl font-black text-emerald-600 dark:text-emerald-400">${product.discountPrice?.toFixed(2)}</span>
+                    <span className="text-xs text-slate-400 dark:text-slate-500 line-through font-semibold">${product.price.toFixed(2)}</span>
+                  </div>
+                ) : (
+                  <span className="text-xl font-black text-slate-900 dark:text-white">${product.price.toFixed(2)}</span>
+                )}
+              </div>
+
+              {/* Action buttons group */}
+              <div className="flex items-center gap-2">
+                {/* Buy Now Button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (onBuyNow) onBuyNow(product);
+                  }}
+                  disabled={isOutOfStock}
+                  className="flex h-9 px-3 items-center justify-center rounded-lg bg-slate-900 dark:bg-white font-sans text-xs font-extrabold uppercase tracking-wider text-white dark:text-slate-900 hover:bg-indigo-600 dark:hover:bg-slate-200 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed transition-colors shadow-sm"
+                  title="Buy Now (Instant Checkout)"
+                  id={`buy-now-${product.id}`}
+                >
+                  Buy Now
+                </button>
+                {/* Add to Cart Button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onQuickAdd(product);
+                  }}
+                  disabled={isOutOfStock}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed shadow-sm"
+                  title="Add to Cart"
+                  id={`quick-add-${product.id}`}
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

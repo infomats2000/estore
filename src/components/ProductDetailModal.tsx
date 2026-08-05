@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X, Star, Heart, ShoppingBag, Check, ShieldCheck, Truck, RotateCcw, Link, Facebook, Twitter, MessageCircle, Bell, BellOff } from 'lucide-react';
-import { Product, Review } from '../types';
+import { X, Star, Heart, ShoppingBag, Check, ShieldCheck, Truck, RotateCcw, Link, Facebook, Twitter, MessageCircle, Bell, BellOff, Tag, Layers } from 'lucide-react';
+import { Product, Review, CustomerProfile } from '../types';
+import { calculateEffectivePrice } from '../utils/pricing';
 
 interface ProductDetailModalProps {
   product: Product | null;
@@ -15,6 +16,7 @@ interface ProductDetailModalProps {
   onBuyNow?: (product: Product, quantity: number, color?: string, size?: string) => void;
   products: Product[];
   onSelectProduct: (product: Product) => void;
+  customerProfile?: CustomerProfile;
 }
 
 export default function ProductDetailModal({
@@ -29,7 +31,8 @@ export default function ProductDetailModal({
   onTogglePriceDropNotification,
   onBuyNow,
   products,
-  onSelectProduct
+  onSelectProduct,
+  customerProfile
 }: ProductDetailModalProps) {
   
   const [selectedImage, setSelectedImage] = useState<string>(product?.image || '');
@@ -271,30 +274,53 @@ export default function ProductDetailModal({
           </div>
 
           {/* Pricing & Stock Status */}
-          <div className="mt-4 flex items-center justify-between">
-            <div className="text-left font-sans">
-              <span className="text-xs text-slate-400 uppercase tracking-wider block font-bold">Price</span>
-              {product.discountPrice ? (
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-black text-neutral-950">${product.discountPrice.toFixed(2)}</span>
-                  <span className="text-sm text-neutral-400 line-through font-semibold">${product.price.toFixed(2)}</span>
-                </div>
-              ) : (
-                <span className="text-2xl font-black text-neutral-950">${product.price.toFixed(2)}</span>
-              )}
-            </div>
+          {(() => {
+            const b2bCalc = calculateEffectivePrice(product, customerProfile, quantity);
+            return (
+              <div className="mt-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-left font-sans">
+                    <span className="text-xs text-slate-400 uppercase tracking-wider block font-bold">
+                      {b2bCalc.discountLabel ? b2bCalc.discountLabel : 'Price'}
+                    </span>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-2xl font-black text-neutral-950">${b2bCalc.unitPrice.toFixed(2)}</span>
+                      {b2bCalc.unitPrice < product.price && (
+                        <span className="text-sm text-neutral-400 line-through font-semibold">${product.price.toFixed(2)}</span>
+                      )}
+                    </div>
+                  </div>
 
-            <div className="text-right font-sans">
-              <span className="text-xs text-slate-400 uppercase tracking-wider block font-bold">Availability</span>
-              {isOutOfStock ? (
-                <span className="text-sm font-bold text-red-600 uppercase tracking-wider">Out of Stock</span>
-              ) : (
-                <span className="text-sm font-bold text-emerald-600 uppercase tracking-wider">
-                  {product.stock} Units In Stock
-                </span>
-              )}
-            </div>
-          </div>
+                  <div className="text-right font-sans">
+                    <span className="text-xs text-slate-400 uppercase tracking-wider block font-bold">Availability</span>
+                    {isOutOfStock ? (
+                      <span className="text-sm font-bold text-red-600 uppercase tracking-wider">Out of Stock</span>
+                    ) : (
+                      <span className="text-sm font-bold text-emerald-600 uppercase tracking-wider">
+                        {product.stock} Units In Stock
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Volume Discount Schedule Banner */}
+                {product.volumeDiscounts && product.volumeDiscounts.length > 0 && (
+                  <div className="bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 p-3 text-left">
+                    <div className="flex items-center gap-1.5 font-mono text-[10px] uppercase font-bold text-indigo-700 dark:text-indigo-300">
+                      <Layers className="h-3.5 w-3.5 text-indigo-600" /> B2B Volume Pricing Schedule
+                    </div>
+                    <div className="mt-1 flex flex-wrap gap-2 font-mono text-[9px]">
+                      {product.volumeDiscounts.map((vBreak, idx) => (
+                        <span key={idx} className="bg-white dark:bg-indigo-900 px-2 py-1 border border-indigo-200 dark:border-indigo-700 font-bold text-indigo-900 dark:text-indigo-100">
+                          Buy {vBreak.minQty}+: {vBreak.discountPercent}% OFF (${(b2bCalc.unitPrice * (1 - (vBreak.discountPercent || 0)/100)).toFixed(2)} ea)
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Product Long Description */}
           <p className="mt-5 text-left font-sans text-sm leading-relaxed text-neutral-600">

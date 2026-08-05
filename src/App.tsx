@@ -11,8 +11,9 @@ import ExitIntentModal from './components/ExitIntentModal';
 import OrderTrackingModal from './components/OrderTrackingModal';
 import POSRegisterView from './components/POSRegisterView';
 
-import { Product, CartItem, Order, Coupon, CustomerProfile, Review, ReturnRequest, CustomerSegment, UpsellRule, FinanceTransaction, User, StoreSettings, DEFAULT_STORE_SETTINGS, PurchaseOrder, RepairJob, StockUnit } from './types';
+import { Product, CartItem, Order, Coupon, CustomerProfile, Review, ReturnRequest, CustomerSegment, UpsellRule, FinanceTransaction, User, StoreSettings, DEFAULT_STORE_SETTINGS, PurchaseOrder, RepairJob, StockUnit, WarehouseLocation, StockTransfer, StocktakeSession, ShrinkageRecord } from './types';
 import { INITIAL_PRODUCTS, INITIAL_REVIEWS, INITIAL_COUPONS } from './data/products';
+import { INITIAL_WAREHOUSES } from './data/warehouses';
 
 import Navbar from './components/Navbar';
 import ProductCard from './components/ProductCard';
@@ -30,7 +31,173 @@ const CheckoutModal = lazy(loadCheckoutModal);
 const AccountDrawer = lazy(loadAccountDrawer);
 const SettingsModal = lazy(loadSettingsModal);
 
-const INITIAL_CUSTOMERS: CustomerProfile[] = [];
+const INITIAL_CUSTOMERS: CustomerProfile[] = [
+  {
+    id: 'cust-apex-b2b',
+    name: 'Sarah Connor',
+    email: 'procurement@apextech.com.au',
+    phone: '+61 2 9876 5432',
+    address: 'Suite 400, 100 Miller Street',
+    city: 'North Sydney NSW 2060',
+    type: 'Trade',
+    registrationDate: '2026-01-15',
+    company: 'Apex Technology Solutions Pty Ltd',
+    abn: '45 123 456 789',
+    walletBalance: 500,
+    points: 1250,
+    wishlist: [],
+    priceDropNotifications: [],
+    tradeAccount: {
+      accountNumber: 'TRD-10042',
+      companyName: 'Apex Technology Solutions Pty Ltd',
+      abn: '45 123 456 789',
+      contactPerson: 'Sarah Connor',
+      phone: '+61 2 9876 5432',
+      email: 'procurement@apextech.com.au',
+      status: 'Active',
+      creditLimit: 25000,
+      creditBalance: 3450,
+      creditTerms: 'Net 30',
+      priceTier: 'Wholesale',
+      customDiscountPercent: 0,
+      poRequired: true,
+      taxExempt: false,
+      appliedDate: '2026-01-15',
+      approvedDate: '2026-01-16'
+    },
+    tradeLedger: [
+      {
+        id: 'LEDG-101',
+        customerId: 'cust-apex-b2b',
+        customerName: 'Sarah Connor',
+        companyName: 'Apex Technology Solutions Pty Ltd',
+        date: '2026-07-10',
+        dueDate: '2026-08-09',
+        type: 'Invoice Charge',
+        amount: 3450,
+        runningBalance: 3450,
+        reference: 'ORD-9821',
+        description: 'Bulk Dell Latitude & ThinkPad Procurement (PO #PO-APEX-901)',
+        status: 'Current'
+      },
+      {
+        id: 'LEDG-100',
+        customerId: 'cust-apex-b2b',
+        customerName: 'Sarah Connor',
+        companyName: 'Apex Technology Solutions Pty Ltd',
+        date: '2026-06-01',
+        type: 'Payment Received',
+        amount: -5000,
+        runningBalance: 0,
+        reference: 'EFT-7712',
+        description: 'EFT Bank Deposit Clearance (cba-ref-9812)',
+        status: 'Paid',
+        paymentMethod: 'EFT Bank Transfer'
+      }
+    ]
+  },
+  {
+    id: 'cust-govtech-b2b',
+    name: 'Arthur Pendelton',
+    email: 'contracts@govtech.gov.au',
+    phone: '+61 2 6100 0000',
+    address: 'Level 12, Treasury Building, Parkes',
+    city: 'Canberra ACT 2600',
+    type: 'Trade',
+    registrationDate: '2026-02-01',
+    company: 'GovTech Australia Department',
+    abn: '99 888 777 666',
+    walletBalance: 0,
+    points: 4000,
+    wishlist: [],
+    priceDropNotifications: [],
+    tradeAccount: {
+      accountNumber: 'TRD-90001',
+      companyName: 'GovTech Australia Department',
+      abn: '99 888 777 666',
+      contactPerson: 'Arthur Pendelton',
+      phone: '+61 2 6100 0000',
+      email: 'contracts@govtech.gov.au',
+      status: 'Active',
+      creditLimit: 50000,
+      creditBalance: 0,
+      creditTerms: 'Net 60',
+      priceTier: 'Government',
+      customDiscountPercent: 2,
+      poRequired: true,
+      taxExempt: true,
+      appliedDate: '2026-02-01',
+      approvedDate: '2026-02-02'
+    },
+    tradeLedger: [
+      {
+        id: 'LEDG-201',
+        customerId: 'cust-govtech-b2b',
+        customerName: 'Arthur Pendelton',
+        companyName: 'GovTech Australia Department',
+        date: '2026-05-15',
+        type: 'Payment Received',
+        amount: -12500,
+        runningBalance: 0,
+        reference: 'EFT-GOV-901',
+        description: 'Federal Treasury EFT Settlement',
+        status: 'Paid',
+        paymentMethod: 'EFT Bank Transfer'
+      }
+    ]
+  },
+  {
+    id: 'cust-nextgen-b2b',
+    name: 'Marcus Brody',
+    email: 'accounts@nextgenresellers.com.au',
+    phone: '+61 3 9555 1234',
+    address: '88 Innovation Way',
+    city: 'Melbourne VIC 3000',
+    type: 'Trade',
+    registrationDate: '2026-03-10',
+    company: 'NextGen IT Resellers Ltd',
+    abn: '12 345 678 901',
+    walletBalance: 0,
+    points: 100,
+    wishlist: [],
+    priceDropNotifications: [],
+    tradeAccount: {
+      accountNumber: 'TRD-44012',
+      companyName: 'NextGen IT Resellers Ltd',
+      abn: '12 345 678 901',
+      contactPerson: 'Marcus Brody',
+      phone: '+61 3 9555 1234',
+      email: 'accounts@nextgenresellers.com.au',
+      status: 'Credit Hold',
+      creditLimit: 15000,
+      creditBalance: 4200,
+      creditTerms: 'Net 14',
+      priceTier: 'Reseller',
+      customDiscountPercent: 0,
+      poRequired: true,
+      taxExempt: false,
+      appliedDate: '2026-03-10',
+      approvedDate: '2026-03-11',
+      lastReminderSent: '2026-07-28'
+    },
+    tradeLedger: [
+      {
+        id: 'LEDG-301',
+        customerId: 'cust-nextgen-b2b',
+        customerName: 'Marcus Brody',
+        companyName: 'NextGen IT Resellers Ltd',
+        date: '2026-05-10',
+        dueDate: '2026-05-24',
+        type: 'Invoice Charge',
+        amount: 4200,
+        runningBalance: 4200,
+        reference: 'ORD-7712',
+        description: 'Server & Workstation Stock Order (OVERDUE 60+ DAYS)',
+        status: 'Overdue'
+      }
+    ]
+  }
+];
 
 const EMPTY_PROFILE: CustomerProfile = {
   id: 'GUEST',
@@ -228,9 +395,182 @@ export default function App() {
     } catch { return []; }
   });
 
+  const [warehouses, setWarehouses] = useState<WarehouseLocation[]>(() => {
+    try {
+      const saved = localStorage.getItem('techseller_warehouses_v4');
+      return saved ? JSON.parse(saved) : INITIAL_WAREHOUSES;
+    } catch { return INITIAL_WAREHOUSES; }
+  });
+
+  const [stockTransfers, setStockTransfers] = useState<StockTransfer[]>(() => {
+    try {
+      const saved = localStorage.getItem('techseller_stock_transfers_v4');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+
   useEffect(() => { localStorage.setItem('techseller_purchase_orders_v4', JSON.stringify(purchaseOrders)); }, [purchaseOrders]);
   useEffect(() => { localStorage.setItem('techseller_repair_jobs_v4', JSON.stringify(repairJobs)); }, [repairJobs]);
   useEffect(() => { localStorage.setItem('techseller_stock_units_v4', JSON.stringify(stockUnits)); }, [stockUnits]);
+  useEffect(() => { localStorage.setItem('techseller_warehouses_v4', JSON.stringify(warehouses)); }, [warehouses]);
+  useEffect(() => { localStorage.setItem('techseller_stock_transfers_v4', JSON.stringify(stockTransfers)); }, [stockTransfers]);
+
+  // ── ERP PHASE 3 STOCKTAKE STATE & HANDLERS ────────────────────────────────
+  const [stocktakes, setStocktakes] = useState<StocktakeSession[]>(() => {
+    try {
+      const saved = localStorage.getItem('techseller_stocktakes_v4');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    
+    return [
+      {
+        id: 'STK-2026-001',
+        title: 'Q1 Accessories & Docks Spot Audit',
+        type: 'Spot Audit',
+        status: 'Completed',
+        startDate: '2026-03-10',
+        completedDate: '2026-03-10',
+        conductedBy: 'Auditor Dave',
+        locationName: 'Sydney Showroom',
+        items: [
+          {
+            productId: 'P-004',
+            productName: 'Dual-Protocol NVMe Enclosure',
+            sku: 'P-004',
+            barcode: 'P-004',
+            category: 'Accessories',
+            expectedQty: 25,
+            countedQty: 25,
+            variance: 0,
+            unitCost: 28.00,
+            varianceValue: 0.00,
+            status: 'Matched'
+          },
+          {
+            productId: 'P-006',
+            productName: 'USB-C Multi-Port Hub',
+            sku: 'P-006',
+            barcode: 'P-006',
+            category: 'Accessories',
+            expectedQty: 30,
+            countedQty: 27,
+            variance: -3,
+            unitCost: 19.50,
+            varianceValue: -58.50,
+            status: 'Adjusted'
+          }
+        ],
+        totalExpectedUnits: 55,
+        totalCountedUnits: 52,
+        netVarianceUnits: -3,
+        netVarianceValue: -58.50,
+        shrinkageUnits: 3,
+        shrinkageValue: 58.50
+      },
+      {
+        id: 'STK-2026-002',
+        title: 'Laptops & Workstations Rolling Cycle Count',
+        type: 'Category Cycle Count',
+        status: 'In Progress',
+        categoryFilter: 'Laptops',
+        startDate: '2026-08-04',
+        conductedBy: 'Auditor Dave',
+        locationName: 'Main Logistics Hub',
+        items: [
+          {
+            productId: 'P-001',
+            productName: 'Refurbished Enterprise ThinkPad - i5 / 16GB / 256GB SSD',
+            sku: 'P-001',
+            barcode: 'P-001',
+            category: 'Laptops',
+            expectedQty: 18,
+            countedQty: 0,
+            variance: -18,
+            unitCost: 280.00,
+            varianceValue: -5040.00,
+            status: 'Pending'
+          },
+          {
+            productId: 'P-002',
+            productName: 'Powerhouse Developer Laptop - i7 / 32GB / 1TB NVMe',
+            sku: 'P-002',
+            barcode: 'P-002',
+            category: 'Laptops',
+            expectedQty: 12,
+            countedQty: 0,
+            variance: -12,
+            unitCost: 450.00,
+            varianceValue: -5400.00,
+            status: 'Pending'
+          }
+        ],
+        totalExpectedUnits: 30,
+        totalCountedUnits: 0,
+        netVarianceUnits: -30,
+        netVarianceValue: -10440.00,
+        shrinkageUnits: 0,
+        shrinkageValue: 0
+      }
+    ];
+  });
+
+  const [shrinkageRecords, setShrinkageRecords] = useState<ShrinkageRecord[]>(() => {
+    try {
+      const saved = localStorage.getItem('techseller_shrinkage_records_v4');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    
+    return [
+      {
+        id: 'SHR-2026-001',
+        stocktakeId: 'STK-2026-001',
+        productId: 'P-006',
+        productName: 'USB-C Multi-Port Hub',
+        category: 'Accessories',
+        locationName: 'Sydney Showroom',
+        quantity: 3,
+        unitCost: 19.50,
+        totalCostValue: 58.50,
+        reason: 'Shrinkage / Theft',
+        date: '2026-03-10',
+        reportedBy: 'Auditor Dave',
+        actionTaken: 'Stock Adjusted'
+      }
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('techseller_stocktakes_v4', JSON.stringify(stocktakes));
+  }, [stocktakes]);
+
+  useEffect(() => {
+    localStorage.setItem('techseller_shrinkage_records_v4', JSON.stringify(shrinkageRecords));
+  }, [shrinkageRecords]);
+
+  const handleAddStocktake = (session: StocktakeSession) => {
+    setStocktakes(prev => [session, ...prev]);
+  };
+
+  const handleUpdateStocktake = (session: StocktakeSession) => {
+    setStocktakes(prev => prev.map(s => s.id === session.id ? session : s));
+  };
+
+  const handleAddShrinkageRecord = (record: ShrinkageRecord) => {
+    setShrinkageRecords(prev => [record, ...prev]);
+  };
+
+  const handleUpdateProductStock = (productId: string, newStock: number, reason: string, notes?: string) => {
+    setProducts(prev => prev.map(p => {
+      if (p.id === productId) {
+        return {
+          ...p,
+          stock: newStock
+        };
+      }
+      return p;
+    }));
+  };
+
 
   const [returns, setReturns] = useState<ReturnRequest[]>(() => {
     try {
@@ -983,6 +1323,62 @@ export default function App() {
 
   const handleUpdateStockUnit = (unit: StockUnit) => {
     setStockUnits(prev => prev.map(u => u.id === unit.id ? unit : u));
+  };
+
+  // ── ERP PHASE 2: WAREHOUSES & TRANSFERS ──────────────────────────────────
+  const handleAddWarehouse = (wh: WarehouseLocation) => {
+    setWarehouses(prev => [wh, ...prev]);
+  };
+
+  const handleUpdateWarehouse = (wh: WarehouseLocation) => {
+    setWarehouses(prev => prev.map(w => w.id === wh.id ? wh : w));
+  };
+
+  const handleDeleteWarehouse = (id: string) => {
+    setWarehouses(prev => prev.filter(w => w.id !== id));
+  };
+
+  const handleAddStockTransfer = (transfer: StockTransfer) => {
+    setStockTransfers(prev => [transfer, ...prev]);
+  };
+
+  const handleUpdateStockTransfer = (transfer: StockTransfer) => {
+    setStockTransfers(prev => prev.map(t => t.id === transfer.id ? transfer : t));
+  };
+
+  const handleCompleteStockTransfer = (transferId: string) => {
+    setStockTransfers(prev => prev.map(st => {
+      if (st.id !== transferId) return st;
+      return {
+        ...st,
+        status: 'Completed',
+        completedDate: new Date().toISOString().split('T')[0],
+      };
+    }));
+
+    const st = stockTransfers.find(t => t.id === transferId);
+    if (st) {
+      const destWh = warehouses.find(w => w.id === st.toLocationId);
+      setStockUnits(prev => prev.map(u => {
+        const itemMatch = st.items.find(i => i.productId === u.productId);
+        if (itemMatch && u.status === 'In Stock') {
+          return {
+            ...u,
+            locationId: st.toLocationId,
+            locationName: destWh?.name || st.toLocationName,
+            auditLog: [
+              {
+                date: new Date().toISOString(),
+                action: 'Transferred Location',
+                notes: `Transferred from ${st.fromLocationName} to ${st.toLocationName} via ${st.id}`,
+              },
+              ...u.auditLog,
+            ],
+          };
+        }
+        return u;
+      }));
+    }
   };
 
   const handleAddUser = (user: User) => {
@@ -1880,6 +2276,20 @@ export default function App() {
                 stockUnits={stockUnits}
                 onAddStockUnit={handleAddStockUnit}
                 onUpdateStockUnit={handleUpdateStockUnit}
+                warehouses={warehouses}
+                onAddWarehouse={handleAddWarehouse}
+                onUpdateWarehouse={handleUpdateWarehouse}
+                onDeleteWarehouse={handleDeleteWarehouse}
+                stockTransfers={stockTransfers}
+                onAddStockTransfer={handleAddStockTransfer}
+                onUpdateStockTransfer={handleUpdateStockTransfer}
+                onCompleteStockTransfer={handleCompleteStockTransfer}
+                stocktakes={stocktakes}
+                shrinkageRecords={shrinkageRecords}
+                onAddStocktake={handleAddStocktake}
+                onUpdateStocktake={handleUpdateStocktake}
+                onAddShrinkageRecord={handleAddShrinkageRecord}
+                onUpdateProductStock={handleUpdateProductStock}
               />
             </Suspense>
           </div>
