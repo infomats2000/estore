@@ -2,6 +2,7 @@ import { INITIAL_PRODUCTS } from '../data/products';
 import { prisma } from './prisma';
 import { hashPassword } from './auth';
 import { normalizeProductForDb } from './products';
+import { seedMasterData } from './masterDataSeeder';
 
 const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL || 'admin@techseller.app';
 const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || 'admin123';
@@ -9,6 +10,7 @@ const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || 'admin123';
 const slugify = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
 export const seedDatabase = async () => {
+  await seedMasterData();
   const adminUser = await prisma.adminUser.upsert({
     where: { email: ADMIN_EMAIL },
     update: {

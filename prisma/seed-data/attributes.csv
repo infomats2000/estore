@@ -1,0 +1,22 @@
+id,name,code,isSystem,isActive
+attr-cpu-socket,CPU Socket,cpu_socket,true,true
+attr-ram-type,RAM Type,ram_type,true,true
+attr-ram-cap,RAM Capacity,ram_capacity,true,true
+attr-chipset,Chipset,chipset,true,true
+attr-storage-cap,Storage Capacity,storage_capacity,true,true
+attr-storage-if,Storage Interface,storage_interface,true,true
+attr-pcie-ver,PCIe Version,pcie_version,true,true
+attr-screen-size,Screen Size,screen_size,true,true
+attr-resolution,Resolution,resolution,true,true
+attr-refresh-rate,Refresh Rate,refresh_rate,true,true
+attr-panel-type,Panel Type,panel_type,true,true
+attr-form-factor,Form Factor,form_factor,true,true
+attr-psu-wattage,PSU Wattage,psu_wattage,true,true
+attr-os,Operating System,operating_system,true,true
+attr-color,Color,color,true,true
+attr-bt-ver,Bluetooth Version,bluetooth_version,true,true
+attr-wifi-std,WiFi Standard,wifi_standard,true,true
+attr-conn-type,Connector Type,connector_type,true,true
+attr-cable-len,Cable Length,cable_length,true,true
+attr-condition,Condition,condition,true,true
+attr-warranty,Warranty,warranty,true,true

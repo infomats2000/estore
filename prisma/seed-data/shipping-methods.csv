@@ -1,0 +1,8 @@
+id,name,code,description,cost,sortOrder,isSystem,active
+ship-pickup,Customer Pickup,PICKUP,Store or warehouse pickup by customer,0.0,1,true,true
+ship-local,Local Delivery,LOCAL_DELIVERY,Same day local van courier delivery,15.0,2,true,true
+ship-courier,Standard Courier,COURIER,Standard road express freight (2-3 business days),9.99,3,true,true
+ship-express,Express Courier,EXPRESS_COURIER,Overnight air express courier delivery,19.99,4,true,true
+ship-freight,Pallet Freight,PALLET_FREIGHT,Heavy palletized freight for bulk orders,75.0,5,true,true
+ship-dropship,Drop Shipping,DROP_SHIP,Direct dispatch from distributor warehouse,12.5,6,true,true
+ship-intl,International Shipping,INTL_AIR,International air courier express,49.99,7,true,true

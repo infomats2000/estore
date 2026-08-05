@@ -73,17 +73,52 @@ export const buildCheckoutOrderPayload = ({
   items
 });
 
-export const submitCheckoutOrder = async (payload: CheckoutOrderPayload) => {
-  const response = await fetch('/api/orders', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
+import { enqueueOfflineTransaction } from './offlineSyncEngine';
 
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.error || 'Unable to save order');
+export const submitCheckoutOrder = async (payload: CheckoutOrderPayload) => {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    enqueueOfflineTransaction({
+      type: 'ORDER',
+      endpoint: '/api/orders',
+      payload
+    });
+
+    return {
+      id: payload.orderNumber,
+      ...payload,
+      paymentStatus: 'Offline Saved (Pending Sync)',
+      offlineQueued: true,
+      createdAt: new Date().toISOString()
+    };
   }
 
-  return data;
+  try {
+    const response = await fetch('/api/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.error || 'Unable to save order');
+    }
+
+    return data;
+  } catch (err: any) {
+    // Network failure fallback — enqueue for background sync when connection is restored
+    enqueueOfflineTransaction({
+      type: 'ORDER',
+      endpoint: '/api/orders',
+      payload
+    });
+
+    return {
+      id: payload.orderNumber,
+      ...payload,
+      paymentStatus: 'Offline Saved (Pending Sync)',
+      offlineQueued: true,
+      createdAt: new Date().toISOString()
+    };
+  }
 };

@@ -1,0 +1,16 @@
+id,name,iso2,iso3,currency,phoneCode,timeZone,isSystem,isActive
+country-au,Australia,AU,AUS,AUD,+61,Australia/Sydney,true,true
+country-us,United States,US,USA,USD,+1,America/New_York,true,true
+country-nz,New Zealand,NZ,NZL,NZD,+64,Pacific/Auckland,true,true
+country-gb,United Kingdom,GB,GBR,GBP,+44,Europe/London,true,true
+country-ca,Canada,CA,CAN,CAD,+1,America/Toronto,true,true
+country-sg,Singapore,SG,SGP,SGD,+65,Asia/Singapore,true,true
+country-jp,Japan,JP,JPN,JPY,+81,Asia/Tokyo,true,true
+country-de,Germany,DE,DEU,EUR,+49,Europe/Berlin,true,true
+country-fr,France,FR,FRA,EUR,+33,Europe/Paris,true,true
+country-ae,United Arab Emirates,AE,ARE,AED,+971,Asia/Dubai,true,true
+country-pk,Pakistan,PK,PAK,PKR,+92,Asia/Karachi,true,true
+country-in,India,IN,IND,INR,+91,Asia/Kolkata,true,true
+country-cn,China,CN,CHN,CNY,+86,Asia/Shanghai,true,true
+country-my,Malaysia,MY,MYS,MYR,+60,Asia/Kuala_Lumpur,true,true
+country-nl,Netherlands,NL,NLD,EUR,+31,Europe/Amsterdam,true,true

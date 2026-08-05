@@ -444,8 +444,38 @@ export default function InventoryProducts({
   };
 
   const exportInventory = () => {
+    const headers = ['Product ID', 'Name', 'Category', 'Price (AUD)', 'Discount Price (AUD)', 'Stock Qty', 'Total Valuation', 'CPU', 'RAM', 'Storage', 'Tags'];
+    const rows = products.map(p => {
+      const price = p.price || 0;
+      const discountPrice = p.discountPrice || p.price || 0;
+      const stock = p.stock || 0;
+      const totalVal = (discountPrice * stock).toFixed(2);
+      const tags = (p.tags || []).join('; ');
+      return [
+        `"${p.id}"`,
+        `"${(p.name || '').replace(/"/g, '""')}"`,
+        `"${(p.category || '').replace(/"/g, '""')}"`,
+        `"${price.toFixed(2)}"`,
+        `"${discountPrice.toFixed(2)}"`,
+        `"${stock}"`,
+        `"$${totalVal}"`,
+        `"${(p.specs?.cpu || '').replace(/"/g, '""')}"`,
+        `"${(p.specs?.ram || '').replace(/"/g, '""')}"`,
+        `"${(p.specs?.storage || '').replace(/"/g, '""')}"`,
+        `"${tags.replace(/"/g, '""')}"`
+      ].join(',');
+    });
 
-    alert("Export feature coming soon.");
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `inventory_export_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const totalValuation = products.reduce((sum, p) => sum + (p.stock * p.price), 0);

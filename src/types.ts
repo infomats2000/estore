@@ -718,9 +718,9 @@ export interface StoreSettings {
 }
 
 export const DEFAULT_STORE_SETTINGS: StoreSettings = {
-  storeName: 'TECH SELLER',
+  storeName: 'INFOMAT',
   storeTagline: 'Quality Refurbished Enterprise Hardware',
-  legalName: 'Tech Seller Australia Pty Ltd',
+  legalName: 'INFOMAT Australia Pty Ltd',
   businessNumber: 'ABN 45 123 456 789',
   logoUrl: '/images/app_logo.jpg',
   currencySymbol: '$',
@@ -735,7 +735,7 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   businessHours: 'Open 24/7',
 
   bankName: 'Commonwealth Bank',
-  accountName: 'Tech Seller Australia Pty Ltd',
+  accountName: 'INFOMAT Australia Pty Ltd',
   bsb: '062-000',
   accountNumber: '12345678',
   swift: 'CTBAAU2S',
@@ -759,7 +759,7 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   whyShopHeadingTop: "Australia's Leader in",
   whyShopHeadingHighlight: 'Premium Refurbished',
   whyShopHeadingBottom: 'Hardware',
-  whyShopBodyText: 'At TECH SELLER, we bridge the gap between high-performance technology and affordability. Our refurbished units are sourced from top-tier corporate environments and undergo rigorous testing by our certified Australian technicians.',
+  whyShopBodyText: 'At INFOMAT, we bridge the gap between high-performance technology and affordability. Our refurbished units are sourced from top-tier corporate environments and undergo rigorous testing by our certified Australian technicians.',
   whyShopBulletPoints: [
     'Professional 50-Point Inspection',
     '12 Month Express Warranty',

@@ -1,0 +1,82 @@
+id,parentId,name,slug,description,sortOrder,isSystem,isActive
+cat-components,,Components,components,Core computer hardware components,1,true,true
+cat-cpus,cat-components,CPUs / Processors,cpus-processors,Central Processing Units,2,true,true
+cat-cpus-intel,cat-cpus,Intel CPUs,intel-cpus,Intel Core i3/i5/i7/i9 and Xeon Processors,3,true,true
+cat-cpus-amd,cat-cpus,AMD CPUs,amd-cpus,AMD Ryzen and EPYC Processors,4,true,true
+cat-motherboards,cat-components,Motherboards,motherboards,System circuit boards,5,true,true
+cat-mb-intel,cat-motherboards,Intel Motherboards,intel-motherboards,LGA1700 and LGA1200 motherboards,6,true,true
+cat-mb-amd,cat-motherboards,AMD Motherboards,amd-motherboards,AM5 and AM4 motherboards,7,true,true
+cat-ram,cat-components,RAM / Memory,ram-memory,Desktop and laptop system memory,8,true,true
+cat-ram-ddr4,cat-ram,DDR4 RAM,ddr4-ram,DDR4 memory kits,9,true,true
+cat-ram-ddr5,cat-ram,DDR5 RAM,ddr5-ram,High-speed DDR5 memory kits,10,true,true
+cat-ram-sodimm,cat-ram,Laptop SODIMM RAM,laptop-sodimm-ram,Small Form Factor SODIMM memory,11,true,true
+cat-gpu,cat-components,Graphics Cards,graphics-cards,Dedicated video and workstation graphics,12,true,true
+cat-gpu-nvidia,cat-gpu,NVIDIA RTX Graphics,nvidia-rtx-graphics,GeForce RTX 40 and 30 series,13,true,true
+cat-gpu-amd,cat-gpu,AMD Radeon Graphics,amd-radeon-graphics,Radeon RX 7000 and 6000 series,14,true,true
+cat-gpu-workstation,cat-gpu,Workstation GPUs,workstation-gpus,NVIDIA RTX A-series and AMD Radeon PRO,15,true,true
+cat-storage,cat-components,Storage Devices,storage-devices,Solid State Drives and Hard Drives,16,true,true
+cat-ssd-nvme,cat-storage,M.2 NVMe SSDs,m2-nvme-ssds,High speed PCIe NVMe storage,17,true,true
+cat-ssd-sata,cat-storage,SATA SSDs,sata-ssds,2.5 inch SATA solid state drives,18,true,true
+cat-hdd-internal,cat-storage,Internal Hard Drives,internal-hard-drives,3.5 inch desktop and NAS hard drives,19,true,true
+cat-hdd-external,cat-storage,External Drives,external-drives,Portable USB external drives,20,true,true
+cat-psu,cat-components,Power Supplies (PSU),power-supplies-psu,80 Plus certified power supply units,21,true,true
+cat-cases,cat-components,Computer Cases,computer-cases,ATX mid-towers and SFF chassis,22,true,true
+cat-cooling,cat-components,Cooling & Fans,cooling-fans,AIO liquid coolers and CPU fans,23,true,true
+cat-coolers-liquid,cat-cooling,AIO Liquid Coolers,aio-liquid-coolers,240mm and 360mm All-In-One liquid coolers,24,true,true
+cat-coolers-air,cat-cooling,Air CPU Coolers,air-cpu-coolers,Tower heatsinks and air cooling,25,true,true
+cat-fans-case,cat-cooling,Case Fans,case-fans,120mm and 140mm chassis fans,26,true,true
+cat-networking,,Networking,networking,Enterprise and home networking equipment,27,true,true
+cat-[#101],cat-networking,Routers,routers,Wireless and wired network routers,28,true,true
+cat-[#102],cat-networking,Network Switches,network-switches,Managed and unmanaged PoE switches,29,true,true
+cat-[#103],cat-networking,Wireless Access Points,wireless-access-points,Wi-Fi 6 and Wi-Fi 7 access points,30,true,true
+cat-[#104],cat-networking,Firewalls & Security,firewalls-security,Hardware security gateways and firewalls,31,true,true
+cat-[#105],cat-networking,Patch Panels & Cabinets,patch-panels-cabinets,Server racks and patch panels,32,true,true
+cat-laptops,,Laptops & Notebooks,laptops-notebooks,Portable computers and Ultrabooks,33,true,true
+cat-[#201],cat-laptops,Business Laptops,business-laptops,Ex-Corporate Dell Latitude ThinkPad EliteBook,34,true,true
+cat-[#202],cat-laptops,Gaming Laptops,gaming-laptops,High performance mobile gaming rigs,35,true,true
+cat-[#203],cat-laptops,Ultrabooks,ultrabooks,Thin and light portable notebooks,36,true,true
+cat-[#204],cat-laptops,Mobile Workstations,mobile-workstations,CAD and rendering heavy duty laptops,37,true,true
+cat-[#205],cat-laptops,2-in-1 Touch Laptops,2-in-1-touch-laptops,Convertibles with touchscreen and stylus,38,true,true
+cat-desktops,,Desktop PCs,desktop-pcs,Desktop computers and workstations,39,true,true
+cat-[#301],cat-desktops,Enterprise Small Form Factor,enterprise-small-form-factor,OptiPlex and ThinkCentre SFF desktops,40,true,true
+cat-[#302],cat-desktops,Tower PCs,tower-pcs,Full tower and mid tower desktops,41,true,true
+cat-[#303],cat-desktops,All-In-One PCs,all-in-one-pcs,AIO integrated screen desktop PCs,42,true,true
+cat-[#304],cat-desktops,Gaming Desktops,gaming-desktops,Custom built gaming tower PCs,43,true,true
+cat-[#305],cat-desktops,Heavy Workstations,heavy-workstations,Dual Xeon and Threadripper workstations,44,true,true
+cat-monitors,,Monitors & Displays,monitors-displays,Computer displays and screens,45,true,true
+cat-[#401],cat-monitors,24-inch Monitors,24-inch-monitors,FHD 1080p office displays,46,true,true
+cat-[#402],cat-monitors,27-inch Monitors,27-inch-monitors,1440p QHD office and gaming screens,47,true,true
+cat-[#403],cat-monitors,4K UHD Monitors,4k-uhd-monitors,3840x2160 ultra high clarity displays,48,true,true
+cat-[#404],cat-monitors,Gaming Monitors,gaming-monitors,144Hz - 240Hz high refresh rate displays,49,true,true
+cat-[#405],cat-monitors,Curved & Ultrawide,curved-ultrawide,34-inch and 49-inch ultrawide monitors,50,true,true
+cat-apple,,Apple Mac,apple-mac,Apple MacBooks iMacs and Mac Studio,51,true,true
+cat-[#501],cat-apple,MacBook Pro,macbook-pro,Apple M1/M2/M3/M4 MacBook Pro laptops,52,true,true
+cat-[#502],cat-apple,MacBook Air,macbook-air,Ultra-thin Apple M-series laptops,53,true,true
+cat-[#503],cat-apple,iMac,imac,All-in-One Apple Retina desktop,54,true,true
+cat-[#504],cat-apple,Mac Mini & Studio,mac-mini-studio,Compact Apple M-series desktop workstations,55,true,true
+cat-peripherals,,Peripherals & Input,peripherals-input,Keyboards mice and desktop accessories,56,true,true
+cat-[#601],cat-peripherals,Keyboards,keyboards,Mechanical and wireless keyboards,57,true,true
+cat-[#602],cat-peripherals,Mice & Trackballs,mice-trackballs,Ergonomic and gaming precision mice,58,true,true
+cat-[#603],cat-peripherals,Headsets & Audio,headsets-audio,Noise canceling office and gaming headsets,59,true,true
+cat-[#604],cat-peripherals,Webcams & Microphones,webcams-microphones,4K conferencing cameras and USB mics,60,true,true
+cat-[#605],cat-peripherals,Docking Stations,docking-stations,USB-C and Thunderbolt 4 laptop docks,61,true,true
+cat-printers,,Printers & POS,printers-pos,Printing scanning and POS hardware,62,true,true
+cat-[#701],cat-printers,Thermal Receipt Printers,thermal-receipt-printers,80mm POS receipt printers,63,true,true
+cat-[#702],cat-printers,Barcode Label Printers,barcode-label-printers,Direct thermal and thermal transfer labelers,64,true,true
+cat-[#703],cat-printers,Laser Printers,laser-printers,Monochrome and color office laser printers,65,true,true
+cat-[#704],cat-printers,Barcode Scanners,barcode-scanners,1D and 2D handheld wireless scanners,66,true,true
+cat-[#705],cat-printers,Cash Drawers,cash-drawers,Heavy duty RJ11 POS cash drawers,67,true,true
+cat-cables,,Cables & Adapters,cables-adapters,Connectivity cables and video converters,68,true,true
+cat-[#801],cat-cables,HDMI & DisplayPort Cables,hdmi-displayport-cables,Ultra High Speed 4K 8K display cables,69,true,true
+cat-[#802],cat-cables,USB & USB-C Cables,usb-usb-c-cables,USB 3.2 and Thunderbolt 4 cables,70,true,true
+cat-[#803],cat-cables,Network Ethernet Cables,network-ethernet-cables,Cat6 and Cat6A snagless patch cords,71,true,true
+cat-[#804],cat-cables,Power Cables & Lead,power-cables-lead,IEC and Cloverleaf power cords,72,true,true
+cat-servers,,Server & Enterprise,server-enterprise,Rackmount servers and enterprise gear,73,true,true
+cat-[#901],cat-servers,Rackmount Servers,rackmount-servers,1U 2U 4U Dell PowerEdge and HPE ProLiant,74,true,true
+cat-[#902],cat-servers,Server Memory (ECC),server-memory-ecc,Registered ECC DDR4 and DDR5 memory,75,true,true
+cat-[#903],cat-servers,Enterprise SAS SSDs,enterprise-sas-ssds,Dual port 12Gbps SAS enterprise storage,76,true,true
+cat-[#904],cat-servers,UPS Power Backup,ups-power-backup,Rackmount and tower Uninterruptible Power Supplies,77,true,true
+cat-parts,,Spare Parts,spare-parts,Replacement components and hardware parts,78,true,true
+cat-[#1001],cat-parts,Laptop Batteries,laptop-batteries,OEM replacement laptop batteries,79,true,true
+cat-[#1002],cat-parts,Laptop Chargers & AC Adapters,laptop-chargers-ac-adapters,65W 90W 130W USB-C chargers,80,true,true
+cat-[#1003],cat-parts,Replacement Screens,replacement-screens,FHD and IPS replacement laptop LCD panels,81,true,true

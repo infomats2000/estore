@@ -1,0 +1,6 @@
+id,name,code,isSystem,isActive
+cond-new,New,NEW,true,true
+cond-openbox,Open Box,OPEN_BOX,true,true
+cond-refurbished,Refurbished,REFURBISHED,true,true
+cond-used,Used,USED,true,true
+cond-parts,For Parts,FOR_PARTS,true,true

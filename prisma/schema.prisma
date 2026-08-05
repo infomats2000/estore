@@ -22,16 +22,225 @@ model AdminUser {
 }
 
 model Category {
-  id          String    @id @default(cuid())
-  name        String    @unique
-  slug        String    @unique
-  description String    @default("")
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id          String     @id @default(cuid())
+  parentId    String?
+  parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryHierarchy")
+  name        String     @unique
+  slug        String     @unique
+  description String     @default("")
+  sortOrder   Int        @default(0)
+  isSystem    Boolean    @default(true)
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
   products    Product[]
 
   @@index([name])
+  @@index([parentId])
+  @@index([slug])
   @@map("categories")
+}
+
+model Brand {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  logoUrl   String   @default("")
+  website   String   @default("")
+  country   String   @default("")
+  isSystem  Boolean  @default(true)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+  @@map("brands")
+}
+
+model UnitOfMeasure {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  symbol    String   @default("")
+  isSystem  Boolean  @default(true)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+  @@map("units_of_measure")
+}
+
+model ProductStatus {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  code      String   @unique
+  isSystem  Boolean  @default(true)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+  @@map("product_statuses")
+}
+
+model WarehouseLocation {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  code      String   @unique
+  address   String   @default("")
+  isSystem  Boolean  @default(true)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+  @@map("warehouse_locations")
+}
+
+model TaxRate {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  country     String   @default("")
+  ratePercent Float    @default(0)
+  code        String   @default("")
+  isSystem    Boolean  @default(true)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([name])
+  @@map("tax_rates")
+}
+
+model PaymentTerm {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  days      Int      @default(0)
+  isSystem  Boolean  @default(true)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+  @@map("payment_terms")
+}
+
+model ShippingMethod {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  code        String   @default("")
+  description String   @default("")
+  cost        Float    @default(0)
+  sortOrder   Int      @default(0)
+  isSystem    Boolean  @default(true)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  orders      Order[]
+
+  @@map("shipping_methods")
+}
+
+model WarrantyType {
+  id             String   @id @default(cuid())
+  name           String   @unique
+  durationMonths Int      @default(12)
+  type           String   @default("Return To Base")
+  isSystem       Boolean  @default(true)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([name])
+  @@map("warranty_types")
+}
+
+model ProductAttribute {
+  id        String           @id @default(cuid())
+  name      String           @unique
+  code      String           @unique
+  isSystem  Boolean          @default(true)
+  isActive  Boolean          @default(true)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  values    AttributeValue[]
+
+  @@index([name])
+  @@map("product_attributes")
+}
+
+model AttributeValue {
+  id          String           @id @default(cuid())
+  attributeId String
+  attribute   ProductAttribute @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+  value       String
+  isSystem    Boolean          @default(true)
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([attributeId, value])
+  @@index([attributeId])
+  @@map("attribute_values")
+}
+
+model Country {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  iso2      String   @unique
+  iso3      String   @unique
+  currency  String   @default("")
+  phoneCode String   @default("")
+  timeZone  String   @default("")
+  isSystem  Boolean  @default(true)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+  @@index([iso2])
+  @@map("countries")
+}
+
+model Currency {
+  id            String   @id @default(cuid())
+  code          String   @unique
+  name          String
+  symbol        String   @default("$")
+  decimalPlaces Int      @default(2)
+  isSystem      Boolean  @default(true)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([code])
+  @@map("currencies")
+}
+
+model Language {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  isSystem  Boolean  @default(true)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([code])
+  @@map("languages")
+}
+
+model ProductCondition {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  code      String   @unique
+  isSystem  Boolean  @default(true)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+  @@map("product_conditions")
 }
 
 model Product {
@@ -77,24 +286,24 @@ model ProductImage {
 }
 
 model Customer {
-  id              String     @id @default(cuid())
-  name            String
-  email           String     @unique
-  phone           String     @default("")
-  address         String     @default("")
-  city            String     @default("")
-  type            String     @default("Retail")
-  company         String     @default("")
-  abn             String     @default("")
-  walletBalance   Float      @default(0)
-  points          Int        @default(0)
-  wishlist        String     @default("[]")
-  notes           String     @default("")
+  id               String     @id @default(cuid())
+  name             String
+  email            String     @unique
+  phone            String     @default("")
+  address          String     @default("")
+  city             String     @default("")
+  type             String     @default("Retail")
+  company          String     @default("")
+  abn              String     @default("")
+  walletBalance    Float      @default(0)
+  points           Int        @default(0)
+  wishlist         String     @default("[]")
+  notes            String     @default("")
   registrationDate DateTime   @default(now())
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
-  addresses       Address[]
-  orders          Order[]
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  addresses        Address[]
+  orders           Order[]
 
   @@index([email])
   @@map("customers")
@@ -118,26 +327,26 @@ model Address {
 }
 
 model Order {
-  id                String          @id @default(cuid())
-  customerId        String?
-  customer          Customer?       @relation(fields: [customerId], references: [id])
-  orderNumber       String          @unique
-  status            String          @default("Pending")
-  subtotal          Float           @default(0)
-  tax               Float           @default(0)
-  shipping          Float           @default(0)
-  discount          Float           @default(0)
-  total             Float           @default(0)
-  paymentMethod     String          @default("Cash")
-  paymentStatus     String          @default("Unpaid")
-  notes             String          @default("")
-  shippingMethodId  String?
-  shippingMethod    ShippingMethod? @relation(fields: [shippingMethodId], references: [id])
-  paymentMethodId   String?
-  paymentMethodRef  PaymentMethod?  @relation(fields: [paymentMethodId], references: [id])
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-  items             OrderItem[]
+  id               String          @id @default(cuid())
+  customerId       String?
+  customer         Customer?       @relation(fields: [customerId], references: [id])
+  orderNumber      String          @unique
+  status           String          @default("Pending")
+  subtotal         Float           @default(0)
+  tax              Float           @default(0)
+  shipping         Float           @default(0)
+  discount         Float           @default(0)
+  total            Float           @default(0)
+  paymentMethod    String          @default("Cash")
+  paymentStatus    String          @default("Unpaid")
+  notes            String          @default("")
+  shippingMethodId String?
+  shippingMethod   ShippingMethod? @relation(fields: [shippingMethodId], references: [id])
+  paymentMethodId  String?
+  paymentMethodRef PaymentMethod?  @relation(fields: [paymentMethodId], references: [id])
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  items            OrderItem[]
 
   @@index([customerId])
   @@index([status])
@@ -146,19 +355,19 @@ model Order {
 }
 
 model OrderItem {
-  id        String   @id @default(cuid())
-  orderId   String
-  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productId String
-  product   Product  @relation(fields: [productId], references: [id])
-  name      String
-  price     Float
-  quantity  Int
+  id           String   @id @default(cuid())
+  orderId      String
+  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId    String
+  product      Product  @relation(fields: [productId], references: [id])
+  name         String
+  price        Float
+  quantity     Int
   color        String?
   size         String?
   serialNumber String?
   image        String   @default("")
-  createdAt DateTime @default(now())
+  createdAt    DateTime @default(now())
 
   @@index([orderId])
   @@index([productId])
@@ -181,7 +390,7 @@ model Coupon {
 
 model StoreSettings {
   id                    String   @id @default(cuid())
-  storeName             String   @default("Tech Seller")
+  storeName             String   @default("INFOMAT")
   storeTagline          String   @default("")
   legalName             String   @default("")
   businessNumber        String   @default("")
@@ -199,19 +408,6 @@ model StoreSettings {
   updatedAt             DateTime @updatedAt
 
   @@map("store_settings")
-}
-
-model ShippingMethod {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  description String   @default("")
-  cost        Float    @default(0)
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  orders      Order[]
-
-  @@map("shipping_methods")
 }
 
 model PaymentMethod {

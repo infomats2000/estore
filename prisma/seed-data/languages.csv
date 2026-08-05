@@ -1,0 +1,13 @@
+id,code,name,isSystem,isActive
+lang-en,en,English,true,true
+lang-fr,fr,French,true,true
+lang-de,de,German,true,true
+lang-es,es,Spanish,true,true
+lang-it,it,Italian,true,true
+lang-nl,nl,Dutch,true,true
+lang-pt,pt,Portuguese,true,true
+lang-ar,ar,Arabic,true,true
+lang-zh,zh,Chinese,true,true
+lang-ja,ja,Japanese,true,true
+lang-hi,hi,Hindi,true,true
+lang-ur,ur,Urdu,true,true

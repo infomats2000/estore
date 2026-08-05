@@ -48,22 +48,32 @@ export default function POSRegisterView({
   const [isLaybyModalOpen, setIsLaybyModalOpen] = useState(false);
 
   const barcodeInputRef = useRef<HTMLInputElement>(null);
+  const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
 
   // Auto-focus barcode input
   useEffect(() => {
     barcodeInputRef.current?.focus();
+    try {
+      broadcastChannelRef.current = new BroadcastChannel('pos_customer_display');
+    } catch (e) {
+      // BroadcastChannel unsupported or optional
+    }
+    return () => {
+      broadcastChannelRef.current?.close();
+      broadcastChannelRef.current = null;
+    };
   }, []);
 
   // Sync to Dual-Monitor Customer Facing Display window via BroadcastChannel
   useEffect(() => {
     try {
-      const channel = new BroadcastChannel('pos_customer_display');
+      if (!broadcastChannelRef.current) return;
       const sub = cart.reduce((s, i) => s + (i.product.discountPrice || i.product.price) * i.quantity, 0);
       const cust = customers.find(c => c.id === selectedCustomerId);
       const cVal = parseFloat(cashTendered) || 0;
       const cDue = Math.max(0, cVal - sub);
 
-      channel.postMessage({
+      broadcastChannelRef.current.postMessage({
         cart,
         subtotal: sub,
         tax: sub - (sub / 1.1),
@@ -75,7 +85,6 @@ export default function POSRegisterView({
         saleCompleted,
         orderNumber: lastCompletedOrder?.orderNumber
       });
-      channel.close();
     } catch (err) {
       // BroadcastChannel optional
     }

@@ -63,7 +63,7 @@ export default function CustomerPortalModal({
 
   // Chat State
   const [chatMessages, setChatMessages] = useState<{ sender: 'user' | 'support'; text: string; time: string }[]>([
-    { sender: 'support', text: `Hello ${customerProfile.name || 'Valued Customer'}! Welcome to Tech Seller Customer Support. How can we help you today?`, time: 'Just now' }
+    { sender: 'support', text: `Hello ${customerProfile.name || 'Valued Customer'}! Welcome to INFOMAT Customer Support. How can we help you today?`, time: 'Just now' }
   ]);
   const [inputMessage, setInputMessage] = useState('');
 
@@ -206,7 +206,7 @@ export default function CustomerPortalModal({
       } else if (lower.includes('invoice') || lower.includes('tax') || lower.includes('receipt')) {
         botReply = `Tax invoices can be printed directly from the "Download Invoices" tab.`;
       } else if (lower.includes('warranty') || lower.includes('repair')) {
-        botReply = `All Tech Seller hardware includes a 12-Month Warranty. You can submit warranty claims under the "Submit RMAs" tab or book workshop repairs under "Book Repairs".`;
+        botReply = `All INFOMAT hardware includes a 12-Month Warranty. You can submit warranty claims under the "Submit RMAs" tab or book workshop repairs under "Book Repairs".`;
       }
 
       setChatMessages(prev => [

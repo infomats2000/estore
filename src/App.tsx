@@ -25,6 +25,8 @@ import CartDrawer from './components/CartDrawer';
 import NewsletterSection from './components/NewsletterSection';
 import FlashSaleBanner from './components/FlashSaleBanner';
 import DashboardView from './components/DashboardView';
+import OfflineStatusBanner from './components/OfflineStatusBanner';
+import { saveOfflineAppState, getOfflineCachedState, enqueueOfflineTransaction } from './utils/offlineSyncEngine';
 
 const loadCheckoutModal = () => import('./components/CheckoutModal');
 const loadAccountDrawer = () => import('./components/AccountDrawer');
@@ -741,8 +743,15 @@ export default function App() {
     const hydrateFromServer = async () => {
       try {
         const response = await fetch('/api/state');
-        if (!response.ok) return;
-        const payload = await response.json();
+        let payload: any = null;
+
+        if (response.ok) {
+          payload = await response.json();
+          saveOfflineAppState(payload);
+        } else {
+          payload = getOfflineCachedState();
+        }
+
         if (cancelled || !payload) return;
 
         if (payload.storeSettings) setStoreSettings((prev) => ({ ...prev, ...payload.storeSettings }));
@@ -762,7 +771,26 @@ export default function App() {
         if (Array.isArray(payload.upsellRules)) setUpsellRules(payload.upsellRules);
         if (Array.isArray(payload.collections)) setCollections(payload.collections);
       } catch (err) {
-        console.warn('Could not hydrate app state from server:', err);
+        console.warn('Could not hydrate app state from server, attempting offline local cache:', err);
+        const cached = getOfflineCachedState();
+        if (cached && !cancelled) {
+          if (cached.storeSettings) setStoreSettings((prev) => ({ ...prev, ...cached.storeSettings }));
+          if (Array.isArray(cached.products)) setProducts(cached.products);
+          if (Array.isArray(cached.reviews)) setReviews(cached.reviews);
+          if (Array.isArray(cached.coupons)) setCoupons(cached.coupons);
+          if (Array.isArray(cached.orders)) setOrders(cached.orders);
+          if (Array.isArray(cached.customers)) setCustomers(cached.customers);
+          if (Array.isArray(cached.financeTransactions)) setFinanceTransactions(cached.financeTransactions);
+          if (Array.isArray(cached.purchaseOrders)) setPurchaseOrders(cached.purchaseOrders);
+          if (Array.isArray(cached.repairJobs)) setRepairJobs(cached.repairJobs);
+          if (Array.isArray(cached.stockUnits)) setStockUnits(cached.stockUnits);
+          if (Array.isArray(cached.users)) setUsers(cached.users);
+          if (Array.isArray(cached.returns)) setReturns(cached.returns);
+          if (Array.isArray(cached.categories)) setCategories(cached.categories);
+          if (Array.isArray(cached.customerSegments)) setCustomerSegments(cached.customerSegments);
+          if (Array.isArray(cached.upsellRules)) setUpsellRules(cached.upsellRules);
+          if (Array.isArray(cached.collections)) setCollections(cached.collections);
+        }
       } finally {
         stateHydratedRef.current = true;
         setIsHydratingState(false);
@@ -803,12 +831,19 @@ export default function App() {
         stockUnits
       };
 
+      saveOfflineAppState(payload);
+
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        enqueueOfflineTransaction({ type: 'STATE_UPDATE', endpoint: '/api/state', payload });
+        return;
+      }
+
       void fetch('/api/state', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       }).catch(() => {
-        // Persisting to the server is optional in local development; the browser keeps the state in localStorage.
+        enqueueOfflineTransaction({ type: 'STATE_UPDATE', endpoint: '/api/state', payload });
       });
     }, 500);
 
@@ -888,6 +923,31 @@ export default function App() {
   const [showTrackOrderModal, setShowTrackOrderModal] = useState(false);
   const [showPOSView, setShowPOSView] = useState(false);
   const [showPCBuilderModal, setShowPCBuilderModal] = useState(false);
+
+  // Handle URL route params (Stripe success/cancel, share product links)
+  useEffect(() => {
+    try {
+      const searchParams = new URLSearchParams(window.location.search);
+      const sessionId = searchParams.get('session_id');
+      const productIdParam = searchParams.get('product') || (window.location.hash.startsWith('#product-') ? window.location.hash.replace('#product-', '') : null);
+
+      if (sessionId) {
+        setCart([]);
+        setAppliedCoupon(null);
+        setSystemAlert({ message: 'Stripe Payment Successful! Your order has been placed and confirmed.', type: 'success' });
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+
+      if (productIdParam && products.length > 0) {
+        const found = products.find(p => p.id === productIdParam);
+        if (found) {
+          setSelectedProduct(found);
+        }
+      }
+    } catch (e) {
+      console.error('Error handling URL route parameters:', e);
+    }
+  }, [products]);
 
   const handleAddToCartBatch = (items: { product: Product; quantity: number }[]) => {
     setCart(prev => {
@@ -1691,25 +1751,91 @@ export default function App() {
     triggerAlert(`Collection "${collToDelete}" deleted`, 'success');
   };
 
-  const handleResetCatalog = () => {
-    if (confirm('Are you sure you want to restore the default store catalog and states? Your current custom edits will be cleared.')) {
-      localStorage.removeItem('techseller_products');
-      localStorage.removeItem('techseller_reviews');
-      localStorage.removeItem('techseller_coupons');
-      localStorage.removeItem('techseller_orders');
-      localStorage.removeItem('techseller_cart');
-      localStorage.removeItem('techseller_profile');
-      localStorage.removeItem('techseller_recently_viewed');
-      localStorage.removeItem('techseller_categories');
-      localStorage.removeItem('techseller_finance_transactions');
-      localStorage.removeItem('techseller_users');
-      localStorage.removeItem('techseller_returns');
-      localStorage.removeItem('techseller_customer_segments');
-      localStorage.removeItem('techseller_upsell_rules');
-      localStorage.removeItem('techseller_collections');
-      localStorage.removeItem('techseller_store_settings');
-      window.location.reload();
+  const handleResetCatalog = async () => {
+    if (!confirm('Are you sure you want to restore the default store catalog and states? Your current custom edits will be cleared.')) {
+      return;
     }
+
+    const legacyKeys = [
+      'techseller_products',
+      'techseller_reviews',
+      'techseller_coupons',
+      'techseller_orders',
+      'techseller_cart',
+      'techseller_profile',
+      'techseller_recently_viewed',
+      'techseller_categories',
+      'techseller_finance_transactions',
+      'techseller_users',
+      'techseller_returns',
+      'techseller_customer_segments',
+      'techseller_upsell_rules',
+      'techseller_collections',
+      'techseller_store_settings'
+    ];
+
+    const currentKeys = [
+      'techseller_products_v4',
+      'techseller_reviews_v4',
+      'techseller_coupons_v4',
+      'techseller_orders_v4',
+      'techseller_customers_v4',
+      'techseller_finance_transactions_v4',
+      'techseller_users_v4',
+      'techseller_returns_v4',
+      'techseller_cart_v4',
+      'techseller_profile_v4',
+      'techseller_recently_viewed_v4',
+      'techseller_categories_v4',
+      'techseller_customer_segments_v4',
+      'techseller_upsell_rules_v4',
+      'techseller_collections_v4',
+      'techseller_store_settings_v4',
+      'techseller_theme_v4',
+      'techseller_admin_mode_v4'
+    ];
+
+    [...legacyKeys, ...currentKeys].forEach((key) => localStorage.removeItem(key));
+
+    const resetPayload = {
+      storeSettings: DEFAULT_STORE_SETTINGS,
+      products: INITIAL_PRODUCTS,
+      reviews: INITIAL_REVIEWS,
+      coupons: INITIAL_COUPONS,
+      orders: [],
+      customers: INITIAL_CUSTOMERS,
+      financeTransactions: [],
+      users: [],
+      returns: [],
+      categories: ['Laptops', 'Desktops', 'Monitors', 'Workstations', 'Apple Mac', 'Parts'],
+      customerSegments: [],
+      upsellRules: [],
+      collections: ['Laptops', 'Apple Mac'],
+      purchaseOrders: [],
+      repairJobs: [],
+      stockUnits: [],
+      warehouses: INITIAL_WAREHOUSES,
+      stockTransfers: []
+    };
+
+    try {
+      await Promise.all([
+        fetch('/api/state', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(resetPayload)
+        }),
+        fetch('/api/admin-extras', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ suppliers: [], supplierOrders: [], shipments: [], inventoryLogs: [] })
+        })
+      ]);
+    } catch (error) {
+      console.warn('Could not fully reset server state:', error);
+    }
+
+    window.location.href = window.location.origin + window.location.pathname;
   };
 
   const handleViewProduct = (product: Product) => {
@@ -1922,6 +2048,9 @@ export default function App() {
         )}
       </AnimatePresence>
 
+      {/* REAL-TIME OFFLINE STATUS & AUTO-SYNC BANNER */}
+      <OfflineStatusBanner />
+
       {/* STICKY NAVIGATION HEADER */}
       <Navbar
         activeCategory={activeCategory}
@@ -2014,8 +2143,8 @@ export default function App() {
                     { id: 'Desktops', label: 'Desktops', icon: Monitor, color: 'bg-neutral-900' },
                     { id: 'Monitors', label: 'Monitors', icon: SlidersHorizontal, color: 'bg-neutral-800' },
                     { id: 'Workstations', label: 'Workstations', icon: Cpu, color: 'bg-blue-700' },
-                    { id: 'Apple', label: 'Apple Mac', icon: Sparkles, color: 'bg-neutral-950' },
-                    { id: 'Accessories', label: 'Parts', icon: Mouse, color: 'bg-blue-800' },
+                    { id: 'Apple Mac', label: 'Apple Mac', icon: Sparkles, color: 'bg-neutral-950' },
+                    { id: 'Parts', label: 'Parts', icon: Mouse, color: 'bg-blue-800' },
                   ].map((cat) => (
                     <button
                       key={cat.id}
@@ -2414,7 +2543,7 @@ export default function App() {
                   <img src="/images/app_logo.jpg" alt="Logo" className="h-full w-full object-contain" />
                 </div>
                 <div>
-                  <span className="font-extrabold text-white tracking-tight text-sm uppercase block">{storeSettings.storeName || 'TECH SELLER'}</span>
+                  <span className="font-extrabold text-white tracking-tight text-sm uppercase block">{storeSettings.storeName || 'INFOMAT'}</span>
                   <span className="block text-[9px] uppercase text-blue-400 font-mono font-bold">{storeSettings.legalName || 'Refurbished IT Hardware'}</span>
                 </div>
               </div>
@@ -2434,7 +2563,7 @@ export default function App() {
                 <li><button onClick={() => { setIsAdminMode(false); setActiveCategory('Laptops'); }} className="hover:text-blue-400">Laptops</button></li>
                 <li><button onClick={() => { setIsAdminMode(false); setActiveCategory('Desktops'); }} className="hover:text-blue-400">Enterprise Desktops</button></li>
                 <li><button onClick={() => { setIsAdminMode(false); setActiveCategory('Monitors'); }} className="hover:text-blue-400">Monitors & Displays</button></li>
-                <li><button onClick={() => { setIsAdminMode(false); setActiveCategory('Apple'); }} className="hover:text-blue-400">MacBook & iMacs</button></li>
+                <li><button onClick={() => { setIsAdminMode(false); setActiveCategory('Apple Mac'); }} className="hover:text-blue-400">MacBook & iMacs</button></li>
                 <li><button onClick={() => { setIsAdminMode(false); setActiveCategory('Workstations'); }} className="hover:text-blue-400">Heavy Duty Workstations</button></li>
               </ul>
             </div>
@@ -2475,7 +2604,7 @@ export default function App() {
 
           <div className="border-t border-[#003C66] pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 font-mono text-[10px] text-neutral-400 uppercase tracking-wider">
             <div>
-              © 2026 TECH SELLER. ALL RIGHTS RESERVED.
+              © 2026 INFOMAT. ALL RIGHTS RESERVED.
             </div>
             <div className="flex items-center gap-4 text-neutral-300 font-bold">
               <span>🇦🇺 100% AUSTRALIAN OWNED</span>

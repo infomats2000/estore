@@ -100,7 +100,7 @@ export default function Navbar({
             </div>
 
             <div className="hidden sm:flex items-center gap-2 font-mono text-[9px] text-white/60 uppercase tracking-wider font-bold">
-              <span>🇦🇺 {storeSettings?.storeName || 'TECH SELLER'}</span>
+              <span>🇦🇺 {storeSettings?.storeName || 'INFOMAT'}</span>
             </div>
           </div>
         </div>
@@ -122,7 +122,7 @@ export default function Navbar({
             <div className="flex h-12 w-12 items-center justify-center bg-white rounded-lg p-1 shadow-sm transition-transform group-hover:scale-105 overflow-hidden">
               <img 
                 src="/images/app_logo.jpg" 
-                alt="Tech Seller Logo" 
+                alt="INFOMAT Logo" 
                 className="h-full w-full object-contain"
                 decoding="async"
                 fetchPriority="high"
@@ -131,7 +131,7 @@ export default function Navbar({
             </div>
             <div className="hidden sm:block">
               <span className="block font-sans text-lg font-black tracking-tight text-white uppercase leading-none">
-                {storeSettings?.storeName || 'TECH SELLER'}
+                {storeSettings?.storeName || 'INFOMAT'}
               </span>
             </div>
           </button>

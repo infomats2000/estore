@@ -50,10 +50,10 @@ export default function CustomerFacingDisplayModal() {
       <div className="bg-slate-900/80 backdrop-blur-md p-4 rounded-2xl border border-slate-800 flex items-center justify-between shadow-xl">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 bg-blue-600 rounded-xl flex items-center justify-center font-mono font-black text-xl text-white shadow-lg shadow-blue-600/30">
-            TS
+            IN
           </div>
           <div>
-            <h1 className="text-base font-black tracking-tight uppercase">Tech Seller Retail Register</h1>
+            <h1 className="text-base font-black tracking-tight uppercase">INFOMAT Retail Register</h1>
             <p className="text-xs text-slate-400">Welcome! Official Hardware &amp; Enterprise Solutions</p>
           </div>
         </div>
@@ -87,7 +87,7 @@ export default function CustomerFacingDisplayModal() {
               <div className="p-5 bg-blue-600/10 border border-blue-500/20 rounded-3xl text-blue-400">
                 <Sparkles className="w-16 h-16" />
               </div>
-              <h2 className="text-2xl font-black tracking-tight text-slate-200">Welcome to Tech Seller</h2>
+              <h2 className="text-2xl font-black tracking-tight text-slate-200">Welcome to INFOMAT</h2>
               <p className="text-xs text-slate-400 max-w-sm">
                 Ask about our B2B Trade Credit Accounts, Extended Warranties, and Same-Day Express Dispatch!
               </p>
@@ -159,7 +159,7 @@ export default function CustomerFacingDisplayModal() {
 
       {/* Bottom Footer Bar */}
       <div className="text-center font-mono text-[10px] text-slate-500 uppercase tracking-widest">
-        TECH SELLER ENTERPRISE POS &bull; TERMINAL #01 &bull; SYDNEY HUB
+        INFOMAT ENTERPRISE POS &bull; TERMINAL #01 &bull; SYDNEY HUB
       </div>
     </div>
   );

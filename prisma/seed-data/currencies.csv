@@ -1,0 +1,11 @@
+id,code,name,symbol,decimalPlaces,isSystem,isActive
+curr-aud,AUD,Australian Dollar,$,2,true,true
+curr-usd,USD,US Dollar,$,2,true,true
+curr-eur,EUR,Euro,€,2,true,true
+curr-gbp,GBP,British Pound,£,2,true,true
+curr-cad,CAD,Canadian Dollar,$,2,true,true
+curr-nzd,NZD,New Zealand Dollar,$,2,true,true
+curr-jpy,JPY,Japanese Yen,¥,0,true,true
+curr-sgd,SGD,Singapore Dollar,$,2,true,true
+curr-aed,AED,UAE Dirham,AED,2,true,true
+curr-pkr,PKR,Pakistani Rupee,Rs,2,true,true

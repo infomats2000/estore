@@ -1,0 +1,9 @@
+id,name,code,address,isSystem,isActive
+wh-main,Main Warehouse,WH-MAIN,456 Velvet Boulevard Sydney NSW 2000,true,true
+wh-a,Warehouse A,WH-A,Building 2 12 Industrial Drive Melbourne VIC 3000,true,true
+wh-b,Warehouse B,WH-B,Unit 4 88 Logistics Way Brisbane QLD 4000,true,true
+wh-showroom,Showroom,WH-SHOWROOM,Retail Showroom Front Desk Sydney,true,true
+wh-returns,Returns Centre,WH-RETURNS,RMA & Inward Inspection Bay,true,true
+wh-repair,Repair Centre,WH-REPAIR,Technical Repair & Refurbishment Lab,true,true
+wh-damaged,Damaged Stock,WH-DAMAGED,Quarantine & Write-Off Storage,true,true
+wh-transit,Transit,WH-TRANSIT,Inter-Warehouse Stock Transfer In-Transit,true,true

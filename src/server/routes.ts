@@ -275,6 +275,7 @@ router.post('/api/orders', async (req, res) => {
     const parsed = z.object({
       customerId: z.string().optional(),
       orderNumber: z.string().min(1),
+      status: z.string().optional(),
       subtotal: z.number().nonnegative(),
       tax: z.number().nonnegative(),
       shipping: z.number().nonnegative(),
@@ -485,6 +486,112 @@ router.post('/api/ebay/orders/shipment', (req, res) => {
       message: `Tracking #${trackingNumber} successfully uploaded to eBay for Order #${orderId}`,
       syncedAt: new Date().toISOString()
     });
+  } catch (err) {
+    handleError(err, res);
+  }
+});
+
+// ============================================================
+// MASTER DATA MANAGEMENT ENDPOINTS (15 ENTITIES)
+// ============================================================
+
+const getMasterDataModel = (entity: string): any => {
+  switch (entity) {
+    case 'categories': return prisma.category;
+    case 'brands': return prisma.brand;
+    case 'units': return prisma.unitOfMeasure;
+    case 'product-status': return prisma.productStatus;
+    case 'warehouses': return prisma.warehouseLocation;
+    case 'taxes': return prisma.taxRate;
+    case 'payment-terms': return prisma.paymentTerm;
+    case 'shipping-methods': return prisma.shippingMethod;
+    case 'warranties': return prisma.warrantyType;
+    case 'attributes': return prisma.productAttribute;
+    case 'attribute-values': return prisma.attributeValue;
+    case 'countries': return prisma.country;
+    case 'currencies': return prisma.currency;
+    case 'languages': return prisma.language;
+    case 'conditions': return prisma.productCondition;
+    default: return null;
+  }
+};
+
+router.get('/api/master-data/:entity', async (req, res) => {
+  try {
+    const { entity } = req.params;
+    const model = getMasterDataModel(entity);
+    if (!model) throw new AppError(`Unknown master data entity '${entity}'`, 400);
+
+    const search = String(req.query.search || '').trim();
+    let where: any = {};
+
+    if (search) {
+      if (['currencies', 'languages'].includes(entity)) {
+        where = { OR: [{ code: { contains: search, mode: 'insensitive' } }, { name: { contains: search, mode: 'insensitive' } }] };
+      } else if (entity === 'attribute-values') {
+        where = { value: { contains: search, mode: 'insensitive' } };
+      } else {
+        where = { name: { contains: search, mode: 'insensitive' } };
+      }
+    }
+
+    const items = await model.findMany({
+      where,
+      orderBy: entity === 'categories' ? [{ sortOrder: 'asc' }, { name: 'asc' }] : { createdAt: 'desc' },
+      include: entity === 'attributes' ? { values: true } : entity === 'attribute-values' ? { attribute: true } : undefined
+    });
+
+    res.json(items);
+  } catch (err) {
+    handleError(err, res);
+  }
+});
+
+router.post('/api/master-data/:entity', async (req, res) => {
+  try {
+    const { entity } = req.params;
+    const model = getMasterDataModel(entity);
+    if (!model) throw new AppError(`Unknown master data entity '${entity}'`, 400);
+
+    const data = { ...req.body, isSystem: req.body.isSystem === true };
+    const item = await model.create({ data });
+    res.status(201).json(item);
+  } catch (err) {
+    handleError(err, res);
+  }
+});
+
+router.put('/api/master-data/:entity/:id', async (req, res) => {
+  try {
+    const { entity, id } = req.params;
+    const model = getMasterDataModel(entity);
+    if (!model) throw new AppError(`Unknown master data entity '${entity}'`, 400);
+
+    const existing = await model.findUnique({ where: { id } });
+    if (!existing) throw new AppError('Record not found', 404);
+
+    const updated = await model.update({ where: { id }, data: req.body });
+    res.json(updated);
+  } catch (err) {
+    handleError(err, res);
+  }
+});
+
+router.delete('/api/master-data/:entity/:id', async (req, res) => {
+  try {
+    const { entity, id } = req.params;
+    const model = getMasterDataModel(entity);
+    if (!model) throw new AppError(`Unknown master data entity '${entity}'`, 400);
+
+    const existing = await model.findUnique({ where: { id } });
+    if (!existing) throw new AppError('Record not found', 404);
+
+    if (existing.isSystem) {
+      throw new AppError('System-protected built-in records cannot be deleted.', 400);
+    }
+
+    await model.delete({ where: { id } });
+    res.json({ ok: true });
   } catch (err) {
     handleError(err, res);
   }

@@ -7,11 +7,12 @@ import {
 import { StoreSettings, DEFAULT_STORE_SETTINGS, Coupon, CustomerSegment, UpsellRule, Review, Product, User } from '../types';
 import { MarketingModule } from './MarketingModule';
 import UserManager from './UserManager';
+import MasterDataManager from './masterdata/MasterDataManager';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  initialTab?: 'general' | 'invoice' | 'tax_bank' | 'storefront' | 'marketing' | 'users' | 'system';
+  initialTab?: 'general' | 'invoice' | 'tax_bank' | 'storefront' | 'marketing' | 'users' | 'system' | 'master_data';
   settings: StoreSettings;
   onSaveSettings: (newSettings: StoreSettings) => void;
   // Marketing & Growth Props
@@ -61,7 +62,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   if (!isOpen) return null;
 
   const [formData, setFormData] = useState<StoreSettings>(settings);
-  const [activeTab, setActiveTab] = useState<'general' | 'invoice' | 'tax_bank' | 'storefront' | 'marketing' | 'users' | 'system'>(initialTab || 'general');
+  const [activeTab, setActiveTab] = useState<'general' | 'invoice' | 'tax_bank' | 'storefront' | 'marketing' | 'users' | 'system' | 'master_data'>(initialTab || 'general');
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   const handleChange = (field: keyof StoreSettings, value: any) => {
@@ -217,6 +218,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             }`}
           >
             <Shield className="h-4 w-4" /> Backup &amp; Import/Export
+          </button>
+
+          <button
+            onClick={() => setActiveTab('master_data')}
+            className={`py-3 px-4 font-semibold text-xs border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap ${
+              activeTab === 'master_data'
+                ? 'border-blue-600 text-blue-600 bg-white shadow-sm'
+                : 'border-transparent text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Sliders className="h-4 w-4 text-blue-600" /> Master Data System
           </button>
         </div>
 
@@ -818,6 +830,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <Trash2 className="h-4 w-4" /> Wipe All Store Data
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* TAB 8: Master Data System */}
+          {activeTab === 'master_data' && (
+            <div className="space-y-4">
+              <MasterDataManager />
             </div>
           )}
 

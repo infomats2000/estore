@@ -53,6 +53,13 @@ export const saveImageFromBase64 = async (dataUrl: string, options: SaveImageOpt
 
 export const deleteImageIfExists = async (imagePath?: string | null) => {
   if (!imagePath) return;
+  const publicUploadsDir = path.resolve(process.cwd(), 'public', 'uploads');
   const absolutePath = path.resolve(process.cwd(), 'public', imagePath.replace(/^\//, ''));
+
+  // Ensure absolutePath is contained within public/uploads to prevent directory traversal
+  if (!absolutePath.startsWith(publicUploadsDir)) {
+    throw new Error('Invalid image path for deletion');
+  }
+
   await fs.rm(absolutePath, { force: true });
 };

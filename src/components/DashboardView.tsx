@@ -11,7 +11,7 @@ import {
   Users, MousePointerClick, Globe, Percent, Calendar, ArrowDownRight, BarChart3, Clock, Undo2,
   MessageSquare, Star, Search, Printer, SlidersHorizontal, RefreshCw, FileSpreadsheet, History, Check,
   Coins, Boxes, Truck, Building2, MapPin, Mail, Phone, Barcode, Receipt, BookOpen, Calculator,
-  PanelLeftClose, PanelLeftOpen, Upload, X, FileText, ArrowLeft, Wrench, ClipboardList, Navigation, Zap
+  PanelLeftClose, PanelLeftOpen, Upload, X, FileText, Wrench, ClipboardList, Navigation, Zap
 } from 'lucide-react';
 import { InvoiceModal } from './InvoiceModal';
 import { convertOrderToInvoice, printInvoiceDirect, downloadInvoiceHtmlFile, printHtmlContent } from '../utils/invoicePrinter';
@@ -39,6 +39,7 @@ import WMSSystemManager from './wms/WMSSystemManager';
 import LogisticsDispatchManager from './logistics/LogisticsDispatchManager';
 import EnterpriseSupplierManager from './suppliers/EnterpriseSupplierManager';
 import StaffManagementSuite from './staff/StaffManagementSuite';
+import MasterDataManager from './masterdata/MasterDataManager';
 import { DEFAULT_STAFF_PROFILES, hasFeaturePermission } from '../utils/staffPermissionEngine';
 
 const FinanceManager = lazy(() => import('./FinanceManager'));
@@ -244,14 +245,14 @@ export default function DashboardView({
   onUpdateProductStock,
 }: DashboardViewProps) {
   
-  const [activeTab, setActiveTab] = useState<'metrics' | 'analytics' | 'reports' | 'inventory' | 'products' | 'categories' | 'collections' | 'orders' | 'invoices' | 'customers' | 'returns' | 'coupons' | 'segments' | 'upsells' | 'reviews' | 'suppliers' | 'shipping' | 'pos' | 'finance' | 'users' | 'repairs' | 'purchase-orders' | 'stock-units' | 'warehouses' | 'trade-accounts' | 'refurb' | 'ebay' | 'payroll' | 'stores' | 'automation' | 'bi' | 'distribution' | 'commercial-sales' | 'pricing-matrix' | 'massive-inventory' | 'procurement' | 'wms' | 'logistics-dispatch'>(() => {
+  const [activeTab, setActiveTab] = useState<'metrics' | 'analytics' | 'reports' | 'inventory' | 'products' | 'categories' | 'collections' | 'orders' | 'invoices' | 'customers' | 'returns' | 'coupons' | 'segments' | 'upsells' | 'reviews' | 'suppliers' | 'shipping' | 'pos' | 'finance' | 'users' | 'repairs' | 'purchase-orders' | 'stock-units' | 'warehouses' | 'trade-accounts' | 'refurb' | 'ebay' | 'payroll' | 'stores' | 'automation' | 'bi' | 'distribution' | 'commercial-sales' | 'pricing-matrix' | 'massive-inventory' | 'procurement' | 'wms' | 'logistics-dispatch' | 'master-data'>(() => {
     try {
       const hash = window.location.hash.replace('#', '');
       const validTabs = [
         'metrics', 'analytics', 'reports', 'inventory', 'products', 'categories', 'collections', 'orders', 'invoices',
         'customers', 'returns', 'coupons', 'segments', 'upsells', 'reviews',
         'suppliers', 'shipping', 'pos', 'finance', 'users',
-        'repairs', 'purchase-orders', 'stock-units', 'warehouses', 'trade-accounts', 'refurb', 'ebay', 'payroll', 'stores', 'automation', 'bi', 'distribution', 'commercial-sales', 'pricing-matrix', 'massive-inventory', 'procurement', 'wms', 'logistics-dispatch'
+        'repairs', 'purchase-orders', 'stock-units', 'warehouses', 'trade-accounts', 'refurb', 'ebay', 'payroll', 'stores', 'automation', 'bi', 'distribution', 'commercial-sales', 'pricing-matrix', 'massive-inventory', 'procurement', 'wms', 'logistics-dispatch', 'master-data'
       ];
       if (hash && validTabs.includes(hash)) {
         return hash as any;
@@ -286,6 +287,7 @@ export default function DashboardView({
     { id: 'payroll',           label: 'Staff & Payroll',     icon: Coins,          group: 'HR' },
     { id: 'shipping',          label: 'Shipments',           icon: Truck,          group: 'Operations' },
     { id: 'finance',           label: 'Finance & Accounting',icon: DollarSign,     group: 'Finance' },
+    { id: 'master-data',       label: 'Master Data System',  icon: SlidersHorizontal, group: 'Catalog' },
     { id: 'ebay',              label: 'Marketplace & Stores',icon: Globe,          group: 'Commerce' },
     // extras (not pinned by default)
     { id: 'commercial-sales',  label: 'Commercial Sales',    icon: DollarSign,     group: 'Sales' },
@@ -351,20 +353,6 @@ export default function DashboardView({
     .filter(Boolean) as typeof ALL_TABS[number][];
 
   const TAB_GROUPS = Array.from(new Set(ALL_TABS.map(t => t.group)));
-
-
-  const handleGoBack = () => {
-    if (tabHistory.length > 1) {
-      const updated = [...tabHistory];
-      updated.pop(); // Remove current
-      const prevTab = updated[updated.length - 1];
-      setTabHistory(updated);
-      setActiveTab(prevTab as any);
-      try { window.location.hash = prevTab; } catch (e) {}
-    } else {
-      window.history.back();
-    }
-  };
 
   // INVOICING & PRINTING SYSTEM STATE
 
@@ -1946,23 +1934,6 @@ export default function DashboardView({
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 text-left" id="dashboard-view-main">
-      
-      {/* UNIVERSAL BACK BUTTON & WORKSPACE BREADCRUMB BAR */}
-      <div className="mb-4 bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-white shadow-md">
-        <button
-          type="button"
-          onClick={handleGoBack}
-          className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-blue-400 hover:text-blue-300 font-mono font-bold text-xs rounded-xl flex items-center gap-2 border border-slate-700 transition-all shadow-sm active:scale-95"
-          title="Click to return to previous page or workspace"
-        >
-          <ArrowLeft className="w-4 h-4" /> ← Back to Previous Page
-        </button>
-
-        <div className="font-mono text-[11px] text-slate-400 flex items-center gap-2">
-          <span className="text-slate-500 uppercase font-bold">Active Module Workspace:</span>
-          <span className="px-2.5 py-0.5 bg-blue-950 text-blue-300 rounded border border-blue-800 font-bold uppercase">{activeTab}</span>
-        </div>
-      </div>
 
       {/* HORIZONTAL TOP NAVIGATION */}
       <div className="mb-8 space-y-4">
@@ -1982,36 +1953,6 @@ export default function DashboardView({
               }`}
             >
               Dashboard
-            </button>
-
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                setActiveTab('analytics');
-              }}
-              className={`font-mono text-[10px] uppercase tracking-wider transition-colors ${
-                activeTab === 'analytics'
-                  ? 'text-emerald-700 dark:text-emerald-300 font-black'
-                  : 'text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-300 font-bold'
-              }`}
-            >
-              Analytics
-            </button>
-
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                setActiveTab('reports');
-              }}
-              className={`font-mono text-[10px] uppercase tracking-wider transition-colors ${
-                activeTab === 'reports'
-                  ? 'text-emerald-700 dark:text-emerald-300 font-black'
-                  : 'text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-300 font-bold'
-              }`}
-            >
-              ERP Reports
             </button>
 
             {/* CATEGORY 1: Sales, B2B & Pricing Dropdown */}
@@ -7459,6 +7400,11 @@ export default function DashboardView({
             onSelectSimulatedUser={setCurrentSimulatedUser}
             onShowAlert={onShowAlert}
           />
+        )}
+
+        {/* DEFAULT MASTER DATA SYSTEM SUITE */}
+        {activeTab === 'master-data' && (
+          <MasterDataManager />
         )}
       </div>
 

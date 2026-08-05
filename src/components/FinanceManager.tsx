@@ -127,35 +127,30 @@ export default function FinanceManager({ transactions, onAddTransaction, onDelet
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-gradient-to-br from-[#198754] to-[#15803d] text-white p-4 rounded-2xl shadow-lg border-b-4 border-emerald-900">
-          <div className="text-emerald-100 text-xs font-mono font-bold tracking-widest mb-1 uppercase">Total Income</div>
-          <div className="text-2xl font-black text-white">${totalIncome.toFixed(2)}</div>
-          <div className="mt-2 text-[10px] font-mono font-bold bg-white/20 text-white px-2 py-1 rounded-full w-fit">
-            + REVENUE LOG
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs dark:border-slate-800 dark:bg-slate-900">
+        <div className="font-mono font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+          Total Income: <span className="text-slate-900 dark:text-slate-100">${totalIncome.toFixed(2)}</span>
+        </div>
+        <div className="font-mono font-bold uppercase tracking-wider text-orange-700 dark:text-orange-400">
+          Total Expense: <span className="text-slate-900 dark:text-slate-100">${totalExpense.toFixed(2)}</span>
+        </div>
+        <div className="font-mono font-bold uppercase tracking-wider text-blue-700 dark:text-blue-400">
+          Net Profit Margin: <span className="text-slate-900 dark:text-slate-100">${netProfit.toFixed(2)} ({totalIncome > 0 ? ((netProfit / totalIncome) * 100).toFixed(1) : '0'}%)</span>
+        </div>
+        {expensePercentage >= 80 && (
+          <div className="font-mono font-bold uppercase tracking-wider text-rose-700 dark:text-rose-400">
+            {expensePercentage >= 100 ? 'Budget Exceeded' : 'Budget Near Limit'}
           </div>
+        )}
+        <div className="flex items-center gap-2">
+          <span className="font-mono font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">Monthly Budget Cap ($):</span>
+          <input
+            type="number"
+            value={budgetCap}
+            onChange={e => setBudgetCap(Number(e.target.value))}
+            className="h-7 w-28 rounded-md border border-slate-300 bg-slate-50 px-2.5 font-mono text-xs font-bold text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+          />
         </div>
-        <div className={`p-4 rounded-2xl shadow-lg text-white border-b-4 ${expensePercentage >= 80 ? 'bg-gradient-to-br from-[#dc3545] to-[#b91c1c] border-rose-950' : 'bg-gradient-to-br from-[#fd7e14] to-[#c2410c] border-orange-950'}`}>
-          <div className="text-amber-100 text-xs font-mono font-bold tracking-widest mb-1 uppercase">Total Expense</div>
-          <div className="text-2xl font-black text-white">${totalExpense.toFixed(2)}</div>
-          {expensePercentage >= 80 && (
-            <div className="text-xs font-bold mt-1.5 bg-black/20 text-white px-2 py-1 rounded-lg w-fit">
-              {expensePercentage >= 100 ? '⚠️ BUDGET EXCEEDED!' : '⚠️ BUDGET NEAR LIMIT'}
-            </div>
-          )}
-        </div>
-        <div className="bg-gradient-to-br from-[#0d6efd] to-[#1d4ed8] text-white p-4 rounded-2xl shadow-lg border-b-4 border-blue-900">
-          <div className="text-blue-100 text-xs font-mono font-bold tracking-widest mb-1 uppercase">Net Profit Margin</div>
-          <div className="text-2xl font-black text-white">${netProfit.toFixed(2)}</div>
-          <div className="mt-2 text-[10px] font-mono font-bold bg-white/20 text-white px-2 py-1 rounded-full w-fit">
-            NET MARGIN: {totalIncome > 0 ? ((netProfit / totalIncome) * 100).toFixed(1) : '0'}%
-          </div>
-        </div>
-      </div>
-      
-      <div className="flex flex-wrap items-center gap-4 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-         <span className="text-xs font-bold font-mono text-slate-700 dark:text-slate-300 uppercase tracking-wider">Monthly Budget Cap ($):</span>
-         <input type="number" value={budgetCap} onChange={e => setBudgetCap(Number(e.target.value))} className="px-3 py-1.5 border border-slate-300 dark:border-slate-700 rounded-lg w-36 font-mono font-bold text-sm bg-slate-50 dark:bg-slate-800 dark:text-white" />
       </div>
 
       <div className="h-44 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-md">

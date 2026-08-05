@@ -130,8 +130,8 @@ export default function ProductDetailModal({
   };
 
   const handleCopyLink = () => {
-    const fakeUrl = `${window.location.origin}/product/${product.id}`;
-    navigator.clipboard.writeText(fakeUrl).then(() => {
+    const shareUrl = `${window.location.origin}${window.location.pathname}?product=${product.id}`;
+    navigator.clipboard.writeText(shareUrl).then(() => {
       setCopied(true);
       setShareStatus('Product link copied to clipboard!');
       setTimeout(() => setCopied(false), 2000);

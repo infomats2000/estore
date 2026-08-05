@@ -1,0 +1,12 @@
+id,name,durationMonths,type,isSystem,isActive
+war-none,No Warranty,0,None,true,true
+war-30d,30 Days Return Warranty,1,Return To Base,true,true
+war-90d,90 Days Express Warranty,3,Return To Base,true,true
+war-6m,6 Months Hardware Warranty,6,Return To Base,true,true
+war-1y,1 Year Direct Warranty,12,Return To Base,true,true
+war-2y,2 Years Extended Warranty,24,Return To Base,true,true
+war-3y,3 Years Pro Support,36,On Site,true,true
+war-5y,5 Years Enterprise Warranty,60,On Site,true,true
+war-mfg,Manufacturer Warranty,12,Manufacturer,true,true
+war-rtb,Return To Base (RTB),12,Return To Base,true,true
+war-onsite,On-Site Next Business Day,12,On Site,true,true

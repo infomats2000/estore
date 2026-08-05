@@ -1,0 +1,7 @@
+id,name,country,ratePercent,code,isSystem,isActive
+tax-au-gst,GST (10%),Australia,10.0,GST_AU,true,true
+tax-au-free,GST Free,Australia,0.0,GST_FREE_AU,true,true
+tax-nz-gst,GST (15%),New Zealand,15.0,GST_NZ,true,true
+tax-uk-std,VAT Standard (20%),United Kingdom,20.0,VAT_STD_UK,true,true
+tax-uk-zero,VAT Zero (0%),United Kingdom,0.0,VAT_ZERO_UK,true,true
+tax-us-exempt,Tax Exempt (0%),USA,0.0,TAX_EXEMPT_US,true,true

@@ -1,0 +1,70 @@
+id,name,logoUrl,website,country,isSystem,isActive
+brand-intel,Intel,,https://www.intel.com,USA,true,true
+brand-amd,AMD,,https://www.amd.com,USA,true,true
+brand-asus,ASUS,,https://www.asus.com,Taiwan,true,true
+brand-msi,MSI,,https://www.msi.com,Taiwan,true,true
+brand-gigabyte,Gigabyte,,https://www.gigabyte.com,Taiwan,true,true
+brand-dell,Dell,,https://www.dell.com,USA,true,true
+brand-hp,HP,,https://www.hp.com,USA,true,true
+brand-lenovo,Lenovo,,https://www.lenovo.com,China,true,true
+brand-apple,Apple,,https://www.apple.com,USA,true,true
+brand-samsung,Samsung,,https://www.samsung.com,South Korea,true,true
+brand-kingston,Kingston,,https://www.kingston.com,USA,true,true
+brand-corsair,Corsair,,https://www.corsair.com,USA,true,true
+brand-cisco,Cisco,,https://www.cisco.com,USA,true,true
+brand-ubiquiti,Ubiquiti,,https://ui.com,USA,true,true
+brand-netgear,Netgear,,https://www.netgear.com,USA,true,true
+brand-synology,Synology,,https://www.synology.com,Taiwan,true,true
+brand-qnap,QNAP,,https://www.qnap.com,Taiwan,true,true
+brand-logitech,Logitech,,https://www.logitech.com,Switzerland,true,true
+brand-apc,APC,,https://www.apc.com,USA,true,true
+brand-brother,Brother,,https://www.brother.com,Japan,true,true
+brand-canon,Canon,,https://www.canon.com,Japan,true,true
+brand-epson,Epson,,https://www.epson.com,Japan,true,true
+brand-zebra,Zebra,,https://www.zebra.com,USA,true,true
+brand-wd,Western Digital,,https://www.westerndigital.com,USA,true,true
+brand-seagate,Seagate,,https://www.seagate.com,USA,true,true
+brand-crucial,Crucial,,https://www.crucial.com,USA,true,true
+brand-sandisk,SanDisk,,https://www.sandisk.com,USA,true,true
+brand-razer,Razer,,https://www.razer.com,USA,true,true
+brand-steelseries,SteelSeries,,https://steelseries.com,Denmark,true,true
+brand-belkin,Belkin,,https://www.belkin.com,USA,true,true
+brand-tplink,TP-Link,,https://www.tp-link.com,China,true,true
+brand-dlink,D-Link,,https://www.dlink.com,Taiwan,true,true
+brand-evga,EVGA,,https://www.evga.com,USA,true,true
+brand-zotac,Zotac,,https://www.zotac.com,Hong Kong,true,true
+brand-sapphire,Sapphire,,https://www.sapphiretech.com,Hong Kong,true,true
+brand-palit,Palit,,https://www.palit.com,Taiwan,true,true
+brand-xfx,XFX,,https://www.xfxforce.com,USA,true,true
+brand-thermaltake,Thermaltake,,https://www.thermaltake.com,Taiwan,true,true
+brand-coolermaster,Cooler Master,,https://www.coolermaster.com,Taiwan,true,true
+brand-seasonic,Seasonic,,https://seasonic.com,Taiwan,true,true
+brand-antec,Antec,,https://www.antec.com,USA,true,true
+brand-nzxt,NZXT,,https://nzxt.com,USA,true,true
+brand-fractal,Fractal Design,,https://www.fractal-design.com,Sweden,true,true
+brand-noctua,Noctua,,https://noctua.at,Austria,true,true
+brand-bequiet,Be Quiet!,,https://www.bequiet.com,Germany,true,true
+brand-sennheiser,Sennheiser,,https://www.sennheiser.com,Germany,true,true
+brand-jabra,Jabra,,https://www.jabra.com,Denmark,true,true
+brand-poly,Poly,,https://www.poly.com,USA,true,true
+brand-plantronics,Plantronics,,https://www.poly.com,USA,true,true
+brand-dellemc,Dell EMC,,https://www.dell.com,USA,true,true
+brand-hpe,HPE,,https://www.hpe.com,USA,true,true
+brand-ibm,IBM,,https://www.ibm.com,USA,true,true
+brand-fujitsu,Fujitsu,,https://www.fujitsu.com,Japan,true,true
+brand-supermicro,Supermicro,,https://www.supermicro.com,USA,true,true
+brand-benq,BenQ,,https://www.benq.com,Taiwan,true,true
+brand-viewsonic,ViewSonic,,https://www.viewsonic.com,USA,true,true
+brand-aoc,AOC,,https://eu.aoc.com,Taiwan,true,true
+brand-lg,LG,,https://www.lg.com,South Korea,true,true
+brand-sony,Sony,,https://www.sony.com,Japan,true,true
+brand-panasonic,Panasonic,,https://www.panasonic.com,Japan,true,true
+brand-sharp,Sharp,,https://sharp-world.com,Japan,true,true
+brand-kyocera,Kyocera,,https://www.kyoceradocumentsolutions.com,Japan,true,true
+brand-ricoh,Ricoh,,https://www.ricoh.com,Japan,true,true
+brand-lexmark,Lexmark,,https://www.lexmark.com,USA,true,true
+brand-xerox,Xerox,,https://www.xerox.com,USA,true,true
+brand-honeywell,Honeywell,,https://www.honeywell.com,USA,true,true
+brand-datalogic,Datalogic,,https://www.datalogic.com,Italy,true,true
+brand-starmicronics,Star Micronics,,https://starmicronics.com,Japan,true,true
+brand-citizen,Citizen,,https://www.citizen-systems.com,Japan,true,true

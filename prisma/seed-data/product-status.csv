@@ -1,0 +1,13 @@
+id,name,code,isSystem,isActive
+status-active,Active,ACTIVE,true,true
+status-inactive,Inactive,INACTIVE,true,true
+status-comingsoon,Coming Soon,COMING_SOON,true,true
+status-preorder,Pre Order,PRE_ORDER,true,true
+status-backorder,Back Order,BACK_ORDER,true,true
+status-outofstock,Out of Stock,OUT_OF_STOCK,true,true
+status-special,Special Order,SPECIAL_ORDER,true,true
+status-clearance,Clearance,CLEARANCE,true,true
+status-discontinued,Discontinued,DISCONTINUED,true,true
+status-openbox,Open Box,OPEN_BOX,true,true
+status-refurbished,Refurbished,REFURBISHED,true,true
+status-used,Used,USED,true,true

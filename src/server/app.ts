@@ -43,7 +43,7 @@ app.use((req, _res, next) => {
 });
 
 const { doubleCsrfProtection } = doubleCsrf({
-  getSecret: () => process.env.JWT_SECRET || 'secret-key-change-me',
+  getSecret: () => process.env.JWT_SECRET || 'dev-secret',
   getSessionIdentifier: (req) => (req as any).cookies?.session || 'anonymous',
   cookieName: 'x-csrf-token',
   cookieOptions: {
@@ -54,6 +54,9 @@ const { doubleCsrfProtection } = doubleCsrf({
 });
 
 app.use((req, res, next) => {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+    return next();
+  }
   const skipCsrf = req.path.startsWith('/api/');
   if (skipCsrf) {
     return next();
@@ -90,7 +93,7 @@ app.get('/sitemap.xml', (req, res) => {
   const protocol = req.protocol || 'http';
   const host = req.get('host') || 'localhost:3000';
   const baseUrl = process.env.APP_URL || `${protocol}://${host}`;
-  const urls = [`${baseUrl}/`, `${baseUrl}/products`, `${baseUrl}/about`].map(u => u.replace(/([^:]\/)\/+/g, "$1"));
+  const urls = [`${baseUrl}/`, `${baseUrl}/products`].map(u => u.replace(/([^:]\/)\/+/g, "$1"));
   res.type('application/xml').send(buildSitemapXml(urls));
 });
 
