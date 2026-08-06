@@ -108,9 +108,11 @@ router.post('/saas-login', async (req, res) => {
     });
   } catch (error: any) {
     console.error('SaaS Login Error:', error);
-    res.status(500).json({ error: error.message || 'Authentication server error' });
+    const msg = error?.message || 'Authentication server error';
+    return res.status(500).json({ error: `Login Error: ${msg}` });
   }
 });
+
 
 // POST /api/auth/login - Universal Login Alias
 router.post('/login', (req, res, next) => {
