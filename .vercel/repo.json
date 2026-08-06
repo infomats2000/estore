@@ -1,0 +1,11 @@
+{
+  "remoteName": "origin",
+  "projects": [
+    {
+      "id": "prj_IKTZAHUftl9kR2f6azCjYowCWOeA",
+      "name": "infomats-erp",
+      "directory": ".",
+      "orgId": "team_9lhu5V6qeDgVbCV0uVSX0J3R"
+    }
+  ]
+}

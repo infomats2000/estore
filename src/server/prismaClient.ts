@@ -1,13 +1,3 @@
-// Auto-resolve Vercel Environment Variables (POSTGRES_URL / PRISMA_DATABASE_URL -> DATABASE_URL)
-if (!process.env.DATABASE_URL) {
-  process.env.DATABASE_URL =
-    process.env.POSTGRES_URL ||
-    process.env.PRISMA_DATABASE_URL ||
-    process.env.POSTGRES_PRISMA_URL ||
-    process.env.POSTGRES_URL_NON_POOLING ||
-    '';
-}
-
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import { getActiveTenantId } from './tenantContext';
@@ -15,6 +5,15 @@ import { getActiveTenantId } from './tenantContext';
 // This module is imported before app.ts has a chance to call dotenv.config().
 // Load it here so Prisma always receives the local development configuration.
 dotenv.config();
+
+// Auto-resolve Vercel Environment Variables (POSTGRES_URL / PRISMA_DATABASE_URL -> DATABASE_URL)
+if (!process.env.DATABASE_URL) {
+  process.env.DATABASE_URL =
+    process.env.POSTGRES_URL ||
+    process.env.PRISMA_DATABASE_URL ||
+    process.env.POSTGRES_PRISMA_URL ||
+    process.env.POSTGRES_URL_NON_POOLING;
+}
 
 const configuredDbUrl =
   process.env.DATABASE_URL ||
@@ -24,29 +23,25 @@ const configuredDbUrl =
   process.env.POSTGRES_URL_NON_POOLING ||
   '';
 
-/**
- * The checked-in development configuration previously targeted a retired or
- * unreachable Prisma-hosted database. Keep production strictly environment
- * driven, but make an out-of-the-box local run use the PostgreSQL service
- * installed on the developer machine.
- */
-const isLocalDevelopment = process.env.NODE_ENV !== 'production' && !process.env.VERCEL;
-const configuredHost = (() => {
+const resolvedDbHost = (() => {
   try {
-    return new URL(configuredDbUrl).hostname;
+    return new URL(configuredDbUrl).host;
   } catch {
     return '';
   }
 })();
-const dbUrl = isLocalDevelopment && ['pooled.db.prisma.io', 'db.prisma.io'].includes(configuredHost)
-  ? 'postgresql://postgres@localhost:5432/store_erp_local?schema=public'
-  : configuredDbUrl;
+
+if (resolvedDbHost) {
+  console.log(`[DB] Prisma connected via host: ${resolvedDbHost}`);
+} else {
+  console.warn('[DB] DATABASE_URL is not configured or invalid.');
+}
 
 // Base raw prisma instance for administrative or cross-tenant tasks
 export const prismaRaw = new PrismaClient({
   datasources: {
     db: {
-      url: dbUrl,
+      url: configuredDbUrl,
     },
   },
 });

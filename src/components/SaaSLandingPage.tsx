@@ -86,7 +86,7 @@ export const SaaSLandingPage: React.FC<SaaSLandingPageProps> = ({
         </div>
 
         <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-8 leading-tight max-w-5xl mx-auto">
-          Turn Your ERP Into A Global <br />
+          Intelligent ERP Solution to Manage Computer Hardwaer Business <br />
           <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400">
             Multi-Tenant SaaS Powerhouse
           </span>

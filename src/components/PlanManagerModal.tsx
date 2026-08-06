@@ -95,6 +95,7 @@ export const PlanManagerModal: React.FC<PlanManagerModalProps> = ({ onClose, onP
   };
 
   const toggleFeature = (featureId: string) => {
+    if (featureId === 'pos') return; // POS is included by default on every plan tier
     if (selectedFeatureIds.includes(featureId)) {
       setSelectedFeatureIds(selectedFeatureIds.filter((id) => id !== featureId));
     } else {
@@ -421,12 +422,15 @@ export const PlanManagerModal: React.FC<PlanManagerModalProps> = ({ onClose, onP
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto p-3 rounded-2xl bg-white border border-slate-200 shadow-inner">
                   {ALL_FEATURES.map((feat) => {
-                    const isChecked = selectedFeatureIds.includes(feat.id);
+                    const isChecked = feat.id === 'pos' ? true : selectedFeatureIds.includes(feat.id);
+                    const isLockedOn = feat.id === 'pos';
                     return (
                       <label
                         key={feat.id}
                         onClick={() => toggleFeature(feat.id)}
-                        className={`p-2.5 rounded-xl border text-xs font-semibold cursor-pointer transition flex items-start gap-2.5 ${
+                        className={`p-2.5 rounded-xl border text-xs font-semibold transition flex items-start gap-2.5 ${
+                          isLockedOn ? 'cursor-not-allowed' : 'cursor-pointer'
+                        } ${
                           isChecked
                             ? 'bg-indigo-50/80 border-indigo-300 text-slate-900'
                             : 'bg-slate-50/50 border-slate-200 text-slate-500 hover:bg-slate-100/80'
@@ -435,12 +439,13 @@ export const PlanManagerModal: React.FC<PlanManagerModalProps> = ({ onClose, onP
                         <input
                           type="checkbox"
                           checked={isChecked}
+                          disabled={isLockedOn}
                           onChange={() => {}} // Handled by container onClick
                           className="mt-0.5 rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 shrink-0"
                         />
                         <div>
                           <div className={`font-bold text-xs ${isChecked ? 'text-indigo-900' : 'text-slate-700'}`}>
-                            {feat.name}
+                            {feat.name}{isLockedOn ? ' (Included on all tiers)' : ''}
                           </div>
                           <div className="text-[10px] font-normal text-slate-500 leading-tight mt-0.5">
                             {feat.description}

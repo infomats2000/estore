@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Store, Globe, Layers, CreditCard, Shield, Users, Package, ShoppingCart, X, CheckCircle2, AlertTriangle, Loader2, Save, Power, Sparkles, Sliders, Check } from 'lucide-react';
-import { ALL_FEATURES } from '../constants/features';
+import { Store, Globe, Layers, CreditCard, Shield, Users, Package, ShoppingCart, X, CheckCircle2, AlertTriangle, Loader2, Save, Power, Sliders, Check } from 'lucide-react';
 
 interface TenantManagerModalProps {
   tenantId: string;
@@ -17,7 +16,7 @@ export const TenantManagerModal: React.FC<TenantManagerModalProps> = ({
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [activeTab, setActiveTab] = useState<'general' | 'billing' | 'custom_tier' | 'contact' | 'stats'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'billing' | 'contact' | 'stats'>('general');
 
   // Form Fields
   const [tenantData, setTenantData] = useState<any>(null);
@@ -40,16 +39,6 @@ export const TenantManagerModal: React.FC<TenantManagerModalProps> = ({
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
-
-  // Custom Tier Provisioning Fields
-  const [customPlanName, setCustomPlanName] = useState('');
-  const [customPriceMonthly, setCustomPriceMonthly] = useState('99.00');
-  const [customPriceYearly, setCustomPriceYearly] = useState('990.00');
-  const [customMaxProducts, setCustomMaxProducts] = useState('5000');
-  const [customMaxOrders, setCustomMaxOrders] = useState('25000');
-  const [customMaxStaff, setCustomMaxStaff] = useState('15');
-  const [customFeatures, setCustomFeatures] = useState<string[]>(['pos', 'custom_domain', 'marketing', 'trade_accounts', 'procurement']);
-  const [customBillingProvider, setCustomBillingProvider] = useState<'stripe' | 'paypal' | 'manual'>('stripe');
 
   const fetchTenantDetails = async () => {
     try {
@@ -80,8 +69,6 @@ export const TenantManagerModal: React.FC<TenantManagerModalProps> = ({
       setPlanId(t.planId || '');
       setSubscriptionStatus(t.subscriptionStatus || 'active');
 
-      setCustomPlanName(`${t.name} Custom Plan`);
-
       const ss = t.storeSettings?.[0] || {};
       setStoreName(ss.storeName || t.name || '');
       setCurrencySymbol(ss.currencySymbol || '$');
@@ -101,59 +88,8 @@ export const TenantManagerModal: React.FC<TenantManagerModalProps> = ({
     fetchTenantDetails();
   }, [tenantId]);
 
-  const toggleCustomFeature = (fid: string) => {
-    if (customFeatures.includes(fid)) {
-      setCustomFeatures(customFeatures.filter((f) => f !== fid));
-    } else {
-      setCustomFeatures([...customFeatures, fid]);
-    }
-  };
-
-  const handleProvisionCustomPlan = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setSuccessMsg('');
-
-    try {
-      setSubmitting(true);
-      const token = localStorage.getItem('authToken') || '';
-      const res = await fetch(`/api/superadmin/tenants/${tenantId}/custom-plan`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          planName: customPlanName,
-          priceMonthly: customPriceMonthly,
-          priceYearly: customPriceYearly,
-          maxProducts: customMaxProducts,
-          maxOrdersPerMonth: customMaxOrders,
-          maxStaff: customMaxStaff,
-          features: customFeatures,
-          billingProvider: customBillingProvider,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to provision custom tier.');
-
-      setSuccessMsg(`Custom plan '${data.plan.name}' created and assigned to '${name}'!`);
-      setTimeout(() => {
-        onTenantUpdated();
-      }, 1200);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   const handleSaveTenant = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (activeTab === 'custom_tier') {
-      return handleProvisionCustomPlan(e);
-    }
 
     setError('');
     setSuccessMsg('');
@@ -253,17 +189,6 @@ export const TenantManagerModal: React.FC<TenantManagerModalProps> = ({
             }`}
           >
             <CreditCard className="w-4 h-4" /> Standard Tiers
-          </button>
-
-          <button
-            onClick={() => setActiveTab('custom_tier')}
-            className={`py-3 px-4 text-xs font-bold border-b-2 flex items-center gap-2 transition ${
-              activeTab === 'custom_tier'
-                ? 'border-purple-600 text-purple-700 bg-white font-extrabold shadow-sm'
-                : 'border-transparent text-purple-600 hover:text-purple-900 font-semibold'
-            }`}
-          >
-            <Sparkles className="w-4 h-4 text-amber-500" /> Provision Custom Tier
           </button>
 
           <button
@@ -418,144 +343,7 @@ export const TenantManagerModal: React.FC<TenantManagerModalProps> = ({
                 </div>
               )}
 
-              {/* TAB 3: PROVISION CUSTOM TIER PLAN & AUTOMATED BILLING */}
-              {activeTab === 'custom_tier' && (
-                <div className="space-y-5 bg-gradient-to-br from-purple-50/50 via-slate-50 to-indigo-50/50 p-5 rounded-3xl border border-purple-200">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Sparkles className="w-5 h-5 text-purple-600" />
-                    <h3 className="font-extrabold text-slate-900 text-base">Provision Tailored Custom Tier</h3>
-                  </div>
-                  <p className="text-xs text-slate-500 font-medium">Create a custom subscription tier with specific module feature access, custom pricing, and automated recurring billing gateway.</p>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Custom Tier Name *</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. INFOMAT Custom Enterprise"
-                        value={customPlanName}
-                        onChange={(e) => setCustomPlanName(e.target.value)}
-                        className="w-full px-3.5 py-2 rounded-xl bg-white border border-slate-300 text-xs font-semibold text-slate-900 focus:outline-none focus:border-purple-600"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Automated Recurring Billing Provider</label>
-                      <select
-                        value={customBillingProvider}
-                        onChange={(e) => setCustomBillingProvider(e.target.value as any)}
-                        className="w-full px-3.5 py-2 rounded-xl bg-white border border-slate-300 text-xs font-bold text-slate-900 focus:outline-none focus:border-purple-600"
-                      >
-                        <option value="stripe">Stripe (Credit Card Monthly Auto-Charge)</option>
-                        <option value="paypal">PayPal (Automated Recurring Subscription)</option>
-                        <option value="manual">Manual Direct Invoicing / Wire Transfer</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Custom Price Monthly ($/mo) *</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        required
-                        value={customPriceMonthly}
-                        onChange={(e) => setCustomPriceMonthly(e.target.value)}
-                        className="w-full px-3.5 py-2 rounded-xl bg-white border border-slate-300 text-xs font-bold text-slate-900 focus:outline-none focus:border-purple-600"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Custom Price Yearly ($/yr)</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={customPriceYearly}
-                        onChange={(e) => setCustomPriceYearly(e.target.value)}
-                        className="w-full px-3.5 py-2 rounded-xl bg-white border border-slate-300 text-xs font-bold text-slate-900 focus:outline-none focus:border-purple-600"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-3">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Max Products</label>
-                      <input
-                        type="number"
-                        value={customMaxProducts}
-                        onChange={(e) => setCustomMaxProducts(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 text-xs font-bold text-slate-900"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Max Orders/Mo</label>
-                      <input
-                        type="number"
-                        value={customMaxOrders}
-                        onChange={(e) => setCustomMaxOrders(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 text-xs font-bold text-slate-900"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Max Staff</label>
-                      <input
-                        type="number"
-                        value={customMaxStaff}
-                        onChange={(e) => setCustomMaxStaff(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 text-xs font-bold text-slate-900"
-                      />
-                    </div>
-                  </div>
-
-                  {/* GRANULAR FEATURE MODULE SELECTION CHECKBOXES FOR CUSTOM TIER */}
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="block text-xs font-extrabold text-purple-950 uppercase tracking-wider">
-                        Select Allowed Feature Modules ({customFeatures.length} / {ALL_FEATURES.length})
-                      </label>
-                      <span className="text-[10px] text-purple-600 font-bold">Check features to grant</span>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto p-3 rounded-2xl bg-white border border-purple-200 shadow-inner">
-                      {ALL_FEATURES.map((feat) => {
-                        const isChecked = customFeatures.includes(feat.id);
-                        return (
-                          <label
-                            key={feat.id}
-                            onClick={() => toggleCustomFeature(feat.id)}
-                            className={`p-2.5 rounded-xl border text-xs font-semibold cursor-pointer transition flex items-start gap-2.5 ${
-                              isChecked
-                                ? 'bg-purple-50/80 border-purple-300 text-slate-900'
-                                : 'bg-slate-50/50 border-slate-200 text-slate-400 hover:bg-slate-100/80'
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={() => {}}
-                              className="mt-0.5 rounded text-purple-600 focus:ring-purple-500 w-4 h-4 shrink-0"
-                            />
-                            <div>
-                              <div className={`font-bold text-xs ${isChecked ? 'text-purple-950' : 'text-slate-600'}`}>
-                                {feat.name}
-                              </div>
-                              <div className="text-[10px] font-normal text-slate-500 leading-tight mt-0.5">
-                                {feat.description}
-                              </div>
-                            </div>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 4: Store Contact & Settings */}
+              {/* TAB 3: Store Contact & Settings */}
               {activeTab === 'contact' && (
                 <div className="space-y-4">
                   <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100 mb-4">
@@ -612,7 +400,7 @@ export const TenantManagerModal: React.FC<TenantManagerModalProps> = ({
                 </div>
               )}
 
-              {/* TAB 5: Catalog Statistics */}
+              {/* TAB 4: Catalog Statistics */}
               {activeTab === 'stats' && (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-center">
@@ -653,10 +441,6 @@ export const TenantManagerModal: React.FC<TenantManagerModalProps> = ({
                   {submitting ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" /> Saving...
-                    </>
-                  ) : activeTab === 'custom_tier' ? (
-                    <>
-                      <Sparkles className="w-4 h-4 text-amber-300" /> Provision &amp; Assign Custom Plan
                     </>
                   ) : (
                     <>

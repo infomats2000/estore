@@ -2,6 +2,9 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { FeatureGateModal } from '../components/FeatureGateModal';
 import { ALL_FEATURES } from '../constants/features';
 
+// POS is a baseline feature included for every tenant on every plan tier
+const ALWAYS_UNLOCKED_FEATURES = ['pos'];
+
 interface TenantFeatureContextType {
   enabledFeatureIds: string[];
   planName: string;
@@ -43,7 +46,7 @@ export const TenantFeatureProvider: React.FC<{
       if (!res.ok) return;
 
       const data = await res.json();
-      const plan = data.plan;
+      const plan = data.currentPlan ?? data.plan;
       if (plan) {
         setPlanName(plan.name || 'Free Starter');
         let feats: string[] = [];
@@ -70,6 +73,8 @@ export const TenantFeatureProvider: React.FC<{
   }, []);
 
   const hasFeature = (featureId: string): boolean => {
+    // POS is included on every plan tier by default, regardless of billing configuration
+    if (ALWAYS_UNLOCKED_FEATURES.includes(featureId)) return true;
     // SUPER ADMIN / IMPERSONATION BYPASS: Grant ALL features regardless of tenant's subscription tier
     if (isImpersonating) return true;
     if (enabledFeatureIds.includes(featureId)) return true;
@@ -77,6 +82,7 @@ export const TenantFeatureProvider: React.FC<{
   };
 
   const openFeatureGate = (featureId: string) => {
+    if (ALWAYS_UNLOCKED_FEATURES.includes(featureId)) return;
     if (!isImpersonating) {
       setActiveLockedFeature(featureId);
     }
@@ -85,7 +91,9 @@ export const TenantFeatureProvider: React.FC<{
   return (
     <TenantFeatureContext.Provider
       value={{
-        enabledFeatureIds: isImpersonating ? ALL_FEATURES.map((f) => f.id) : enabledFeatureIds,
+        enabledFeatureIds: isImpersonating
+          ? ALL_FEATURES.map((f) => f.id)
+          : Array.from(new Set([...enabledFeatureIds, ...ALWAYS_UNLOCKED_FEATURES])),
         planName: isImpersonating ? `${planName} (Super Admin Impersonation Bypass)` : planName,
         loading,
         isImpersonating,

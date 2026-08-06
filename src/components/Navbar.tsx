@@ -152,7 +152,7 @@ export default function Navbar({
 
           {/* Middle Search Bar (hidden in admin mode) */}
           {!isAdminMode ? (
-            <div className="hidden md:block flex-1 max-w-lg mx-4" id="desktop-search-container">
+            <div className="hidden md:block flex-1 min-w-[260px] max-w-lg mx-4" id="desktop-search-container">
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-neutral-400 dark:text-neutral-500">
                   <Search className="h-4 w-4" />
@@ -162,7 +162,7 @@ export default function Navbar({
                   placeholder="SEARCH DELL, THINKPAD, CORE i7, MACBOOK, MONITORS..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full rounded-none border-2 border-neutral-900 dark:border-neutral-700 dark:border-amber-400/80 bg-neutral-50 dark:bg-neutral-950 py-2 pl-10 pr-16 font-sans text-[10px] uppercase tracking-wider outline-none transition-all placeholder:text-neutral-500 dark:placeholder:text-neutral-500 focus:bg-white text-neutral-900 dark:text-neutral-100"
+                  className="w-full rounded-none border-2 border-neutral-900 dark:border-amber-400/80 bg-white dark:bg-neutral-950 py-2 pl-10 pr-12 font-sans text-[10px] uppercase tracking-wider outline-none transition-all placeholder:text-neutral-700 dark:placeholder:text-neutral-300 focus:bg-white text-neutral-900 dark:text-neutral-100"
                   id="search-input-desktop"
                 />
                 {searchQuery && (
@@ -421,8 +421,8 @@ export default function Navbar({
                 />
               </div>
             ) : (
-              <button
-                type="button"
+              <a
+                href="#"
                 onClick={(e) => {
                   e.preventDefault();
                   setIsAdminMode(true);
@@ -434,7 +434,7 @@ export default function Navbar({
               >
                 <LogIn className="h-3 w-3" />
                 <span className="hidden sm:inline">STAFF / ADMIN LOGIN</span>
-              </button>
+              </a>
             )}
           </div>
         </div>

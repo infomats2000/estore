@@ -8,7 +8,7 @@
     "build": "prisma generate && vite build && esbuild server.ts --bundle --platform=node --format=esm --packages=external \"--banner:js=import { createRequire } from 'module'; import { fileURLToPath } from 'url'; import { dirname } from 'path'; const require = createRequire(import.meta.url); const __filename = fileURLToPath(import.meta.url); const __dirname = dirname(__filename);\" --sourcemap --outfile=dist/server.js",
     "build:local": "vite build && esbuild server.ts --bundle --platform=node --format=esm --packages=external \"--banner:js=import { createRequire } from 'module'; import { fileURLToPath } from 'url'; import { dirname } from 'path'; const require = createRequire(import.meta.url); const __filename = fileURLToPath(import.meta.url); const __dirname = dirname(__filename);\" --sourcemap --outfile=dist/server.js",
     "start": "node dist/server.js",
-    "vercel-build": "DATABASE_URL=$PRISMA_DATABASE_URL prisma migrate deploy && DATABASE_URL=$PRISMA_DATABASE_URL tsx src/server/seedSaaS.ts && prisma generate && esbuild api/_handler.ts --bundle --platform=node --format=esm --packages=external --outfile=api/_handler.js && vite build",
+    "vercel-build": "prisma migrate deploy && tsx src/server/seedSaaS.ts && prisma generate && esbuild api/_handler.ts --bundle --platform=node --format=esm --packages=external --outfile=api/_handler.js && vite build",
     "postinstall": "prisma generate",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",

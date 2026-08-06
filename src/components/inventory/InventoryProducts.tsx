@@ -562,20 +562,6 @@ export default function InventoryProducts({
                   <span>Print Barcode Labels</span>
                 </button>
 
-                {products.length > 0 && (
-                  <button
-                    onClick={() => {
-                      if (window.confirm('CRITICAL: Are you absolutely sure you want to delete ALL products from the catalog? This will completely empty the active store database and cannot be undone.')) {
-                        onClearAllProducts();
-                      }
-                    }}
-                    className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 font-sans text-xs uppercase tracking-wider font-black border border-rose-300 dark:border-rose-500/40 text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/40 bg-rose-50 dark:bg-rose-950/30 transition-all cursor-pointer shadow-md"
-                    id="delete-all-products-btn"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    <span>Clear All ITEMs</span>
-                  </button>
-                )}
                 <button
                   onClick={() => {
                     if (showAddProduct && !editingProduct) {

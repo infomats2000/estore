@@ -2257,7 +2257,7 @@ export default function App() {
         <div className="bg-slate-950 text-slate-200 border-b border-indigo-500/30 px-4 py-2 flex flex-wrap items-center justify-between gap-2 text-xs z-50">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="font-bold text-white uppercase tracking-wider">StoreERP SaaS Platform</span>
+            <span className="font-bold text-white uppercase tracking-wider">Powered by Infomats</span>
             <span className="text-slate-400">|</span>
             <span className="text-indigo-300 font-mono">Store: {storeSettings.storeName}</span>
           </div>
@@ -2270,26 +2270,17 @@ export default function App() {
                 ⚙️ Return to Super Admin Panel
               </button>
             ) : (
-              <button
-                onClick={() => setSaasMode('login')}
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setSaasMode('login');
+                }}
                 className="px-3 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 font-semibold transition flex items-center gap-1"
               >
-                🔑 Sign In
-              </button>
+                Log Out
+              </a>
             )}
-
-            <button
-              onClick={() => setSaasMode('landing')}
-              className="px-3 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 font-semibold transition"
-            >
-              🌐 SaaS Landing &amp; Pricing
-            </button>
-            <button
-              onClick={() => setShowOnboardingModal(true)}
-              className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition"
-            >
-              + Launch New Store
-            </button>
           </div>
         </div>
 
