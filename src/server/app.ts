@@ -52,9 +52,14 @@ app.use(tenantResolverMiddleware);
 
 // SaaS Authentication, Public Onboarding, Billing & Super Admin Routers
 app.use('/api/auth', saasAuthRoutes);
+app.use('/auth', saasAuthRoutes);
 app.use('/api/onboarding', onboardingRoutes);
+app.use('/onboarding', onboardingRoutes);
 app.use('/api/billing', tenantBillingRoutes);
+app.use('/billing', tenantBillingRoutes);
 app.use('/api/superadmin', superadminRoutes);
+app.use('/superadmin', superadminRoutes);
+
 
 
 

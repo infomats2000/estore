@@ -8,11 +8,12 @@ if (!process.env.DATABASE_URL) {
     '';
 }
 
-import { PrismaClient } from '../generated/prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { getActiveTenantId } from './tenantContext';
 
 // Base raw prisma instance for administrative or cross-tenant tasks
 export const prismaRaw = new PrismaClient();
+
 
 
 // Models that are scoped to a specific tenant
