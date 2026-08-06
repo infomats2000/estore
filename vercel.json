@@ -3,6 +3,11 @@
   "framework": "vite",
   "buildCommand": "npm run vercel-build",
   "outputDirectory": "dist",
+  "functions": {
+    "api/index.ts": {
+      "includeFiles": "node_modules/@prisma/client/**"
+    }
+  },
   "rewrites": [
     {
       "source": "/api/(.*)",
