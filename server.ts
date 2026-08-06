@@ -5,6 +5,10 @@ import { createServer as createViteServer } from 'vite';
 import express from 'express';
 import app from './src/server/app';
 import { seedDatabase } from './src/server/seed';
+import { validateEnvironment } from './src/server/envValidator';
+
+validateEnvironment();
+
 
 // Process crash guards to keep local development server connected and resilient
 process.on('uncaughtException', (err) => {

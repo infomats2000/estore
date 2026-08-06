@@ -1,13 +1,24 @@
 import { Router } from 'express';
 import { prismaRaw } from '../prismaClient';
 import { findUserByEmail, verifyPassword, createAuthToken } from '../auth';
+import { validateEnvironment } from '../envValidator';
 
 const router = Router();
 
 // POST /api/auth/saas-login - Standard Universal Login (Auto-recognizes Super Admin vs Store User)
 router.post('/saas-login', async (req, res) => {
   try {
+    const envCheck = validateEnvironment();
+    if (!envCheck.isValid) {
+      return res.status(500).json({
+        success: false,
+        error: `Server Configuration Error: Missing required environment variables (${envCheck.missingVars.join(', ')}). Please set these in Vercel Project Settings.`,
+        missingVars: envCheck.missingVars,
+      });
+    }
+
     const { email, password, storeSlug } = req.body;
+
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required.' });
@@ -109,9 +120,13 @@ router.post('/saas-login', async (req, res) => {
   } catch (error: any) {
     console.error('SaaS Login Error:', error);
     const msg = error?.message || 'Authentication server error';
-    return res.status(500).json({ error: `Login Error: ${msg}` });
+    return res.status(500).json({
+      success: false,
+      error: `Database / Server Error: ${msg}. Please verify Vercel DATABASE_URL & JWT_SECRET environment variables.`
+    });
   }
 });
+
 
 
 // POST /api/auth/login - Universal Login Alias

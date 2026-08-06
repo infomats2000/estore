@@ -1,13 +1,9 @@
-if (!process.env.DATABASE_URL) {
-  process.env.DATABASE_URL =
-    process.env.POSTGRES_URL ||
-    process.env.PRISMA_DATABASE_URL ||
-    process.env.POSTGRES_PRISMA_URL ||
-    process.env.POSTGRES_URL_NON_POOLING ||
-    '';
-}
-
+import { validateEnvironment } from '../src/server/envValidator';
 import app from '../src/server/app';
 
+// Validate environment on serverless invocation
+validateEnvironment();
+
 export default app;
+
 
