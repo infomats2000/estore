@@ -5,8 +5,9 @@ import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
 import { doubleCsrf } from 'csrf-csrf';
 import cookieParser from 'cookie-parser';
-import routes from './routes';
+import legacyRoutes from './legacyRoutes';
 import onboardingRoutes from './routes/onboarding';
+
 import superadminRoutes from './routes/superadmin';
 import saasAuthRoutes from './routes/saasAuth';
 import tenantBillingRoutes from './routes/tenantBilling';
@@ -86,7 +87,8 @@ app.use((req, res, next) => {
   return doubleCsrfProtection(req, res, next);
 });
 
-app.use(routes);
+app.use(legacyRoutes);
+
 
 app.post('/api/payments/session', async (req, res) => {
   try {
