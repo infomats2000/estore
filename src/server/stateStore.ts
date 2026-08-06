@@ -90,10 +90,15 @@ const readJsonFile = async <T>(filePath: string, fallback: T): Promise<T> => {
 };
 
 const writeJsonFile = async <T>(filePath: string, data: T): Promise<T> => {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8');
+  try {
+    await fs.mkdir(DATA_DIR, { recursive: true });
+    await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8');
+  } catch (err) {
+    // Ignore read-only filesystem errors in serverless production environments
+  }
   return data;
 };
+
 
 export const readAppStateStore = async (): Promise<AppStateStore> => {
   const state = await readJsonFile<AppStateStore>(APP_STATE_FILE, APP_STATE_DEFAULTS);

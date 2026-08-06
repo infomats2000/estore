@@ -39,9 +39,19 @@ export const saveImageFromBase64 = async (dataUrl: string, options: SaveImageOpt
   const relativeDir = path.posix.join('/uploads', options.folder);
   const outputDir = options.outputDir ? path.resolve(options.outputDir, options.folder) : path.resolve(process.cwd(), 'public', 'uploads', options.folder);
 
-  await fs.mkdir(outputDir, { recursive: true });
-  const fullPath = path.join(outputDir, filename);
-  await fs.writeFile(fullPath, buffer);
+  try {
+    await fs.mkdir(outputDir, { recursive: true });
+    const fullPath = path.join(outputDir, filename);
+    await fs.writeFile(fullPath, buffer);
+  } catch (e) {
+    // In serverless read-only environment, return dataUrl directly
+    return {
+      path: dataUrl,
+      filename,
+      extension,
+      size: buffer.length,
+    };
+  }
 
   return {
     path: path.posix.join(relativeDir, filename),
@@ -52,14 +62,14 @@ export const saveImageFromBase64 = async (dataUrl: string, options: SaveImageOpt
 };
 
 export const deleteImageIfExists = async (imagePath?: string | null) => {
-  if (!imagePath) return;
-  const publicUploadsDir = path.resolve(process.cwd(), 'public', 'uploads');
-  const absolutePath = path.resolve(process.cwd(), 'public', imagePath.replace(/^\//, ''));
+  if (!imagePath || imagePath.startsWith('data:')) return;
+  try {
+    const publicUploadsDir = path.resolve(process.cwd(), 'public', 'uploads');
+    const absolutePath = path.resolve(process.cwd(), 'public', imagePath.replace(/^\//, ''));
 
-  // Ensure absolutePath is contained within public/uploads to prevent directory traversal
-  if (!absolutePath.startsWith(publicUploadsDir)) {
-    throw new Error('Invalid image path for deletion');
-  }
-
-  await fs.rm(absolutePath, { force: true });
+    if (absolutePath.startsWith(publicUploadsDir)) {
+      await fs.rm(absolutePath, { force: true });
+    }
+  } catch (e) {}
 };
+
