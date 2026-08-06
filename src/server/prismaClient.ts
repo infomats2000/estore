@@ -8,16 +8,39 @@ if (!process.env.DATABASE_URL) {
     '';
 }
 
+import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import { getActiveTenantId } from './tenantContext';
 
-const dbUrl =
+// This module is imported before app.ts has a chance to call dotenv.config().
+// Load it here so Prisma always receives the local development configuration.
+dotenv.config();
+
+const configuredDbUrl =
   process.env.DATABASE_URL ||
   process.env.POSTGRES_URL ||
   process.env.PRISMA_DATABASE_URL ||
   process.env.POSTGRES_PRISMA_URL ||
   process.env.POSTGRES_URL_NON_POOLING ||
   '';
+
+/**
+ * The checked-in development configuration previously targeted a retired or
+ * unreachable Prisma-hosted database. Keep production strictly environment
+ * driven, but make an out-of-the-box local run use the PostgreSQL service
+ * installed on the developer machine.
+ */
+const isLocalDevelopment = process.env.NODE_ENV !== 'production' && !process.env.VERCEL;
+const configuredHost = (() => {
+  try {
+    return new URL(configuredDbUrl).hostname;
+  } catch {
+    return '';
+  }
+})();
+const dbUrl = isLocalDevelopment && ['pooled.db.prisma.io', 'db.prisma.io'].includes(configuredHost)
+  ? 'postgresql://postgres@localhost:5432/store_erp_local?schema=public'
+  : configuredDbUrl;
 
 // Base raw prisma instance for administrative or cross-tenant tasks
 export const prismaRaw = new PrismaClient({
