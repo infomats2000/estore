@@ -248,7 +248,9 @@ export default function App() {
     return 'landing';
   });
   const [loginRole, setLoginRole] = useState<'superadmin' | 'storeadmin'>('superadmin');
+  const [isImpersonating, setIsImpersonating] = useState(false);
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+
   const [onboardingPlanCode, setOnboardingPlanCode] = useState('GROWTH');
   const [currentUser, setCurrentUser] = useState<any>(() => {
     try {
@@ -934,6 +936,9 @@ export default function App() {
   
   const [isAdminMode, setIsAdminMode] = useState<boolean>(() => {
     try {
+      const savedUser = localStorage.getItem('currentUser');
+      if (savedUser) return true;
+
       const hash = window.location.hash.replace('#', '');
       const validAdminTabs = [
         'metrics', 'analytics', 'inventory', 'categories', 'collections', 'orders', 'invoices',
@@ -950,6 +955,7 @@ export default function App() {
       return false;
     }
   });
+
 
   useEffect(() => {
     try {
@@ -2153,6 +2159,18 @@ export default function App() {
         <SaaSLoginPage
           onBackToLanding={() => setSaasMode('landing')}
           onLoginSuccess={(data) => {
+            if (data.user) {
+              setCurrentUser(data.user);
+              localStorage.setItem('currentUser', JSON.stringify(data.user));
+            }
+            if (data.token) {
+              localStorage.setItem('authToken', data.token);
+            }
+            setIsAdminMode(true);
+            try {
+              localStorage.setItem('techseller_admin_mode_v4', 'true');
+            } catch (e) {}
+
             if (data.isSuperAdmin) {
               triggerAlert(`Super Admin authenticated successfully!`, 'success');
               setSaasMode('superadmin');
@@ -2161,25 +2179,33 @@ export default function App() {
               setSaasMode('store');
             }
           }}
+
         />
       </TenantProvider>
     );
   }
 
 
-  const [isImpersonating, setIsImpersonating] = useState(false);
-
   if (saasMode === 'superadmin') {
+
+
     return (
       <TenantProvider>
         <SuperAdminDashboard
-          onBackToApp={() => setSaasMode('store')}
+          onBackToApp={() => {
+            setIsAdminMode(true);
+            setSaasMode('store');
+          }}
           onLogout={() => {
             setIsImpersonating(false);
+            setCurrentUser(null);
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('currentUser');
             setSaasMode('login');
           }}
           onImpersonateStore={(tenant) => {
             setIsImpersonating(true);
+            setIsAdminMode(true);
             setSaasMode('store');
             triggerAlert(`Super Admin now impersonating '${tenant.name}' with ALL feature modules unlocked!`, 'info');
           }}
@@ -2188,6 +2214,7 @@ export default function App() {
       </TenantProvider>
     );
   }
+
 
   return (
     <TenantProvider>

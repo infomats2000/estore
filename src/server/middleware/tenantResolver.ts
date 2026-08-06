@@ -72,10 +72,14 @@ export async function tenantResolverMiddleware(
 
     // 4. Default / Fallback Tenant Lookup
     if (!tenant) {
-      tenant = await prismaRaw.tenant.findFirst({
-        where: { slug: 'default-tenant' },
-        include: { plan: true },
-      });
+      try {
+        tenant = await prismaRaw.tenant.findFirst({
+          where: { slug: 'default-tenant' },
+          include: { plan: true },
+        });
+      } catch (dbErr) {
+        console.warn('[TenantResolver Warning] Database temporary lookup fallback:', dbErr);
+      }
     }
 
     // If still no tenant exists in DB, construct fallback context
@@ -104,7 +108,16 @@ export async function tenantResolverMiddleware(
       }
     );
   } catch (error) {
-    console.error('Tenant Resolution Error:', error);
-    next();
+    console.warn('[Tenant Resolution Guard] Proceeding with default context:', error);
+    tenantLocalStorage.run(
+      {
+        tenantId: 'default-tenant',
+        tenantSlug: 'default-tenant',
+      },
+      () => {
+        next();
+      }
+    );
   }
 }
+

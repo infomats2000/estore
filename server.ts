@@ -6,7 +6,17 @@ import express from 'express';
 import app from './src/server/app';
 import { seedDatabase } from './src/server/seed';
 
+// Process crash guards to keep local development server connected and resilient
+process.on('uncaughtException', (err) => {
+  console.warn('[Server Guard] Uncaught Exception:', err?.message || err);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.warn('[Server Guard] Unhandled Promise Rejection:', reason);
+});
+
 const findAvailablePort = (startPort: number): Promise<number> => {
+
   const tryPort = (port: number, resolve: (port: number) => void, reject: (error: Error) => void) => {
     const tester = net.createServer();
 
