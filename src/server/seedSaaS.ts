@@ -89,18 +89,23 @@ export async function seedSaaS() {
     },
   });
 
-  // 3. Create SaaS Super Admin User
+  // 3. Create SaaS Super Admin Users
   const superAdminPassword = await hashPassword('SuperAdmin123!');
-  const superAdmin = await prismaRaw.user.upsert({
-    where: { email: 'admin@infomats.net' },
-    update: { isSuperAdmin: true },
-    create: {
-      name: 'SaaS Platform Admin',
-      email: 'admin@infomats.net',
-      password: superAdminPassword,
-      isSuperAdmin: true,
-    },
-  });
+  const superAdminEmails = ['admin@infomats.net', 'infomats.net@gmail.com'];
+
+  for (const email of superAdminEmails) {
+    await prismaRaw.user.upsert({
+      where: { email },
+      update: { isSuperAdmin: true },
+      create: {
+        name: 'SaaS Platform Admin',
+        email,
+        password: superAdminPassword,
+        isSuperAdmin: true,
+      },
+    });
+  }
+
 
 
   // 4. Create Default Store Owner
