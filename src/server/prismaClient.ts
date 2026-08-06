@@ -1,8 +1,19 @@
+// Auto-resolve Vercel Environment Variables (POSTGRES_URL / PRISMA_DATABASE_URL -> DATABASE_URL)
+if (!process.env.DATABASE_URL) {
+  process.env.DATABASE_URL =
+    process.env.POSTGRES_URL ||
+    process.env.PRISMA_DATABASE_URL ||
+    process.env.POSTGRES_PRISMA_URL ||
+    process.env.POSTGRES_URL_NON_POOLING ||
+    '';
+}
+
 import { PrismaClient } from '../generated/prisma/client';
 import { getActiveTenantId } from './tenantContext';
 
 // Base raw prisma instance for administrative or cross-tenant tasks
 export const prismaRaw = new PrismaClient();
+
 
 // Models that are scoped to a specific tenant
 const TENANT_SCOPED_MODELS = new Set([
