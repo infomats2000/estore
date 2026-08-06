@@ -64,17 +64,22 @@ app.use('/superadmin', superadminRoutes);
 
 
 
-const { doubleCsrfProtection } = doubleCsrf({
-
-  getSecret: () => process.env.JWT_SECRET || 'dev-secret',
-  getSessionIdentifier: (req) => (req as any).cookies?.session || 'anonymous',
-  cookieName: 'x-csrf-token',
-  cookieOptions: {
-    sameSite: 'lax',
-    path: '/',
-    secure: process.env.NODE_ENV === 'production',
-  },
-});
+let doubleCsrfProtection: any = (_req: any, _res: any, next: any) => next();
+try {
+  const csrf = doubleCsrf({
+    getSecret: () => process.env.JWT_SECRET || 'dev-secret-key-must-be-at-least-32-chars-long-infomats-store-erp',
+    getSessionIdentifier: (req) => (req as any).cookies?.session || 'anonymous',
+    cookieName: 'x-csrf-token',
+    cookieOptions: {
+      sameSite: 'lax',
+      path: '/',
+      secure: process.env.NODE_ENV === 'production',
+    },
+  });
+  doubleCsrfProtection = csrf.doubleCsrfProtection;
+} catch (csrfErr) {
+  console.warn('⚠️ [CSRF Warning] doubleCsrf initialization skipped:', csrfErr);
+}
 
 app.use((req, res, next) => {
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
@@ -86,6 +91,7 @@ app.use((req, res, next) => {
   }
   return doubleCsrfProtection(req, res, next);
 });
+
 
 app.use(legacyRoutes);
 

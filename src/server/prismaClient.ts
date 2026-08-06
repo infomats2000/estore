@@ -11,8 +11,24 @@ if (!process.env.DATABASE_URL) {
 import { PrismaClient } from '@prisma/client';
 import { getActiveTenantId } from './tenantContext';
 
+const dbUrl =
+  process.env.DATABASE_URL ||
+  process.env.POSTGRES_URL ||
+  process.env.PRISMA_DATABASE_URL ||
+  process.env.POSTGRES_PRISMA_URL ||
+  process.env.POSTGRES_URL_NON_POOLING ||
+  '';
+
 // Base raw prisma instance for administrative or cross-tenant tasks
-export const prismaRaw = new PrismaClient();
+export const prismaRaw = new PrismaClient({
+  datasources: {
+    db: {
+      url: dbUrl,
+    },
+  },
+});
+
+
 
 
 
