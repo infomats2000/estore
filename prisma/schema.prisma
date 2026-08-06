@@ -9,6 +9,115 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ==========================================
+// SAAS PLATFORM CORE MODELS
+// ==========================================
+
+model Tenant {
+  id                   String      @id @default(cuid())
+  name                 String
+  slug                 String      @unique
+  customDomain         String?     @unique
+  customDomainVerified Boolean     @default(false)
+  status               String      @default("ACTIVE") // ACTIVE, SUSPENDED, CANCELED
+  logoUrl              String      @default("")
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  subscriptionStatus   String      @default("active") // active, trialing, past_due, canceled
+  currentPeriodEnd     DateTime?
+  planId               String?
+  plan                 Plan?       @relation(fields: [planId], references: [id])
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+
+  // Relations to Tenant-Scoped Data
+  tenantUsers          TenantUser[]
+  categories           Category[]
+  brands               Brand[]
+  unitsOfMeasure       UnitOfMeasure[]
+  productStatuses      ProductStatus[]
+  warehouseLocations   WarehouseLocation[]
+  taxRates             TaxRate[]
+  paymentTerms         PaymentTerm[]
+  shippingMethods      ShippingMethod[]
+  warrantyTypes        WarrantyType[]
+  productAttributes    ProductAttribute[]
+  attributeValues      AttributeValue[]
+  productConditions    ProductCondition[]
+  products             Product[]
+  productImages        ProductImage[]
+  customers            Customer[]
+  addresses            Address[]
+  orders               Order[]
+  orderItems           OrderItem[]
+  coupons              Coupon[]
+  storeSettings        StoreSettings?
+  paymentMethods       PaymentMethod[]
+  activityLogs         ActivityLog[]
+  invoices             TenantInvoice[]
+
+  @@index([slug])
+
+  @@index([customDomain])
+  @@map("tenants")
+}
+
+model Plan {
+  id                   String   @id @default(cuid())
+  name                 String
+  code                 String   @unique // FREE, STARTER, GROWTH, ENTERPRISE
+  description          String   @default("")
+  priceMonthly         Float    @default(0)
+  priceYearly          Float    @default(0)
+  maxProducts          Int      @default(100)
+  maxOrdersPerMonth    Int      @default(500)
+  maxStaff             Int      @default(2)
+  customDomainAllowed  Boolean  @default(false)
+  featuresJson         String   @default("[]")
+  stripePriceIdMonthly String?
+  stripePriceIdYearly  String?
+  isPopular            Boolean  @default(false)
+  isActive             Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  tenants              Tenant[]
+
+  @@map("plans")
+}
+
+model User {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  password     String
+  name         String
+  isSuperAdmin Boolean      @default(false)
+  avatarUrl    String       @default("")
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  tenantUsers  TenantUser[]
+
+  @@index([email])
+  @@map("users")
+}
+
+model TenantUser {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      String   @default("TENANT_STAFF") // TENANT_OWNER, TENANT_ADMIN, TENANT_STAFF
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, userId])
+  @@index([tenantId])
+  @@index([userId])
+  @@map("tenant_users")
+}
+
 model AdminUser {
   id        String   @id @default(cuid())
   name      String
@@ -21,13 +130,19 @@ model AdminUser {
   @@map("admin_users")
 }
 
+// ==========================================
+// TENANT-SCOPED STORE ERP MODELS
+// ==========================================
+
 model Category {
   id          String     @id @default(cuid())
+  tenantId    String     @default("default-tenant")
+  tenant      Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   parentId    String?
   parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
   children    Category[] @relation("CategoryHierarchy")
-  name        String     @unique
-  slug        String     @unique
+  name        String
+  slug        String
   description String     @default("")
   sortOrder   Int        @default(0)
   isSystem    Boolean    @default(true)
@@ -36,15 +151,18 @@ model Category {
   updatedAt   DateTime   @updatedAt
   products    Product[]
 
+  @@unique([tenantId, slug])
+  @@index([tenantId])
   @@index([name])
   @@index([parentId])
-  @@index([slug])
   @@map("categories")
 }
 
 model Brand {
   id        String   @id @default(cuid())
-  name      String   @unique
+  tenantId  String   @default("default-tenant")
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name      String
   logoUrl   String   @default("")
   website   String   @default("")
   country   String   @default("")
@@ -53,53 +171,69 @@ model Brand {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([tenantId, name])
+  @@index([tenantId])
   @@index([name])
   @@map("brands")
 }
 
 model UnitOfMeasure {
   id        String   @id @default(cuid())
-  name      String   @unique
+  tenantId  String   @default("default-tenant")
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name      String
   symbol    String   @default("")
   isSystem  Boolean  @default(true)
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([tenantId, name])
+  @@index([tenantId])
   @@index([name])
   @@map("units_of_measure")
 }
 
 model ProductStatus {
   id        String   @id @default(cuid())
-  name      String   @unique
-  code      String   @unique
+  tenantId  String   @default("default-tenant")
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name      String
+  code      String
   isSystem  Boolean  @default(true)
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([tenantId, code])
+  @@index([tenantId])
   @@index([name])
   @@map("product_statuses")
 }
 
 model WarehouseLocation {
   id        String   @id @default(cuid())
-  name      String   @unique
-  code      String   @unique
+  tenantId  String   @default("default-tenant")
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name      String
+  code      String
   address   String   @default("")
   isSystem  Boolean  @default(true)
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([tenantId, code])
+  @@index([tenantId])
   @@index([name])
   @@map("warehouse_locations")
 }
 
 model TaxRate {
   id          String   @id @default(cuid())
-  name        String   @unique
+  tenantId    String   @default("default-tenant")
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name        String
   country     String   @default("")
   ratePercent Float    @default(0)
   code        String   @default("")
@@ -108,26 +242,34 @@ model TaxRate {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  @@unique([tenantId, name])
+  @@index([tenantId])
   @@index([name])
   @@map("tax_rates")
 }
 
 model PaymentTerm {
   id        String   @id @default(cuid())
-  name      String   @unique
+  tenantId  String   @default("default-tenant")
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name      String
   days      Int      @default(0)
   isSystem  Boolean  @default(true)
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([tenantId, name])
+  @@index([tenantId])
   @@index([name])
   @@map("payment_terms")
 }
 
 model ShippingMethod {
   id          String   @id @default(cuid())
-  name        String   @unique
+  tenantId    String   @default("default-tenant")
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name        String
   code        String   @default("")
   description String   @default("")
   cost        Float    @default(0)
@@ -138,12 +280,15 @@ model ShippingMethod {
   updatedAt   DateTime @updatedAt
   orders      Order[]
 
+  @@index([tenantId])
   @@map("shipping_methods")
 }
 
 model WarrantyType {
   id             String   @id @default(cuid())
-  name           String   @unique
+  tenantId       String   @default("default-tenant")
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name           String
   durationMonths Int      @default(12)
   type           String   @default("Return To Base")
   isSystem       Boolean  @default(true)
@@ -151,26 +296,34 @@ model WarrantyType {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
+  @@unique([tenantId, name])
+  @@index([tenantId])
   @@index([name])
   @@map("warranty_types")
 }
 
 model ProductAttribute {
   id        String           @id @default(cuid())
-  name      String           @unique
-  code      String           @unique
+  tenantId  String           @default("default-tenant")
+  tenant    Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name      String
+  code      String
   isSystem  Boolean          @default(true)
   isActive  Boolean          @default(true)
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
   values    AttributeValue[]
 
+  @@unique([tenantId, code])
+  @@index([tenantId])
   @@index([name])
   @@map("product_attributes")
 }
 
 model AttributeValue {
   id          String           @id @default(cuid())
+  tenantId    String           @default("default-tenant")
+  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   attributeId String
   attribute   ProductAttribute @relation(fields: [attributeId], references: [id], onDelete: Cascade)
   value       String
@@ -179,7 +332,8 @@ model AttributeValue {
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 
-  @@unique([attributeId, value])
+  @@unique([tenantId, attributeId, value])
+  @@index([tenantId])
   @@index([attributeId])
   @@map("attribute_values")
 }
@@ -232,19 +386,25 @@ model Language {
 
 model ProductCondition {
   id        String   @id @default(cuid())
-  name      String   @unique
-  code      String   @unique
+  tenantId  String   @default("default-tenant")
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name      String
+  code      String
   isSystem  Boolean  @default(true)
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([tenantId, code])
+  @@index([tenantId])
   @@index([name])
   @@map("product_conditions")
 }
 
 model Product {
   id               String         @id @default(cuid())
+  tenantId         String         @default("default-tenant")
+  tenant           Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name             String
   description      String         @default("")
   categoryId       String?
@@ -269,6 +429,7 @@ model Product {
   images           ProductImage[]
   orderItems       OrderItem[]
 
+  @@index([tenantId])
   @@index([categoryId])
   @@index([name])
   @@map("products")
@@ -276,19 +437,24 @@ model Product {
 
 model ProductImage {
   id        String   @id @default(cuid())
+  tenantId  String   @default("default-tenant")
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   productId String
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   url       String
   createdAt DateTime @default(now())
 
+  @@index([tenantId])
   @@index([productId])
   @@map("product_images")
 }
 
 model Customer {
   id               String     @id @default(cuid())
+  tenantId         String     @default("default-tenant")
+  tenant           Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name             String
-  email            String     @unique
+  email            String
   phone            String     @default("")
   address          String     @default("")
   city             String     @default("")
@@ -305,12 +471,16 @@ model Customer {
   addresses        Address[]
   orders           Order[]
 
+  @@unique([tenantId, email])
+  @@index([tenantId])
   @@index([email])
   @@map("customers")
 }
 
 model Address {
   id         String   @id @default(cuid())
+  tenantId   String   @default("default-tenant")
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customerId String
   customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
   line1      String
@@ -322,15 +492,18 @@ model Address {
   isDefault  Boolean  @default(false)
   createdAt  DateTime @default(now())
 
+  @@index([tenantId])
   @@index([customerId])
   @@map("addresses")
 }
 
 model Order {
   id               String          @id @default(cuid())
+  tenantId         String          @default("default-tenant")
+  tenant           Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customerId       String?
   customer         Customer?       @relation(fields: [customerId], references: [id])
-  orderNumber      String          @unique
+  orderNumber      String
   status           String          @default("Pending")
   subtotal         Float           @default(0)
   tax              Float           @default(0)
@@ -348,6 +521,8 @@ model Order {
   updatedAt        DateTime        @updatedAt
   items            OrderItem[]
 
+  @@unique([tenantId, orderNumber])
+  @@index([tenantId])
   @@index([customerId])
   @@index([status])
   @@index([createdAt])
@@ -356,6 +531,8 @@ model Order {
 
 model OrderItem {
   id           String   @id @default(cuid())
+  tenantId     String   @default("default-tenant")
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   orderId      String
   order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   productId    String
@@ -369,6 +546,7 @@ model OrderItem {
   image        String   @default("")
   createdAt    DateTime @default(now())
 
+  @@index([tenantId])
   @@index([orderId])
   @@index([productId])
   @@map("order_items")
@@ -376,7 +554,9 @@ model OrderItem {
 
 model Coupon {
   id          String   @id @default(cuid())
-  code        String   @unique
+  tenantId    String   @default("default-tenant")
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  code        String
   type        String   @default("percent")
   value       Float
   active      Boolean  @default(true)
@@ -384,12 +564,16 @@ model Coupon {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  @@unique([tenantId, code])
+  @@index([tenantId])
   @@index([code])
   @@map("coupons")
 }
 
 model StoreSettings {
   id                    String   @id @default(cuid())
+  tenantId              String   @unique @default("default-tenant")
+  tenant                Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   storeName             String   @default("INFOMAT")
   storeTagline          String   @default("")
   legalName             String   @default("")
@@ -412,24 +596,57 @@ model StoreSettings {
 
 model PaymentMethod {
   id          String   @id @default(cuid())
-  name        String   @unique
+  tenantId    String   @default("default-tenant")
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name        String
   description String   @default("")
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   orders      Order[]
 
+  @@index([tenantId])
   @@map("payment_methods")
 }
 
 model ActivityLog {
   id        String   @id @default(cuid())
+  tenantId  String   @default("default-tenant")
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   action    String
   entity    String
   details   String   @default("")
   createdAt DateTime @default(now())
 
+  @@index([tenantId])
   @@index([entity])
   @@index([createdAt])
   @@map("activity_logs")
 }
+
+model TenantInvoice {
+  id              String    @id @default(cuid())
+  invoiceNumber   String    @unique
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  planName        String    @default("Subscription Plan")
+  amount          Float     @default(0)
+  tax             Float     @default(0)
+  total           Float     @default(0)
+  status          String    @default("UNPAID") // UNPAID, PAID, OVERDUE, CANCELED
+  dueDate         DateTime
+  paidAt          DateTime?
+  paymentProvider String    @default("stripe") // stripe, paypal, manual
+  paymentRef      String?
+  itemsJson       String    @default("[]")
+  pdfUrl          String    @default("")
+  sentAt          DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([invoiceNumber])
+  @@map("tenant_invoices")
+}
+

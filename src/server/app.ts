@@ -6,6 +6,11 @@ import rateLimit from 'express-rate-limit';
 import { doubleCsrf } from 'csrf-csrf';
 import cookieParser from 'cookie-parser';
 import routes from './routes';
+import onboardingRoutes from './routes/onboarding';
+import superadminRoutes from './routes/superadmin';
+import saasAuthRoutes from './routes/saasAuth';
+import tenantBillingRoutes from './routes/tenantBilling';
+import { tenantResolverMiddleware } from './middleware/tenantResolver';
 import { writeLog } from './logging';
 import { createPaymentAdapter, PaymentService } from './payments';
 import { buildRobotsTxt, buildSitemapXml, buildSeoMetadata } from './seo';
@@ -42,7 +47,19 @@ app.use((req, _res, next) => {
   next();
 });
 
+// SaaS Multi-Tenant Resolution Middleware
+app.use(tenantResolverMiddleware);
+
+// SaaS Authentication, Public Onboarding, Billing & Super Admin Routers
+app.use('/api/auth', saasAuthRoutes);
+app.use('/api/onboarding', onboardingRoutes);
+app.use('/api/billing', tenantBillingRoutes);
+app.use('/api/superadmin', superadminRoutes);
+
+
+
 const { doubleCsrfProtection } = doubleCsrf({
+
   getSecret: () => process.env.JWT_SECRET || 'dev-secret',
   getSessionIdentifier: (req) => (req as any).cookies?.session || 'anonymous',
   cookieName: 'x-csrf-token',

@@ -1,8 +1,9 @@
 import { INITIAL_PRODUCTS } from '../data/products';
-import { prisma } from './prisma';
+import { prisma, prismaRaw } from './prisma';
 import { hashPassword } from './auth';
 import { normalizeProductForDb } from './products';
 import { seedMasterData } from './masterDataSeeder';
+import { seedSaaS } from './seedSaaS';
 
 const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL || 'admin@techseller.app';
 const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || 'admin123';
@@ -10,8 +11,10 @@ const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || 'admin123';
 const slugify = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
 export const seedDatabase = async () => {
+  await seedSaaS();
   await seedMasterData();
-  const adminUser = await prisma.adminUser.upsert({
+
+  const adminUser = await prismaRaw.adminUser.upsert({
     where: { email: ADMIN_EMAIL },
     update: {
       name: 'Admin',
@@ -29,10 +32,12 @@ export const seedDatabase = async () => {
   for (const product of INITIAL_PRODUCTS) {
     const categoryName = product.category || 'Laptops';
     if (!categories.has(categoryName)) {
-      const category = await prisma.category.upsert({
+      const existingCategory = await prisma.category.findFirst({
         where: { name: categoryName },
-        update: {},
-        create: {
+      });
+
+      const category = existingCategory || await prisma.category.create({
+        data: {
           name: categoryName,
           slug: slugify(categoryName)
         }

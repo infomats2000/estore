@@ -8,12 +8,16 @@ import { StoreSettings, DEFAULT_STORE_SETTINGS, Coupon, CustomerSegment, UpsellR
 import { MarketingModule } from './MarketingModule';
 import UserManager from './UserManager';
 import MasterDataManager from './masterdata/MasterDataManager';
+import { CustomDomainSettings } from './CustomDomainSettings';
+import { TenantBillingSettings } from './TenantBillingSettings';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  initialTab?: 'general' | 'invoice' | 'tax_bank' | 'storefront' | 'marketing' | 'users' | 'system' | 'master_data';
+  initialTab?: 'general' | 'invoice' | 'tax_bank' | 'storefront' | 'marketing' | 'users' | 'system' | 'master_data' | 'domain' | 'billing';
   settings: StoreSettings;
+
+
   onSaveSettings: (newSettings: StoreSettings) => void;
   // Marketing & Growth Props
   coupons: Coupon[];
@@ -62,8 +66,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   if (!isOpen) return null;
 
   const [formData, setFormData] = useState<StoreSettings>(settings);
-  const [activeTab, setActiveTab] = useState<'general' | 'invoice' | 'tax_bank' | 'storefront' | 'marketing' | 'users' | 'system' | 'master_data'>(initialTab || 'general');
+  const [activeTab, setActiveTab] = useState<'general' | 'invoice' | 'tax_bank' | 'storefront' | 'marketing' | 'users' | 'system' | 'master_data' | 'domain' | 'billing'>(initialTab || 'general');
   const [savedSuccess, setSavedSuccess] = useState(false);
+
+
 
   const handleChange = (field: keyof StoreSettings, value: any) => {
     setFormData(prev => ({
@@ -230,10 +236,36 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           >
             <Sliders className="h-4 w-4 text-blue-600" /> Store Lookup Tables &amp; Setup
           </button>
+
+          <button
+            onClick={() => setActiveTab('domain')}
+            className={`py-3 px-4 font-semibold text-xs border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap ${
+              activeTab === 'domain'
+                ? 'border-indigo-600 text-indigo-600 bg-white shadow-sm font-bold'
+                : 'border-transparent text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Globe className="h-4 w-4 text-indigo-600" /> Custom Domain (TLD)
+          </button>
+
+          <button
+            onClick={() => setActiveTab('billing')}
+            className={`py-3 px-4 font-semibold text-xs border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap ${
+              activeTab === 'billing'
+                ? 'border-purple-600 text-purple-600 bg-white shadow-sm font-bold'
+                : 'border-transparent text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <CreditCard className="h-4 w-4 text-purple-600" /> Subscription &amp; Billing
+          </button>
         </div>
 
+
         {/* Tab Body */}
-        <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+
+          {activeTab === 'domain' && <CustomDomainSettings />}
+
 
           {/* TAB 1: General Store Identity */}
           {activeTab === 'general' && (
@@ -840,7 +872,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           )}
 
-        </form>
+          {/* TAB 9: Custom Domain Settings */}
+          {activeTab === 'domain' && (
+            <div className="space-y-4">
+              <CustomDomainSettings />
+            </div>
+          )}
+
+          {/* TAB 10: Subscription & Billing Settings */}
+          {activeTab === 'billing' && (
+            <div className="space-y-4">
+              <TenantBillingSettings />
+            </div>
+          )}
+        </div>
+
 
         {/* Modal Footer */}
         <div className="bg-slate-50 p-4 px-6 border-t border-slate-200 flex justify-between items-center">

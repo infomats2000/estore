@@ -168,13 +168,16 @@ interface DashboardViewProps {
   onUpdateStocktake?: (session: StocktakeSession) => void;
   onAddShrinkageRecord?: (record: ShrinkageRecord) => void;
   onUpdateProductStock?: (productId: string, newStock: number, reason: string, notes?: string) => void;
+  onOpenStorefront?: () => void;
 }
 
 const COLORS = ['#0d6efd', '#198754', '#0dcaf0', '#ffc107', '#dc3545', '#6610f2', '#fd7e14', '#20c997', '#6f42c1'];
 
 export default function DashboardView({
+  onOpenStorefront,
   products,
   onUpdateProduct,
+
   onAddProduct,
   onDeleteProduct,
   onClearAllProducts,
@@ -1934,9 +1937,41 @@ export default function DashboardView({
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 text-left" id="dashboard-view-main">
+      {/* STOREFRONT PUBLIC QUICK LINK BANNER */}
+      <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white shadow-md flex flex-wrap items-center justify-between gap-4 border border-blue-500/20">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-white/10 text-blue-300 backdrop-blur-xs">
+            <Globe className="w-5 h-5 text-blue-400" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-extrabold text-white text-sm sm:text-base">Storefront Public Page</h3>
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold font-mono uppercase">
+                LIVE STORE
+              </span>
+            </div>
+            <p className="text-xs text-blue-200/80 font-medium">
+              Preview your public e-commerce store, product catalog, custom PC builder & customer checkout
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {onOpenStorefront && (
+            <button
+              type="button"
+              onClick={onOpenStorefront}
+              className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-sm transition flex items-center gap-1.5 cursor-pointer"
+            >
+              <Globe className="w-4 h-4" /> Open Public Storefront
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* HORIZONTAL TOP NAVIGATION */}
       <div className="mb-8 space-y-4">
+
         {/* Store Operations Group */}
         <div className="space-y-2">
           <div className="flex flex-wrap items-center justify-start gap-2 px-1 pb-1">

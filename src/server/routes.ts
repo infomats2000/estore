@@ -149,6 +149,15 @@ router.put('/api/products/:id', async (req, res) => {
   }
 });
 
+router.delete('/api/products', async (_req, res) => {
+  try {
+    await prisma.product.deleteMany({});
+    res.json({ ok: true });
+  } catch (err) {
+    handleError(err, res);
+  }
+});
+
 router.delete('/api/products/:id', async (req, res) => {
   try {
     const existing = await prisma.product.findUnique({ where: { id: req.params.id } });

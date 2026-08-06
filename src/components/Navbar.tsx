@@ -1,6 +1,11 @@
 import React, { useState } from 'react';
-import { ShoppingBag, ShieldCheck, Search, Phone, Mail, Truck, Shield, Laptop, LogIn, Headphones, Cpu, User } from 'lucide-react';
+import { ShoppingBag, ShieldCheck, Search, Phone, Mail, Truck, Shield, Laptop, LogIn, Headphones, Cpu, User, Lock, Globe } from 'lucide-react';
+
 import { Product, StoreSettings } from '../types';
+import { UserAccountDropdown } from './UserAccountDropdown';
+import { ChangePasswordModal } from './ChangePasswordModal';
+import { useTenantFeatures } from '../context/TenantFeatureContext';
+
 
 interface NavbarProps {
   activeCategory: string;
@@ -31,7 +36,10 @@ interface NavbarProps {
   onOpenPOS?: () => void;
   onOpenPCBuilder?: () => void;
   onOpenCustomerPortal?: () => void;
+  currentUser?: any;
+  onLogoutAccount?: () => void;
 }
+
 
 export default function Navbar({
   activeCategory,
@@ -61,10 +69,16 @@ export default function Navbar({
   compareCount = 0,
   onOpenPOS,
   onOpenPCBuilder,
-  onOpenCustomerPortal
+  onOpenCustomerPortal,
+  currentUser,
+  onLogoutAccount,
 }: NavbarProps) {
+  const { hasFeature, openFeatureGate } = useTenantFeatures();
   const allCategories = ['All', ...categories];
   const [showSearchMobile, setShowSearchMobile] = useState(false);
+
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+
 
   const matchingProducts = searchQuery.trim()
     ? products.filter(p => 
@@ -220,13 +234,25 @@ export default function Navbar({
               {onOpenPOS && (
                 <button
                   type="button"
-                  onClick={onOpenPOS}
-                  className="flex items-center gap-1.5 rounded-md border-2 border-amber-200 bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-2 font-mono text-[11px] font-black uppercase tracking-wider text-slate-950 shadow-lg shadow-amber-500/40 ring-2 ring-amber-300/50 transition-all hover:scale-[1.03] hover:from-amber-400 hover:to-orange-400"
-                  title="Launch retail in-store counter cash register (POS)"
+                  onClick={() => {
+                    if (hasFeature('pos')) {
+                      onOpenPOS();
+                    } else {
+                      openFeatureGate('pos');
+                    }
+                  }}
+                  className={`flex items-center gap-1.5 rounded-md border-2 px-3 py-2 font-mono text-[11px] font-black uppercase tracking-wider transition-all hover:scale-[1.03] ${
+                    hasFeature('pos')
+                      ? 'border-amber-200 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 shadow-lg shadow-amber-500/40 ring-2 ring-amber-300/50 hover:from-amber-400 hover:to-orange-400'
+                      : 'border-slate-700 bg-slate-800 text-slate-400 opacity-90'
+                  }`}
+                  title={hasFeature('pos') ? 'Launch retail in-store counter cash register (POS)' : 'POS Feature Locked - Click to Upgrade Tier'}
                 >
+                  {!hasFeature('pos') && <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
                   <span>CASH REGISTER (POS)</span>
                 </button>
               )}
+
               <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tighter bg-gradient-to-r from-cyan-300 via-sky-200 to-blue-300 bg-clip-text text-transparent drop-shadow-[0_1px_6px_rgba(125,211,252,0.45)]">
                 infomat
               </h2>
@@ -336,6 +362,20 @@ export default function Navbar({
               </button>
             )}
 
+            {/* View Public Storefront Button in Store Admin Navbar */}
+            {isAdminMode && (
+              <button
+                type="button"
+                onClick={() => setIsAdminMode(false)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-[10px] font-black uppercase tracking-wider shadow-xs transition-all cursor-pointer"
+                title="Open Live Customer Public Storefront Page"
+                id="view-public-storefront-btn"
+              >
+                <Globe className="w-3.5 h-3.5" />
+                <span>View Storefront</span>
+              </button>
+            )}
+
             {/* Store Settings Button */}
             {isAdminMode && onOpenSettings && (
               <button
@@ -351,6 +391,7 @@ export default function Navbar({
               </button>
             )}
 
+
             {/* Theme Toggle Button */}
             {isAdminMode && (
               <button
@@ -363,21 +404,22 @@ export default function Navbar({
               </button>
             )}
 
-            <div className="h-5 w-px bg-neutral-200 dark:bg-neutral-800 hidden sm:block" />
-
-            {/* Mode Switcher Button: Customer vs Admin Dashboard */}
+            {/* User Account & Security Dropdown or Staff Login */}
             {isAdminMode ? (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setIsAdminMode(false);
-                }}
-                className="bg-red-800 text-white hover:bg-red-900 flex items-center gap-2 px-3 py-2 text-[9px] font-black tracking-widest uppercase transition-all rounded-md"
-                id="dashboard-mode-toggle"
-              >
-                <span>Log Out</span>
-              </button>
+              <div className="pl-2 border-l border-neutral-700/60 flex items-center">
+                <UserAccountDropdown
+                  userName={currentUser?.name || 'Store Admin'}
+                  userEmail={currentUser?.email || 'owner@infomat.com'}
+                  roleBadge="Store Owner"
+                  isSuperAdmin={false}
+                  onChangePassword={() => setShowChangePasswordModal(true)}
+                  onLogout={() => {
+                    localStorage.removeItem('authToken');
+                    if (onLogoutAccount) onLogoutAccount();
+                    else window.location.href = '/?mode=login';
+                  }}
+                />
+              </div>
             ) : (
               <button
                 type="button"
@@ -397,6 +439,7 @@ export default function Navbar({
           </div>
         </div>
       </div>
+
 
       {/* Main Categories Navigation Bar (ACT Deep Navy Blue Menu) */}
       {!isAdminMode && (
@@ -527,7 +570,16 @@ export default function Navbar({
           </div>
         </div>
       )}
+
+      {/* Change Password Modal */}
+      {showChangePasswordModal && (
+        <ChangePasswordModal
+          onClose={() => setShowChangePasswordModal(false)}
+        />
+      )}
     </header>
   );
 }
+
+
 

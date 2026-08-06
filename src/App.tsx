@@ -27,6 +27,16 @@ import FlashSaleBanner from './components/FlashSaleBanner';
 import DashboardView from './components/DashboardView';
 import OfflineStatusBanner from './components/OfflineStatusBanner';
 import { saveOfflineAppState, getOfflineCachedState, enqueueOfflineTransaction } from './utils/offlineSyncEngine';
+import { SaaSLandingPage } from './components/SaaSLandingPage';
+import { SaaSOnboardingModal } from './components/SaaSOnboardingModal';
+import { SuperAdminDashboard } from './components/SuperAdminDashboard';
+import { SaaSLoginPage } from './components/SaaSLoginPage';
+import { TenantProvider } from './context/TenantContext';
+import { TenantFeatureProvider } from './context/TenantFeatureContext';
+import { ShopByCategoryGrid } from './components/ShopByCategoryGrid';
+
+
+
 
 const loadCheckoutModal = () => import('./components/CheckoutModal');
 const loadAccountDrawer = () => import('./components/AccountDrawer');
@@ -226,6 +236,48 @@ export default function App() {
   const stateSyncTimeoutRef = useRef<number | null>(null);
   const [isHydratingState, setIsHydratingState] = useState(true);
 
+  // SaaS Platform States
+  const [saasMode, setSaasMode] = useState<'store' | 'landing' | 'login' | 'superadmin'>(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const modeParam = params.get('mode');
+      if (modeParam === 'store' || modeParam === 'landing' || modeParam === 'login' || modeParam === 'superadmin') {
+        return modeParam;
+      }
+    } catch (e) {}
+    return 'landing';
+  });
+  const [loginRole, setLoginRole] = useState<'superadmin' | 'storeadmin'>('superadmin');
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+  const [onboardingPlanCode, setOnboardingPlanCode] = useState('GROWTH');
+  const [currentUser, setCurrentUser] = useState<any>(() => {
+    try {
+      const saved = localStorage.getItem('currentUser');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.authenticated && data.user) {
+            setCurrentUser(data.user);
+            localStorage.setItem('currentUser', JSON.stringify(data.user));
+          }
+        })
+        .catch((err) => console.error(err));
+    }
+  }, [saasMode]);
+
+
+
+
+
   const prefetchAdminWorkspace = () => {
     void loadSettingsModal();
   };
@@ -266,10 +318,10 @@ export default function App() {
   const [products, setProducts] = useState<Product[]>(() => {
     try {
       const saved = localStorage.getItem('techseller_products_v4');
-      if (!saved) return INITIAL_PRODUCTS;
+      if (saved === null) return INITIAL_PRODUCTS;
 
       const data = JSON.parse(saved);
-      if (!Array.isArray(data) || data.length === 0) return INITIAL_PRODUCTS;
+      if (!Array.isArray(data)) return INITIAL_PRODUCTS;
 
       return data.map((p: any) => ({
         ...p,
@@ -287,10 +339,10 @@ export default function App() {
   const [reviews, setReviews] = useState<Review[]>(() => {
     try {
       const saved = localStorage.getItem('techseller_reviews_v4');
-      if (!saved) return INITIAL_REVIEWS;
+      if (saved === null) return INITIAL_REVIEWS;
 
       const data = JSON.parse(saved);
-      return Array.isArray(data) && data.length > 0 ? data : INITIAL_REVIEWS;
+      return Array.isArray(data) ? data : INITIAL_REVIEWS;
     } catch (e) {
       console.error('Error loading reviews from localStorage:', e);
       return INITIAL_REVIEWS;
@@ -300,10 +352,10 @@ export default function App() {
   const [coupons, setCoupons] = useState<Coupon[]>(() => {
     try {
       const saved = localStorage.getItem('techseller_coupons_v4');
-      if (!saved) return INITIAL_COUPONS;
+      if (saved === null) return INITIAL_COUPONS;
 
       const data = JSON.parse(saved);
-      return Array.isArray(data) && data.length > 0 ? data : INITIAL_COUPONS;
+      return Array.isArray(data) ? data : INITIAL_COUPONS;
     } catch (e) {
       console.error('Error loading coupons from localStorage:', e);
       return INITIAL_COUPONS;
@@ -323,7 +375,10 @@ export default function App() {
   const [customers, setCustomers] = useState<CustomerProfile[]>(() => {
     try {
       const saved = localStorage.getItem('techseller_customers_v4');
-      return saved ? JSON.parse(saved) : INITIAL_CUSTOMERS;
+      if (saved === null) return INITIAL_CUSTOMERS;
+
+      const data = JSON.parse(saved);
+      return Array.isArray(data) ? data : INITIAL_CUSTOMERS;
     } catch (e) {
       console.error('Error loading customers from localStorage:', e);
       return INITIAL_CUSTOMERS;
@@ -911,7 +966,8 @@ export default function App() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const [settingsInitialTab, setSettingsInitialTab] = useState<'general' | 'invoice' | 'tax_bank' | 'storefront' | 'marketing' | 'users' | 'system'>('general');
+  const [settingsInitialTab, setSettingsInitialTab] = useState<'general' | 'invoice' | 'tax_bank' | 'storefront' | 'marketing' | 'users' | 'system' | 'master_data' | 'domain' | 'billing'>('general');
+
   const [directCheckoutItem, setDirectCheckoutItem] = useState<CartItem | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
@@ -1632,8 +1688,14 @@ export default function App() {
     triggerAlert(`ITEM ${id} has been removed from the catalog`, 'info');
   };
 
-  const handleClearAllProducts = () => {
+  const handleClearAllProducts = async () => {
     setProducts([]);
+    try {
+      localStorage.setItem('techseller_products_v4', JSON.stringify([]));
+      await fetch('/api/products', { method: 'DELETE' });
+    } catch (e) {
+      console.warn('Failed to sync empty products to server API:', e);
+    }
     triggerAlert('All products have been deleted from the catalog', 'info');
   };
 
@@ -1990,8 +2052,12 @@ export default function App() {
   }
   const directTotal = Math.max(0, directSubtotal + directTax + directShipping - directDiscount);
 
-  const handleHardReset = () => {
-    // Immediate clear
+  const handleHardReset = async () => {
+    setProducts([]);
+    setOrders([]);
+    setReviews([]);
+    setCoupons([]);
+
     const keysToClear = [
       'techseller_products_v4',
       'techseller_reviews_v4',
@@ -2012,6 +2078,36 @@ export default function App() {
       'techseller_theme_v4'
     ];
     keysToClear.forEach(key => localStorage.removeItem(key));
+    localStorage.setItem('techseller_products_v4', JSON.stringify([]));
+    localStorage.setItem('techseller_reviews_v4', JSON.stringify([]));
+    localStorage.setItem('techseller_coupons_v4', JSON.stringify([]));
+    localStorage.setItem('techseller_orders_v4', JSON.stringify([]));
+
+    try {
+      await fetch('/api/products', { method: 'DELETE' });
+      await fetch('/api/state', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storeSettings: DEFAULT_STORE_SETTINGS,
+          products: [],
+          reviews: [],
+          coupons: [],
+          orders: [],
+          customers: [],
+          financeTransactions: [],
+          users: [],
+          returns: [],
+          categories: [],
+          customerSegments: [],
+          upsellRules: [],
+          collections: []
+        })
+      });
+    } catch (e) {
+      console.warn('Could not reset server database state:', e);
+    }
+
     // Hard reload to base URL to clear any memory states
     window.location.href = window.location.origin + window.location.pathname;
   };
@@ -2020,13 +2116,159 @@ export default function App() {
     triggerAlert(`Return request ${req.id} submitted successfully!`, 'success');
   };
 
+  if (saasMode === 'landing') {
+    return (
+      <TenantProvider>
+        <SaaSLandingPage
+          onOpenOnboarding={(code) => {
+            if (code) setOnboardingPlanCode(code);
+            setShowOnboardingModal(true);
+          }}
+          onOpenSuperAdmin={() => {
+            setLoginRole('superadmin');
+            setSaasMode('login');
+          }}
+          onOpenLogin={() => {
+            setLoginRole('storeadmin');
+            setSaasMode('login');
+          }}
+          onOpenStoreERP={() => setSaasMode('store')}
+        />
+        <SaaSOnboardingModal
+          isOpen={showOnboardingModal}
+          onClose={() => setShowOnboardingModal(false)}
+          initialPlanCode={onboardingPlanCode}
+          onSuccess={(data) => {
+            triggerAlert(`Store '${data.tenant.name}' provisioned successfully!`, 'success');
+            setSaasMode('store');
+          }}
+        />
+      </TenantProvider>
+    );
+  }
+
+  if (saasMode === 'login') {
+    return (
+      <TenantProvider>
+        <SaaSLoginPage
+          onBackToLanding={() => setSaasMode('landing')}
+          onLoginSuccess={(data) => {
+            if (data.isSuperAdmin) {
+              triggerAlert(`Super Admin authenticated successfully!`, 'success');
+              setSaasMode('superadmin');
+            } else {
+              triggerAlert(`Logged into store '${data.tenant?.name || 'Workspace'}'`, 'success');
+              setSaasMode('store');
+            }
+          }}
+        />
+      </TenantProvider>
+    );
+  }
+
+
+  const [isImpersonating, setIsImpersonating] = useState(false);
+
+  if (saasMode === 'superadmin') {
+    return (
+      <TenantProvider>
+        <SuperAdminDashboard
+          onBackToApp={() => setSaasMode('store')}
+          onLogout={() => {
+            setIsImpersonating(false);
+            setSaasMode('login');
+          }}
+          onImpersonateStore={(tenant) => {
+            setIsImpersonating(true);
+            setSaasMode('store');
+            triggerAlert(`Super Admin now impersonating '${tenant.name}' with ALL feature modules unlocked!`, 'info');
+          }}
+          currentUser={currentUser}
+        />
+      </TenantProvider>
+    );
+  }
+
   return (
-    <div
-      className={`min-h-screen flex flex-col selection:bg-neutral-900 selection:text-white dark:selection:bg-white dark:selection:text-neutral-950 ${
-        isAdminMode ? 'admin-theme' : 'storefront-theme'
-      } ${isAdminMode && isDarkMode ? 'dark' : ''}`}
-      id="store-app-root"
-    >
+    <TenantProvider>
+      <TenantFeatureProvider
+        isImpersonating={isImpersonating}
+        onOpenUpgradeModal={() => {
+          setSettingsInitialTab('billing');
+          setIsSettingsOpen(true);
+        }}
+      >
+      <div
+        className={`min-h-screen flex flex-col selection:bg-neutral-900 selection:text-white dark:selection:bg-white dark:selection:text-neutral-950 ${
+          isAdminMode ? 'admin-theme' : 'storefront-theme'
+        } ${isAdminMode && isDarkMode ? 'dark' : ''}`}
+        id="store-app-root"
+      >
+
+        {/* IMPERSONATION CONTROL BANNER */}
+        {isImpersonating && (
+          <div className="bg-gradient-to-r from-amber-600 via-orange-600 to-purple-600 text-white px-4 py-2 flex items-center justify-between shadow-md z-50 text-xs font-bold">
+            <div className="flex items-center gap-2">
+              <span className="text-base">🎭</span>
+              <span>SUPER ADMIN IMPERSONATION ACTIVE:</span>
+              <span className="bg-white/20 px-2 py-0.5 rounded font-extrabold uppercase">All Feature Modules Unlocked (Bypassing Tier Gate)</span>
+            </div>
+            <button
+              onClick={() => {
+                setIsImpersonating(false);
+                setSaasMode('superadmin');
+                triggerAlert('Exited impersonation mode. Returned to Super Admin Dashboard.', 'success');
+              }}
+              className="px-3 py-1 bg-white hover:bg-slate-100 text-amber-950 rounded-lg font-black shadow-xs transition flex items-center gap-1"
+            >
+              ✕ Exit Impersonation Mode
+            </button>
+          </div>
+        )}
+
+        {/* SAAS PLATFORM CONTROL BAR */}
+        <div className="bg-slate-950 text-slate-200 border-b border-indigo-500/30 px-4 py-2 flex flex-wrap items-center justify-between gap-2 text-xs z-50">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="font-bold text-white uppercase tracking-wider">StoreERP SaaS Platform</span>
+            <span className="text-slate-400">|</span>
+            <span className="text-indigo-300 font-mono">Store: {storeSettings.storeName}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {isImpersonating ? (
+              <button
+                onClick={() => setSaasMode('superadmin')}
+                className="px-3 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-extrabold transition flex items-center gap-1"
+              >
+                ⚙️ Return to Super Admin Panel
+              </button>
+            ) : (
+              <button
+                onClick={() => setSaasMode('login')}
+                className="px-3 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 font-semibold transition flex items-center gap-1"
+              >
+                🔑 Sign In
+              </button>
+            )}
+
+            <button
+              onClick={() => setSaasMode('landing')}
+              className="px-3 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 font-semibold transition"
+            >
+              🌐 SaaS Landing &amp; Pricing
+            </button>
+            <button
+              onClick={() => setShowOnboardingModal(true)}
+              className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition"
+            >
+              + Launch New Store
+            </button>
+          </div>
+        </div>
+
+
+
+
       
       {/* GLOBAL SYSTEM ALERTS */}
       <AnimatePresence>
@@ -2053,6 +2295,19 @@ export default function App() {
 
       {/* STICKY NAVIGATION HEADER */}
       <Navbar
+        currentUser={currentUser}
+        onLogoutAccount={async () => {
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('currentUser');
+          try {
+            await fetch('/api/auth/logout', { method: 'POST' });
+          } catch (e) {}
+          setCurrentUser(null);
+          setIsAdminMode(false);
+          setSaasMode('login');
+          triggerAlert('Logged out successfully.', 'info');
+        }}
+
         activeCategory={activeCategory}
         setActiveCategory={(cat) => {
           setIsAdminMode(false);
@@ -2097,6 +2352,9 @@ export default function App() {
         onOpenCustomerPortal={() => setShowCustomerPortalModal(true)}
       />
 
+
+
+
       {/* CORE ROUTING SWITCH: CUSTOMER VIEW vs ADMIN VIEW */}
       <main className="flex-1">
         {!isAdminMode ? (
@@ -2130,38 +2388,15 @@ export default function App() {
               </div>
             </div>
 
-            {/* SHOP BY CATEGORY SECTION */}
+            {/* DYNAMIC REAL-PHOTO SHOP BY CATEGORY SECTION */}
             {!searchQuery && activeCategory === 'All' && (
-              <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8" id="category-icons-section">
-                <div className="mb-8 text-center md:text-left">
-                  <span className="font-mono text-[9px] uppercase tracking-widest text-blue-600 font-black mb-1 block">Quick Navigation</span>
-                  <h2 className="font-sans text-2xl font-black uppercase tracking-tight text-neutral-900 dark:text-white">Shop By Category</h2>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-6">
-                  {[
-                    { id: 'Laptops', label: 'Laptops', icon: Laptop, color: 'bg-blue-600' },
-                    { id: 'Desktops', label: 'Desktops', icon: Monitor, color: 'bg-neutral-900' },
-                    { id: 'Monitors', label: 'Monitors', icon: SlidersHorizontal, color: 'bg-neutral-800' },
-                    { id: 'Workstations', label: 'Workstations', icon: Cpu, color: 'bg-blue-700' },
-                    { id: 'Apple Mac', label: 'Apple Mac', icon: Sparkles, color: 'bg-neutral-950' },
-                    { id: 'Parts', label: 'Parts', icon: Mouse, color: 'bg-blue-800' },
-                  ].map((cat) => (
-                    <button
-                      key={cat.id}
-                      onClick={() => setActiveCategory(cat.id)}
-                      className="group flex flex-col items-center gap-4 p-6 bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 hover:border-blue-600 dark:hover:border-blue-500 transition-all hover:shadow-xl hover:-translate-y-1"
-                    >
-                      <div className={`h-16 w-16 ${cat.color} text-white flex items-center justify-center rounded-none shadow-lg group-hover:rotate-6 transition-transform`}>
-                        <cat.icon className="h-8 w-8" />
-                      </div>
-                      <span className="font-mono text-[10px] font-black uppercase tracking-widest text-neutral-900 dark:text-white group-hover:text-blue-600 transition-colors">
-                        {cat.label}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </section>
+              <ShopByCategoryGrid
+                products={products}
+                activeCategory={activeCategory}
+                onSelectCategory={(catName) => setActiveCategory(catName)}
+              />
             )}
+
             
             {/* PRODUCT CATALOG GRID SECTION */}
             <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8" id="product-catalog-grid">
@@ -2449,8 +2684,10 @@ export default function App() {
                 </div>
               )}
               <DashboardView
+                onOpenStorefront={() => setIsAdminMode(false)}
                 products={products}
                 onUpdateProduct={handleUpdateProduct}
+
                 onAddProduct={handleAddProduct}
                 onDeleteProduct={handleDeleteProduct}
                 onClearAllProducts={handleClearAllProducts}
@@ -2841,6 +3078,19 @@ export default function App() {
         onAddRepairJob={handleAddRepairJob}
         onShowAlert={(msg, type) => triggerAlert(msg, type === 'error' ? 'error' : 'success')}
       />
+
+      <SaaSOnboardingModal
+        isOpen={showOnboardingModal}
+        onClose={() => setShowOnboardingModal(false)}
+        initialPlanCode={onboardingPlanCode}
+        onSuccess={(data) => {
+          triggerAlert(`Store '${data.tenant.name}' provisioned successfully!`, 'success');
+        }}
+      />
     </div>
+    </TenantFeatureProvider>
+  </TenantProvider>
   );
 }
+
+
