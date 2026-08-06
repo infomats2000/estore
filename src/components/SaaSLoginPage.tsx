@@ -37,10 +37,17 @@ export const SaaSLoginPage: React.FC<SaaSLoginPageProps> = ({
         }),
       });
 
-      const data = await res.json();
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch (jsonErr) {
+        throw new Error(`Server connection error (${res.status}). Please verify Vercel DATABASE_URL & JWT_SECRET environment variables.`);
+      }
+
       if (!res.ok) {
         throw new Error(data.error || data.message || 'Invalid email or password.');
       }
+
 
       if (data.token) {
         localStorage.setItem('authToken', data.token);

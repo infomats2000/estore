@@ -149,3 +149,13 @@ export async function seedSaaS() {
 
   console.log('SaaS Plans and Default Tenant initialized successfully.');
 }
+
+if (process.argv[1]?.includes('seedSaaS')) {
+  seedSaaS()
+    .then(() => process.exit(0))
+    .catch((err) => {
+      console.error(err);
+      process.exit(1);
+    });
+}
+
