@@ -1,18 +1,6 @@
-import { validateEnvironment } from '../src/server/envValidator';
-import app from '../src/server/app';
-
-export default async function handler(req: any, res: any) {
-  try {
-    validateEnvironment();
-    return app(req, res);
-  } catch (error: any) {
-    console.error('[Vercel Serverless Invocation Error]:', error);
-    return res.status(500).json({
-      success: false,
-      error: `Serverless Invocation Failed: ${error?.message || error}`,
-    });
-  }
-}
-
+// `_handler.js` is produced by the Vercel build script. It bundles the
+// Express app and all local server modules so Node does not need to resolve
+// extensionless TypeScript imports at serverless-function runtime.
+export { default } from './_handler.js';
 
 
