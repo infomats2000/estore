@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyAuthToken, TokenPayload } from '../auth';
 import { prismaRaw } from '../prismaClient';
+import { getTenantContext, tenantLocalStorage } from '../tenantContext';
 
 export interface AuthenticatedRequest extends Request {
   user?: TokenPayload;
@@ -46,6 +47,44 @@ export async function authMiddleware(req: AuthenticatedRequest, res: Response, n
       isSuperAdmin,
     };
     res.locals.user = req.user;
+
+    const authenticatedTenantId = decoded.tenantId;
+    if (authenticatedTenantId) {
+      const tenant = await prismaRaw.tenant.findUnique({
+        where: { id: authenticatedTenantId },
+        select: { id: true, slug: true, customDomain: true, status: true },
+      });
+      if (!tenant) {
+        return res.status(403).json({ error: 'Forbidden', message: 'Token tenant no longer exists.' });
+      }
+      if (!isSuperAdmin) {
+        const membership = await prismaRaw.tenantUser.findUnique({
+          where: { tenantId_userId: { tenantId: authenticatedTenantId, userId: userId || '' } },
+          select: { role: true },
+        });
+        if (!membership) {
+          return res.status(403).json({ error: 'Forbidden', message: 'User is no longer assigned to this tenant.' });
+        }
+        req.user.role = membership.role;
+      }
+      if (tenant.status === 'SUSPENDED' && !isSuperAdmin) {
+        return res.status(403).json({ error: 'Tenant Account Suspended' });
+      }
+
+      const existingContext = getTenantContext();
+      return tenantLocalStorage.run(
+        {
+          ...existingContext,
+          tenantId: tenant.id,
+          tenantSlug: tenant.slug,
+          customDomain: tenant.customDomain || undefined,
+          userId,
+          userRole: req.user.role,
+          isSuperAdmin,
+        },
+        () => next(),
+      );
+    }
 
     next();
   } catch (error) {

@@ -77,6 +77,7 @@ export const PlanManagerModal: React.FC<PlanManagerModalProps> = ({ onClose, onP
   };
 
   const handleEditClick = (plan: any) => {
+    const featList = parseFeatures(plan.featuresJson);
     setEditingPlanId(plan.id);
     setName(plan.name);
     setCode(plan.code);
@@ -86,10 +87,9 @@ export const PlanManagerModal: React.FC<PlanManagerModalProps> = ({ onClose, onP
     setMaxProducts(String(plan.maxProducts));
     setMaxOrdersPerMonth(String(plan.maxOrdersPerMonth));
     setMaxStaff(String(plan.maxStaff));
-    setCustomDomainAllowed(!!plan.customDomainAllowed);
+    setCustomDomainAllowed(!!plan.customDomainAllowed || featList.includes('custom_domain'));
     setIsPopular(!!plan.isPopular);
 
-    const featList = parseFeatures(plan.featuresJson);
     setSelectedFeatureIds(featList);
     setFormMsg('');
   };
@@ -134,7 +134,7 @@ export const PlanManagerModal: React.FC<PlanManagerModalProps> = ({ onClose, onP
           maxProducts,
           maxOrdersPerMonth,
           maxStaff,
-          customDomainAllowed,
+          customDomainAllowed: selectedFeatureIds.includes('custom_domain'),
           isPopular,
           featuresJson: JSON.stringify(selectedFeatureIds),
         }),
@@ -461,8 +461,13 @@ export const PlanManagerModal: React.FC<PlanManagerModalProps> = ({ onClose, onP
                 <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
                   <input
                     type="checkbox"
-                    checked={customDomainAllowed}
-                    onChange={(e) => setCustomDomainAllowed(e.target.checked)}
+                    checked={selectedFeatureIds.includes('custom_domain')}
+                    onChange={(e) => {
+                      setCustomDomainAllowed(e.target.checked);
+                      setSelectedFeatureIds((current) => e.target.checked
+                        ? Array.from(new Set([...current, 'custom_domain']))
+                        : current.filter((id) => id !== 'custom_domain'));
+                    }}
                     className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4"
                   />
                   <span>Allow Custom Top-Level Domain Binding</span>

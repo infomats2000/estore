@@ -52,7 +52,8 @@ export const TenantBillingSettings: React.FC = () => {
       if (!res.ok) throw new Error(data.error || 'Failed to update plan tier.');
 
       setMsg(`Success! Your store plan has been updated to ${planName}.`);
-      fetchBillingOverview();
+      await fetchBillingOverview();
+      window.dispatchEvent(new Event('tenant-plan-changed'));
     } catch (err: any) {
       setError(err.message);
     } finally {

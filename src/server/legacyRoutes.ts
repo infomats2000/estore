@@ -10,6 +10,8 @@ import { saveImageFromBase64, deleteImageIfExists } from './uploads';
 import { readAppStateStore, readAdminExtrasStore, writeAppStateStore, writeAdminExtrasStore } from './stateStore';
 import { normalizeProductForDb, serializeProductForResponse } from './products';
 import { seedMasterData } from './masterDataSeeder';
+import { authMiddleware } from './middleware/authMiddleware';
+import { requirePlanFeature } from './middleware/featureEnforcer';
 
 const router = express.Router();
 router.use(cookieParser());
@@ -371,7 +373,7 @@ router.put('/api/settings', requireAuth, async (req, res) => {
   }
 });
 
-router.post('/api/reports/email', async (req, res) => {
+router.post('/api/reports/email', authMiddleware, requirePlanFeature('analytics_reports'), async (req, res) => {
   try {
     const { payload, reportData } = req.body || {};
     if (!payload?.recipientEmail || !reportData?.title) {
@@ -394,6 +396,8 @@ router.post('/api/reports/email', async (req, res) => {
 // ============================================================
 // EBAY & MULTI-CHANNEL INTEGRATION ENDPOINTS
 // ============================================================
+
+router.use('/api/ebay', authMiddleware, requirePlanFeature('api_access'));
 
 router.get('/api/ebay/oauth/authorize', (req, res) => {
   const marketplace = (req.query.marketplace as string) || 'EBAY_AU';
@@ -504,6 +508,8 @@ router.post('/api/ebay/orders/shipment', (req, res) => {
 // ============================================================
 // MASTER DATA MANAGEMENT ENDPOINTS (15 ENTITIES)
 // ============================================================
+
+router.use('/api/master-data', authMiddleware, requirePlanFeature('master_data'));
 
 const getMasterDataModel = (entity: string): any => {
   switch (entity) {

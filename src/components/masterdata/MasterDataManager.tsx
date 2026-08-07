@@ -233,7 +233,9 @@ export default function MasterDataManager() {
   const fetchItems = async (entity: MasterDataEntityKey, q = '') => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/master-data/${entity}?search=${encodeURIComponent(q)}`);
+      const res = await fetch(`/api/master-data/${entity}?search=${encodeURIComponent(q)}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('authToken') || ''}` },
+      });
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {
@@ -286,7 +288,10 @@ export default function MasterDataManager() {
 
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('authToken') || ''}`,
+        },
         body: JSON.stringify(formData)
       });
 
@@ -338,7 +343,10 @@ export default function MasterDataManager() {
     }
 
     try {
-      await fetch(`/api/master-data/${activeTab}/${item.id}`, { method: 'DELETE' });
+      await fetch(`/api/master-data/${activeTab}/${item.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${localStorage.getItem('authToken') || ''}` },
+      });
     } catch (err) {
       // ignore network errors
     }
@@ -403,7 +411,10 @@ export default function MasterDataManager() {
 
           fetch(`/api/master-data/${activeTab}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${localStorage.getItem('authToken') || ''}`,
+            },
             body: JSON.stringify(payload)
           }).catch(() => {});
         }

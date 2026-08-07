@@ -1,9 +1,12 @@
 import { Router } from 'express';
 import { prismaRaw } from '../prismaClient';
 import { getActiveTenantId } from '../tenantContext';
-import { authMiddleware } from '../middleware/authMiddleware';
+import { authMiddleware, requireTenantRole } from '../middleware/authMiddleware';
 
 const router = Router();
+
+// Billing data must always be resolved from the authenticated token tenant.
+router.use(authMiddleware);
 
 // GET /api/billing/overview - Store owner subscription & usage overview
 router.get('/overview', async (req, res) => {
@@ -65,13 +68,13 @@ router.get('/overview', async (req, res) => {
 });
 
 // POST /api/billing/change-plan - Change active store plan tier
-router.post('/change-plan', authMiddleware, async (req, res) => {
+router.post('/change-plan', requireTenantRole(['TENANT_OWNER', 'TENANT_ADMIN']), async (req, res) => {
   try {
     const tenantId = getActiveTenantId();
     const { planId } = req.body;
 
     const plan = await prismaRaw.plan.findUnique({ where: { id: planId } });
-    if (!plan) {
+    if (!plan || !plan.isActive) {
       return res.status(400).json({ error: 'Selected plan tier does not exist.' });
     }
 
@@ -80,6 +83,7 @@ router.post('/change-plan', authMiddleware, async (req, res) => {
       data: {
         planId: plan.id,
         subscriptionStatus: 'active',
+        currentPeriodEnd: new Date(new Date().setMonth(new Date().getMonth() + 1)),
       },
       include: { plan: true },
     });
@@ -95,7 +99,7 @@ router.post('/change-plan', authMiddleware, async (req, res) => {
 });
 
 // POST /api/billing/setup-recurring-payment - Configure automated monthly recurring charge via Stripe or PayPal
-router.post('/setup-recurring-payment', authMiddleware, async (req, res) => {
+router.post('/setup-recurring-payment', requireTenantRole(['TENANT_OWNER', 'TENANT_ADMIN']), async (req, res) => {
 
   try {
     const tenantId = getActiveTenantId();
@@ -143,4 +147,3 @@ router.post('/setup-recurring-payment', authMiddleware, async (req, res) => {
 });
 
 export default router;
-

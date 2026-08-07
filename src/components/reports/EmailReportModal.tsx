@@ -43,7 +43,10 @@ export default function EmailReportModal({ report, isOpen, onClose, onShowAlert 
 
       const res = await fetch('/api/reports/email', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('authToken') || ''}`,
+        },
         body: JSON.stringify({ payload, reportData: report })
       });
 

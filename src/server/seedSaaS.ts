@@ -1,5 +1,6 @@
 import { prismaRaw } from './prismaClient';
 import { hashPassword } from './auth';
+import { DEFAULT_PLAN_FEATURES } from '../constants/features';
 
 export async function seedSaaS() {
   console.log('Seeding SaaS Plans & Master Tenant...');
@@ -17,7 +18,7 @@ export async function seedSaaS() {
       maxStaff: 1,
       customDomainAllowed: false,
       isPopular: false,
-      featuresJson: JSON.stringify(['pos']),
+      featuresJson: JSON.stringify(DEFAULT_PLAN_FEATURES.FREE),
     },
     {
       code: 'STARTER',
@@ -30,7 +31,7 @@ export async function seedSaaS() {
       maxStaff: 3,
       customDomainAllowed: false,
       isPopular: true,
-      featuresJson: JSON.stringify(['pos', 'marketing', 'pc_builder']),
+      featuresJson: JSON.stringify(DEFAULT_PLAN_FEATURES.STARTER),
     },
     {
       code: 'GROWTH',
@@ -43,7 +44,7 @@ export async function seedSaaS() {
       maxStaff: 10,
       customDomainAllowed: true,
       isPopular: false,
-      featuresJson: JSON.stringify(['pos', 'custom_domain', 'marketing', 'trade_accounts', 'procurement', 'wms_inventory', 'pc_builder']),
+      featuresJson: JSON.stringify(DEFAULT_PLAN_FEATURES.GROWTH),
     },
     {
       code: 'ENTERPRISE',
@@ -56,7 +57,7 @@ export async function seedSaaS() {
       maxStaff: 100,
       customDomainAllowed: true,
       isPopular: false,
-      featuresJson: JSON.stringify(['pos', 'custom_domain', 'marketing', 'trade_accounts', 'procurement', 'wms_inventory', 'repair_jobs', 'pc_builder', 'finance_ledger', 'api_access']),
+      featuresJson: JSON.stringify(DEFAULT_PLAN_FEATURES.ENTERPRISE),
     },
   ];
 
@@ -163,4 +164,3 @@ if (process.argv[1]?.includes('seedSaaS')) {
       process.exit(1);
     });
 }
-

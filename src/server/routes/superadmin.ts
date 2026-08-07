@@ -2,8 +2,21 @@ import { Router } from 'express';
 import { prismaRaw } from '../prismaClient';
 import { authMiddleware, requireSuperAdmin } from '../middleware/authMiddleware';
 import { createAuthToken } from '../auth';
+import { ALL_FEATURES } from '../../constants/features';
 
 const router = Router();
+const validFeatureIds = new Set(ALL_FEATURES.map((feature) => feature.id));
+
+function normalizeFeaturesJson(value: unknown): string {
+  let parsed: unknown = value;
+  if (typeof value === 'string') {
+    try { parsed = JSON.parse(value); } catch { parsed = []; }
+  }
+  const features = Array.isArray(parsed)
+    ? parsed.filter((id): id is string => typeof id === 'string' && validFeatureIds.has(id))
+    : [];
+  return JSON.stringify(Array.from(new Set(['pos', ...features])));
+}
 
 
 // Protect all Super Admin endpoints
@@ -629,6 +642,7 @@ router.post('/plans', async (req, res) => {
       return res.status(400).json({ error: `Plan code '${cleanCode}' already exists.` });
     }
 
+    const normalizedFeatures = normalizeFeaturesJson(featuresJson);
     const plan = await prismaRaw.plan.create({
       data: {
         name,
@@ -639,8 +653,8 @@ router.post('/plans', async (req, res) => {
         maxProducts: parseInt(maxProducts || '100', 10),
         maxOrdersPerMonth: parseInt(maxOrdersPerMonth || '1000', 10),
         maxStaff: parseInt(maxStaff || '2', 10),
-        customDomainAllowed: !!customDomainAllowed,
-        featuresJson: typeof featuresJson === 'string' ? featuresJson : JSON.stringify(featuresJson || []),
+        customDomainAllowed: JSON.parse(normalizedFeatures).includes('custom_domain'),
+        featuresJson: normalizedFeatures,
         isPopular: !!isPopular,
       },
     });
@@ -669,6 +683,7 @@ router.put('/plans/:id', async (req, res) => {
       isActive,
     } = req.body;
 
+    const normalizedFeatures = featuresJson !== undefined ? normalizeFeaturesJson(featuresJson) : undefined;
     const updated = await prismaRaw.plan.update({
       where: { id },
       data: {
@@ -679,8 +694,10 @@ router.put('/plans/:id', async (req, res) => {
         maxProducts: maxProducts !== undefined ? parseInt(maxProducts, 10) : undefined,
         maxOrdersPerMonth: maxOrdersPerMonth !== undefined ? parseInt(maxOrdersPerMonth, 10) : undefined,
         maxStaff: maxStaff !== undefined ? parseInt(maxStaff, 10) : undefined,
-        customDomainAllowed: customDomainAllowed !== undefined ? !!customDomainAllowed : undefined,
-        featuresJson: typeof featuresJson === 'string' ? featuresJson : (featuresJson ? JSON.stringify(featuresJson) : undefined),
+        customDomainAllowed: normalizedFeatures !== undefined
+          ? JSON.parse(normalizedFeatures).includes('custom_domain')
+          : (customDomainAllowed !== undefined ? !!customDomainAllowed : undefined),
+        featuresJson: normalizedFeatures,
         isPopular: isPopular !== undefined ? !!isPopular : undefined,
         isActive: isActive !== undefined ? !!isActive : undefined,
       },

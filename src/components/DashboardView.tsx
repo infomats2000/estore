@@ -42,6 +42,7 @@ import StaffManagementSuite from './staff/StaffManagementSuite';
 import MasterDataManager from './masterdata/MasterDataManager';
 import { DEFAULT_STAFF_PROFILES, hasFeaturePermission } from '../utils/staffPermissionEngine';
 import { useTenantFeatures } from '../context/TenantFeatureContext';
+import { DASHBOARD_TAB_FEATURE_MAP } from '../constants/features';
 
 const FinanceManager = lazy(() => import('./FinanceManager'));
 const UserManager = lazy(() => import('./UserManager'));
@@ -325,27 +326,7 @@ export default function DashboardView({
   const hiddenTabSet = new Set((storeSettings?.hiddenDashboardTabs || []).filter(Boolean));
 
   // Maps admin tabs to the tenant plan feature that must be unlocked to access them
-  const TAB_FEATURE_MAP: Partial<Record<TabId, string>> = {
-    finance: 'finance_ledger',
-    'trade-accounts': 'trade_accounts',
-    'commercial-sales': 'trade_accounts',
-    'pricing-matrix': 'trade_accounts',
-    distribution: 'trade_accounts',
-    procurement: 'procurement',
-    'purchase-orders': 'procurement',
-    suppliers: 'procurement',
-    wms: 'wms_inventory',
-    warehouses: 'wms_inventory',
-    'stock-units': 'wms_inventory',
-    'logistics-dispatch': 'wms_inventory',
-    'massive-inventory': 'wms_inventory',
-    repairs: 'repair_jobs',
-    refurb: 'repair_jobs',
-    ebay: 'api_access',
-    coupons: 'marketing',
-    segments: 'marketing',
-    upsells: 'marketing',
-  };
+  const TAB_FEATURE_MAP = DASHBOARD_TAB_FEATURE_MAP as Record<TabId, string>;
 
   const isTabLocked = (id: string): boolean => {
     const requiredFeature = TAB_FEATURE_MAP[id as TabId];
@@ -466,7 +447,7 @@ export default function DashboardView({
     };
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
+  }, [hasFeature, openFeatureGate]);
 
   React.useEffect(() => {
     if (activeTab !== 'metrics' && !isTabVisible(activeTab)) {
