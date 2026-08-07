@@ -3,6 +3,8 @@ import jwt from 'jsonwebtoken';
 import { prismaRaw } from './prismaClient';
 
 const SALT_ROUNDS = 10;
+export const SESSION_DURATION = '7d';
+export const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 export interface TokenPayload {
   userId?: string;
@@ -29,7 +31,7 @@ const getJwtSecret = (): string => {
   return secret;
 };
 
-export const createAuthToken = (payload: TokenPayload, expiresIn: string = '24h') => {
+export const createAuthToken = (payload: TokenPayload, expiresIn: string = SESSION_DURATION) => {
   const secret = getJwtSecret();
   return jwt.sign(payload, secret, { expiresIn: expiresIn as any });
 };

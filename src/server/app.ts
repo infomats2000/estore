@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
 import { doubleCsrf } from 'csrf-csrf';
 import cookieParser from 'cookie-parser';
+import compression from 'compression';
 import legacyRoutes from './legacyRoutes';
 import onboardingRoutes from './routes/onboarding';
 
@@ -19,11 +20,14 @@ import { tenantResolverMiddleware } from './middleware/tenantResolver';
 import { writeLog } from './logging';
 import { createPaymentAdapter, PaymentService } from './payments';
 import { buildRobotsTxt, buildSitemapXml, buildSeoMetadata } from './seo';
+import { trackRequestPerformance } from './performanceMetrics';
 
 dotenv.config({ path: ['.env.local', '.env'] });
 dotenv.config({ path: '.env.development.local', override: true });
 
 const app = express();
+
+app.use(compression({ threshold: 1024 }));
 
 const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY)
@@ -33,11 +37,15 @@ const stripe = process.env.STRIPE_SECRET_KEY
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
+app.use(trackRequestPerformance);
 
 // Serve static files and uploads
 const publicDir = path.resolve(process.cwd(), 'public');
-app.use(express.static(publicDir));
-app.use('/uploads', express.static(path.resolve(publicDir, 'uploads')));
+app.use(express.static(publicDir, { maxAge: '1h' }));
+app.use('/uploads', express.static(path.resolve(publicDir, 'uploads'), {
+  maxAge: '30d',
+  immutable: true,
+}));
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -49,7 +57,9 @@ const limiter = rateLimit({
 app.use('/api', limiter);
 
 app.use((req, _res, next) => {
-  void writeLog(`${req.method} ${req.path}`);
+  if (process.env.NODE_ENV !== 'production' || process.env.LOG_REQUESTS === 'true') {
+    void writeLog(`${req.method} ${req.path}`);
+  }
   next();
 });
 

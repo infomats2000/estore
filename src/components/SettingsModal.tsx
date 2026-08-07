@@ -10,6 +10,7 @@ import UserManager from './UserManager';
 import MasterDataManager from './masterdata/MasterDataManager';
 import { CustomDomainSettings } from './CustomDomainSettings';
 import { TenantBillingSettings } from './TenantBillingSettings';
+import { ContextualHelp } from './ContextualHelp';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -146,6 +147,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <X className="h-5 w-5" />
           </button>
         </div>
+
+        <ContextualHelp className="mx-6 mt-4" compact line1="Configure tenant store operations, documents, billing and the separately scoped public storefront design." line2="Choose a settings tab, review its options, then save; storefront design controls do not restyle the tenant admin panel." />
 
         {/* Navigation Tabs */}
         <div className="flex flex-wrap border-b border-slate-200 bg-slate-50/80 px-6">

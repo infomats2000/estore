@@ -2,6 +2,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import sharp from 'sharp';
+import { deleteObjectByPublicUrl, isObjectStorageConfigured, putObject } from './objectStorage';
+import { getActiveTenantId } from './tenantContext';
 
 const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
@@ -11,6 +13,8 @@ export interface UploadResult {
   filename: string;
   extension: string;
   size: number;
+  variants: { thumbnail: string; catalog: string; detail: string };
+  assets: Array<{ path: string; size: number }>;
 }
 
 export interface SaveImageOptions {
@@ -35,46 +39,76 @@ export const saveImageFromBase64 = async (dataUrl: string, options: SaveImageOpt
     throw new Error('Image exceeds 10MB limit');
   }
 
-  let optimizedBuffer: Buffer;
+  let variantBuffers: { thumbnail: Buffer; catalog: Buffer; detail: Buffer };
   try {
-    optimizedBuffer = await sharp(buffer, { failOn: 'error' })
-      .rotate()
-      .resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true })
-      .webp({ quality: 78, effort: 4, smartSubsample: true })
-      .toBuffer();
+    const createVariant = (size: number, quality: number) => sharp(buffer, { failOn: 'error' }).rotate()
+      .resize({ width: size, height: size, fit: 'inside', withoutEnlargement: true })
+      .webp({ quality, effort: 4, smartSubsample: true }).toBuffer();
+    const [thumbnail, catalog, detail] = await Promise.all([
+      createVariant(320, 72), createVariant(800, 76), createVariant(1600, 80),
+    ]);
+    variantBuffers = { thumbnail, catalog, detail };
   } catch {
     throw new Error('Invalid or corrupt image data');
   }
 
   const extension = 'webp';
-  const filename = `${Date.now()}-${crypto.randomBytes(8).toString('hex')}.${extension}`;
+  const basename = `${Date.now()}-${crypto.randomBytes(8).toString('hex')}`;
+  const filenames = {
+    thumbnail: `${basename}-thumb.${extension}`,
+    catalog: `${basename}-catalog.${extension}`,
+    detail: `${basename}-detail.${extension}`,
+  };
+  const filename = filenames.detail;
   const relativeDir = path.posix.join('/uploads', options.folder);
   const outputDir = options.outputDir ? path.resolve(options.outputDir, options.folder) : path.resolve(process.cwd(), 'public', 'uploads', options.folder);
 
+  if (!options.outputDir && isObjectStorageConfigured()) {
+    const stored: Array<readonly [keyof typeof filenames, string]> = [];
+    try {
+      for (const variant of Object.keys(filenames) as Array<keyof typeof filenames>) {
+        const objectKey = path.posix.join('tenants', getActiveTenantId(), options.folder, filenames[variant]);
+        stored.push([variant, await putObject(objectKey, variantBuffers[variant], 'image/webp')] as const);
+      }
+    } catch (error) {
+      await Promise.allSettled(stored.map(([, publicUrl]) => deleteObjectByPublicUrl(publicUrl)));
+      throw error;
+    }
+    const variants = Object.fromEntries(stored) as UploadResult['variants'];
+    const assets = (Object.keys(variants) as Array<keyof typeof variants>).map((variant) => ({ path: variants[variant], size: variantBuffers[variant].length }));
+    return { path: variants.detail, filename, extension, size: assets.reduce((sum, asset) => sum + asset.size, 0), variants, assets };
+  }
+
   try {
     await fs.mkdir(outputDir, { recursive: true });
-    const fullPath = path.join(outputDir, filename);
-    await fs.writeFile(fullPath, optimizedBuffer);
+    await Promise.all((Object.keys(filenames) as Array<keyof typeof filenames>).map((variant) =>
+      fs.writeFile(path.join(outputDir, filenames[variant]), variantBuffers[variant])));
   } catch (e) {
-    // Preserve optimized WebP bytes when local disk is read-only.
+    if (process.env.NODE_ENV === 'production') throw new Error('Image storage is unavailable');
+    const dataUrl = `data:image/webp;base64,${variantBuffers.detail.toString('base64')}`;
     return {
-      path: `data:image/webp;base64,${optimizedBuffer.toString('base64')}`,
-      filename,
-      extension,
-      size: optimizedBuffer.length,
+      path: dataUrl, filename, extension, size: variantBuffers.detail.length,
+      variants: { thumbnail: dataUrl, catalog: dataUrl, detail: dataUrl },
+      assets: [],
     };
   }
 
+  const variants = Object.fromEntries((Object.keys(filenames) as Array<keyof typeof filenames>).map((variant) =>
+    [variant, path.posix.join(relativeDir, filenames[variant])])) as UploadResult['variants'];
+  const assets = (Object.keys(variants) as Array<keyof typeof variants>).map((variant) => ({ path: variants[variant], size: variantBuffers[variant].length }));
   return {
-    path: path.posix.join(relativeDir, filename),
-    filename,
-    extension,
-    size: optimizedBuffer.length,
+    path: variants.detail, filename, extension,
+    size: assets.reduce((sum, asset) => sum + asset.size, 0), variants, assets,
   };
 };
 
 export const deleteImageIfExists = async (imagePath?: string | null, publicUploadsDirOverride?: string) => {
-  if (!imagePath || imagePath.startsWith('data:') || !imagePath.startsWith('/uploads/')) return;
+  if (!imagePath || imagePath.startsWith('data:')) return;
+  if (/^https:\/\//i.test(imagePath)) {
+    await deleteObjectByPublicUrl(imagePath);
+    return;
+  }
+  if (!imagePath.startsWith('/uploads/')) return;
   try {
     const publicUploadsDir = publicUploadsDirOverride ? path.resolve(publicUploadsDirOverride) : path.resolve(process.cwd(), 'public', 'uploads');
     const uploadRelativePath = imagePath.replace(/^\/uploads\/?/, '');

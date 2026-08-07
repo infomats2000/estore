@@ -32,6 +32,10 @@ export default function InventoryProducts({
   categories,
   collections
 }: InventoryProductsProps) {
+  const apiHeaders = () => ({
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${localStorage.getItem('authToken') || ''}`,
+  });
   const parseJsonResponse = async <T,>(response: Response): Promise<T> => {
     const raw = await response.text();
     const contentType = response.headers.get('content-type') || '';
@@ -69,6 +73,7 @@ export default function InventoryProducts({
   const [newProdStock, setNewProdStock] = useState('15');
   const [newProdDesc, setNewProdDesc] = useState('');
   const [newProdImage, setNewProdImage] = useState('');
+  const [newProdImageVariants, setNewProdImageVariants] = useState<Product['imageVariants']>();
   const [newProdAdditionalImages, setNewProdAdditionalImages] = useState<string[]>([]);
   const [imageError, setImageError] = useState('');
   const [newProdCondition, setNewProdCondition] = useState('New');
@@ -213,14 +218,16 @@ export default function InventoryProducts({
       try {
         const uploadResponse = await fetch('/api/uploads', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: apiHeaders(),
           body: JSON.stringify({ file: webpData, folder: 'products' })
         });
-        const uploadResult = await parseJsonResponse<{ path?: string }>(uploadResponse);
+        const uploadResult = await parseJsonResponse<{ path?: string; variants?: Product['imageVariants'] }>(uploadResponse);
         if (uploadResult.path) imagePath = uploadResult.path;
+        setNewProdImageVariants(uploadResult.variants);
       } catch (uploadErr) {
-        console.warn('Upload API unavailable, storing image locally in product data.', uploadErr);
-        setImageError('Upload service unavailable. Image kept locally and will still save with the product.');
+          console.warn('Upload API unavailable.', uploadErr);
+          imagePath = '';
+          setImageError('Upload service unavailable. The image was not stored; please retry before saving.');
       }
 
       setNewProdImage(imagePath);
@@ -247,17 +254,18 @@ export default function InventoryProducts({
         try {
           const uploadResponse = await fetch('/api/uploads', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: apiHeaders(),
             body: JSON.stringify({ file: webpData, folder: 'products' })
           });
           const uploadResult = await parseJsonResponse<{ path?: string }>(uploadResponse);
           if (uploadResult.path) imagePath = uploadResult.path;
         } catch (uploadErr) {
-          console.warn('Additional image upload unavailable, storing locally.', uploadErr);
-          setImageError('Upload service unavailable. Additional images were kept locally.');
+          console.warn('Additional image upload unavailable.', uploadErr);
+          imagePath = '';
+          setImageError('Upload service unavailable. One or more additional images were not stored.');
         }
 
-        convertedImages.push(imagePath);
+        if (imagePath) convertedImages.push(imagePath);
       }
 
       if (convertedImages.length > 0) {
@@ -288,6 +296,7 @@ export default function InventoryProducts({
     setNewProdCollection(prod.collection || '');
     setNewProdDesc(prod.description);
     setNewProdImage(prod.image);
+    setNewProdImageVariants(prod.imageVariants);
     setNewProdAdditionalImages(prod.additionalImages || []);
     setNewProdCpu(prod.specs?.cpu || prod.specs?.CPU || prod.specs?.Processor || '');
     setNewProdRam(prod.specs?.ram || prod.specs?.RAM || '');
@@ -369,7 +378,8 @@ export default function InventoryProducts({
         categoryId: undefined,
         price: parseFloat(newProdPrice),
         stock: parseInt(newProdStock, 10),
-        image: newProdImage.startsWith('/') ? newProdImage : '',
+        image: newProdImage,
+        imageVariants: newProdImageVariants,
         additionalImages: newProdAdditionalImages,
         specs: {
           cpu: newProdCpu,
@@ -390,12 +400,12 @@ export default function InventoryProducts({
         const response = editingProduct
           ? await fetch(`/api/products/${editingProduct.id}`, {
               method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
+              headers: apiHeaders(),
               body: JSON.stringify(payload)
             })
           : await fetch('/api/products', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: apiHeaders(),
               body: JSON.stringify(payload)
             });
 
@@ -413,6 +423,7 @@ export default function InventoryProducts({
         price: typeof productData?.price === 'number' ? productData.price : parseFloat(newProdPrice),
         discountPrice: productData?.discountPrice,
         image: productData?.image || newProdImage || '',
+        imageVariants: productData?.imageVariants || newProdImageVariants,
         additionalImages: productData?.additionalImages || newProdAdditionalImages || [],
         rating: productData?.rating || 0,
         reviewsCount: productData?.reviewsCount || 0,
@@ -573,6 +584,7 @@ export default function InventoryProducts({
                       setNewProdStock('15');
                       setNewProdDesc('');
                       setNewProdImage('');
+                      setNewProdImageVariants(undefined);
                       setNewProdAdditionalImages([]);
                       setImageError('');
                       setNewProdCondition('New');
@@ -1025,6 +1037,7 @@ export default function InventoryProducts({
                             type="button"
                             onClick={() => {
                               setNewProdImage('');
+                              setNewProdImageVariants(undefined);
                               setImageError('');
                             }}
                             className="absolute top-2 right-2 p-1 bg-white hover:bg-rose-50 border border-neutral-400 hover:border-rose-300 dark:bg-neutral-900 dark:hover:bg-rose-950/20 dark:border-neutral-700 dark:hover:border-rose-900 text-neutral-400 hover:text-rose-500 transition-all cursor-pointer"
@@ -1177,6 +1190,7 @@ export default function InventoryProducts({
                         setNewProdStock('15');
                         setNewProdDesc('');
                         setNewProdImage('');
+                        setNewProdImageVariants(undefined);
                         setImageError('');
                         setNewProdCondition('New');
                         setNewProdCpu('');

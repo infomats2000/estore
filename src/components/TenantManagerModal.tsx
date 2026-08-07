@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Store, Globe, Layers, CreditCard, Shield, Users, Package, ShoppingCart, X, CheckCircle2, AlertTriangle, Loader2, Save, Power, Sliders, Check } from 'lucide-react';
+import { ContextualHelp } from './ContextualHelp';
 
 interface TenantManagerModalProps {
   tenantId: string;
@@ -213,6 +214,8 @@ export const TenantManagerModal: React.FC<TenantManagerModalProps> = ({
             <Package className="w-4 h-4" /> Catalog Statistics
           </button>
         </div>
+
+        <ContextualHelp className="mx-6 mt-4" compact line1="Review this tenant's identity, plan, status, contact details and explicitly assigned modules." line2="Saved changes can immediately alter the store's access, limits and administrator experience." />
 
         {/* Modal Body */}
         <div className="p-6 overflow-y-auto flex-1 space-y-4">

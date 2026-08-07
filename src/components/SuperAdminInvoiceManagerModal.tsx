@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { DollarSign, FileText, Send, CheckCircle2, AlertTriangle, Clock, X, Plus, Loader2, Download, Search, Filter, RefreshCw, Zap, ShieldCheck, Mail } from 'lucide-react';
+import { ContextualHelp } from './ContextualHelp';
 
 interface SuperAdminInvoiceManagerModalProps {
   onClose: () => void;
@@ -219,6 +220,8 @@ export const SuperAdminInvoiceManagerModal: React.FC<SuperAdminInvoiceManagerMod
           </div>
         </div>
 
+        <ContextualHelp className="mx-6 mt-4" compact line1="Review tenant subscription invoices, payment status and the platform billing ledger." line2="Use the controls to issue, send or reconcile invoices; verify the tenant and amount before confirming." />
+
         {/* Financial Metrics Summary */}
         <div className="grid grid-cols-3 gap-4 p-6 bg-slate-50 border-b border-slate-200 shrink-0">
           <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between">
@@ -385,6 +388,7 @@ export const SuperAdminInvoiceManagerModal: React.FC<SuperAdminInvoiceManagerMod
               </button>
             </div>
 
+            <ContextualHelp compact line1="Issue a new subscription invoice to the selected tenant for the stated billing period and amount." line2="Verify the tenant, due date and charge details before creating the invoice ledger entry." />
             <form onSubmit={handleCreateInvoice} className="space-y-4 text-xs font-semibold">
               <div>
                 <label className="block text-slate-700 uppercase mb-1">Target Tenant Store</label>

@@ -1,5 +1,5 @@
-import InventoryModule from './inventory/InventoryModule';
-import React, { Suspense, lazy, useRef, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
+import { ContextualHelp } from './ContextualHelp';
 import { 
   BarChart as RechartsBarChart, Bar, LineChart as RechartsLineChart, Line, XAxis, YAxis, 
   CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, PieChart, Pie,
@@ -17,35 +17,37 @@ import { InvoiceModal } from './InvoiceModal';
 import { convertOrderToInvoice, printInvoiceDirect, downloadInvoiceHtmlFile, printHtmlContent } from '../utils/invoicePrinter';
 import { buildCustomInvoiceSyncPayload } from '../utils/customInvoice';
 import { Product, Order, Coupon, ReturnRequest, Review, CustomerSegment, UpsellRule, Supplier, SupplierOrder, Shipment, FinanceTransaction, User, Invoice, StoreSettings, CustomerProfile, PurchaseOrder, RepairJob, StockUnit, WarehouseLocation, StockTransfer, StocktakeSession, ShrinkageRecord } from '../types';
-import RepairJobsManager from './repairs/RepairJobsManager';
-import PurchaseOrdersManager from './purchases/PurchaseOrdersManager';
-import InboundJobsManager from './inbound/InboundJobsManager';
-import StockUnitsManager from './stock/StockUnitsManager';
-import WarehousesManager from './warehouse/WarehousesManager';
-import B2BTradeManager from './b2b/B2BTradeManager';
-import RefurbGradingManager from './stock/RefurbGradingManager';
-import ERPReportsManager from './reports/ERPReportsManager';
-import EBayIntegrationManager from './ebay/EBayIntegrationManager';
-import AccountingFinanceManager from './finance/AccountingFinanceManager';
-import HRStaffPayrollManager from './hr/HRStaffPayrollManager';
-import MultiStoreManager from './stores/MultiStoreManager';
-import AutomationWorkflowBuilder from './automation/AutomationWorkflowBuilder';
-import BusinessIntelligenceManager from './bi/BusinessIntelligenceManager';
-import EnterpriseDistributorSuite from './distribution/EnterpriseDistributorSuite';
-import CommercialSalesManager from './sales/CommercialSalesManager';
-import CustomerPricingMatrixManager from './pricing/CustomerPricingMatrixManager';
-import MassiveInventorySuite from './inventory/MassiveInventorySuite';
-import EnterpriseProcurementManager from './procurement/EnterpriseProcurementManager';
-import WMSSystemManager from './wms/WMSSystemManager';
-import LogisticsDispatchManager from './logistics/LogisticsDispatchManager';
-import EnterpriseSupplierManager from './suppliers/EnterpriseSupplierManager';
-import StaffManagementSuite from './staff/StaffManagementSuite';
-import MasterDataManager from './masterdata/MasterDataManager';
 import { useTenantFeatures } from '../context/TenantFeatureContext';
 import { DASHBOARD_TAB_FEATURE_MAP } from '../constants/features';
 
 const FinanceManager = lazy(() => import('./FinanceManager'));
 const UserManager = lazy(() => import('./UserManager'));
+const InventoryModule = lazy(() => import('./inventory/InventoryModule'));
+const InventoryProducts = lazy(() => import('./inventory/InventoryProducts'));
+const RepairJobsManager = lazy(() => import('./repairs/RepairJobsManager'));
+const PurchaseOrdersManager = lazy(() => import('./purchases/PurchaseOrdersManager'));
+const InboundJobsManager = lazy(() => import('./inbound/InboundJobsManager'));
+const StockUnitsManager = lazy(() => import('./stock/StockUnitsManager'));
+const WarehousesManager = lazy(() => import('./warehouse/WarehousesManager'));
+const B2BTradeManager = lazy(() => import('./b2b/B2BTradeManager'));
+const RefurbGradingManager = lazy(() => import('./stock/RefurbGradingManager'));
+const ERPReportsManager = lazy(() => import('./reports/ERPReportsManager'));
+const EBayIntegrationManager = lazy(() => import('./ebay/EBayIntegrationManager'));
+const AccountingFinanceManager = lazy(() => import('./finance/AccountingFinanceManager'));
+const HRStaffPayrollManager = lazy(() => import('./hr/HRStaffPayrollManager'));
+const MultiStoreManager = lazy(() => import('./stores/MultiStoreManager'));
+const AutomationWorkflowBuilder = lazy(() => import('./automation/AutomationWorkflowBuilder'));
+const BusinessIntelligenceManager = lazy(() => import('./bi/BusinessIntelligenceManager'));
+const EnterpriseDistributorSuite = lazy(() => import('./distribution/EnterpriseDistributorSuite'));
+const CommercialSalesManager = lazy(() => import('./sales/CommercialSalesManager'));
+const CustomerPricingMatrixManager = lazy(() => import('./pricing/CustomerPricingMatrixManager'));
+const MassiveInventorySuite = lazy(() => import('./inventory/MassiveInventorySuite'));
+const EnterpriseProcurementManager = lazy(() => import('./procurement/EnterpriseProcurementManager'));
+const WMSSystemManager = lazy(() => import('./wms/WMSSystemManager'));
+const LogisticsDispatchManager = lazy(() => import('./logistics/LogisticsDispatchManager'));
+const EnterpriseSupplierManager = lazy(() => import('./suppliers/EnterpriseSupplierManager'));
+const StaffManagementSuite = lazy(() => import('./staff/StaffManagementSuite'));
+const MasterDataManager = lazy(() => import('./masterdata/MasterDataManager'));
 
 const convertToWebP = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -249,12 +251,16 @@ export default function DashboardView({
   onAddShrinkageRecord,
   onUpdateProductStock,
 }: DashboardViewProps) {
+  const [serverSummary, setServerSummary] = useState<null | {
+    products: number; lowStock: number; orders: number; revenue: number; averageOrderValue: number;
+    bestSeller: null | { id: string; name: string; price: number; quantity: number };
+  }>(null);
   
   const [activeTab, setActiveTab] = useState<'metrics' | 'analytics' | 'reports' | 'inventory' | 'products' | 'categories' | 'collections' | 'orders' | 'invoices' | 'customers' | 'returns' | 'coupons' | 'segments' | 'upsells' | 'reviews' | 'suppliers' | 'shipping' | 'pos' | 'finance' | 'users' | 'repairs' | 'purchase-orders' | 'inbound-jobs' | 'stock-units' | 'warehouses' | 'trade-accounts' | 'refurb' | 'ebay' | 'payroll' | 'stores' | 'automation' | 'bi' | 'distribution' | 'commercial-sales' | 'pricing-matrix' | 'massive-inventory' | 'procurement' | 'wms' | 'logistics-dispatch' | 'master-data'>(() => {
     try {
       const hash = window.location.hash.replace('#', '');
       const validTabs = [
-        'metrics', 'analytics', 'reports', 'inventory', 'products', 'categories', 'collections', 'orders', 'invoices',
+        'metrics', 'analytics', 'reports', 'inventory', 'products', 'orders', 'invoices',
         'customers', 'returns', 'coupons', 'segments', 'upsells', 'reviews',
         'suppliers', 'shipping', 'pos', 'finance', 'users',
         'repairs', 'purchase-orders', 'stock-units', 'warehouses', 'trade-accounts', 'refurb', 'ebay', 'payroll', 'stores', 'automation', 'bi', 'distribution', 'commercial-sales', 'pricing-matrix', 'massive-inventory', 'procurement', 'wms', 'logistics-dispatch', 'master-data'
@@ -271,6 +277,17 @@ export default function DashboardView({
     }
     return 'metrics';
   });
+  useEffect(() => {
+    if (activeTab !== 'metrics') return;
+    const token = localStorage.getItem('authToken') || '';
+    if (!token) return;
+    const controller = new AbortController();
+    fetch('/api/dashboard/summary', { headers: { Authorization: `Bearer ${token}` }, signal: controller.signal })
+      .then((response) => response.ok ? response.json() : null)
+      .then((summary) => { if (summary) setServerSummary(summary); })
+      .catch((error) => { if (error?.name !== 'AbortError') console.warn('Dashboard summary unavailable', error); });
+    return () => controller.abort();
+  }, [activeTab, orders.length, products.length]);
   const [tabHistory, setTabHistory] = useState<string[]>(['metrics']);
   const [hoverMenu, setHoverMenu] = useState<'sales' | 'inventory' | 'procurement' | 'intelligence' | null>(null);
   const [showCustomizePanel, setShowCustomizePanel] = useState(false);
@@ -313,8 +330,6 @@ export default function DashboardView({
     { id: 'coupons',           label: 'Coupons & Promos',    icon: Tag,            group: 'Commerce' },
     { id: 'segments',          label: 'Customer Groups & VIPs', icon: Users,      group: 'Commerce' },
     { id: 'upsells',           label: 'Product Recommendations & Upsells', icon: TrendingUp, group: 'Commerce' },
-    { id: 'categories',        label: 'Categories',          icon: Tag,            group: 'Catalog' },
-    { id: 'collections',       label: 'Collections',         icon: Boxes,          group: 'Catalog' },
     { id: 'reviews',           label: 'Product Reviews',     icon: Star,           group: 'Commerce' },
     { id: 'stores',            label: 'Branch Locations',    icon: MapPin,         group: 'Commerce' },
   ] as const;
@@ -447,7 +462,7 @@ export default function DashboardView({
     const handleHashChange = () => {
       const hash = window.location.hash.replace('#', '');
       const validTabs = [
-        'metrics', 'analytics', 'inventory', 'products', 'categories', 'collections', 'orders', 'invoices',
+        'metrics', 'analytics', 'inventory', 'products', 'orders', 'invoices',
         'customers', 'returns', 'coupons', 'segments', 'upsells', 'reviews',
         'suppliers', 'shipping', 'pos', 'finance', 'users',
         'repairs', 'purchase-orders', 'inbound-jobs', 'stock-units', 'warehouses', 'trade-accounts'
@@ -1204,10 +1219,11 @@ export default function DashboardView({
   };
 
   // CALCULATE METRICS
-  const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
-  const totalSalesCount = orders.length;
-  const averageOrderValue = totalSalesCount > 0 ? totalRevenue / totalSalesCount : 0;
-  const lowStockCount = products.filter(p => p.stock <= 5).length;
+  const localTotalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
+  const totalRevenue = serverSummary?.revenue ?? localTotalRevenue;
+  const totalSalesCount = serverSummary?.orders ?? orders.length;
+  const averageOrderValue = serverSummary?.averageOrderValue ?? (totalSalesCount > 0 ? totalRevenue / totalSalesCount : 0);
+  const lowStockCount = serverSummary?.lowStock ?? products.filter(p => p.stock <= 5).length;
 
   // Dynamic Analytics variables based on selectedTimeRange
   const getTimeMultiplier = () => {
@@ -1317,9 +1333,11 @@ export default function DashboardView({
     });
   });
   const sortedProductSales = Object.values(productSalesMap).sort((a, b) => b.revenue - a.revenue);
-  const bestSellingProduct = sortedProductSales[0]?.name || 'No Sales Yet';
-  const bestSellingProductQty = sortedProductSales[0]?.qty || 0;
-  const bestSellingProductRevenue = sortedProductSales[0]?.revenue || 0;
+  const bestSellingProduct = serverSummary?.bestSeller?.name || sortedProductSales[0]?.name || 'No Sales Yet';
+  const bestSellingProductQty = serverSummary?.bestSeller?.quantity || sortedProductSales[0]?.qty || 0;
+  const bestSellingProductRevenue = serverSummary?.bestSeller
+    ? serverSummary.bestSeller.price * serverSummary.bestSeller.quantity
+    : sortedProductSales[0]?.revenue || 0;
 
   // Best category
   const sortedCategories = Object.entries(categoryCount).sort((a, b) => b[1] - a[1]);
@@ -1989,7 +2007,7 @@ export default function DashboardView({
   const activePage = ALL_TABS.find((tab) => tab.id === activeTab) || ALL_TABS[0];
   const ActivePageIcon = activePage.icon;
   const hasSalesMenuLinks = ['commercial-sales', 'pricing-matrix', 'distribution', 'orders', 'invoices', 'customers', 'trade-accounts', 'coupons', 'segments', 'upsells'].some(isTabVisible);
-  const hasInventoryMenuLinks = ['massive-inventory', 'wms', 'logistics-dispatch', 'warehouses', 'stock-units', 'inventory', 'refurb', 'products', 'categories', 'collections'].some(isTabVisible);
+  const hasInventoryMenuLinks = ['massive-inventory', 'wms', 'logistics-dispatch', 'warehouses', 'stock-units', 'inventory', 'refurb', 'products'].some(isTabVisible);
   const hasProcurementMenuLinks = ['procurement', 'suppliers', 'purchase-orders', 'inbound-jobs'].some(isTabVisible);
   const hasIntelligenceMenuLinks = ['bi', 'reports', 'finance', 'payroll', 'automation', 'repairs', 'ebay', 'stores', 'reviews', 'users'].some(isTabVisible);
 
@@ -2076,8 +2094,6 @@ export default function DashboardView({
                     {isTabVisible('inventory') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('inventory'); setHoverMenu(null); }} onClick={() => { requestTab('inventory'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Inventory Stockpools</button>}
                     {isTabVisible('refurb') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('refurb'); setHoverMenu(null); }} onClick={() => { requestTab('refurb'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Refurb &amp; Grading</button>}
                     {isTabVisible('products') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('products'); setHoverMenu(null); }} onClick={() => { requestTab('products'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Product Catalog</button>}
-                    {isTabVisible('categories') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('categories'); setHoverMenu(null); }} onClick={() => { requestTab('categories'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Categories Manager</button>}
-                    {isTabVisible('collections') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('collections'); setHoverMenu(null); }} onClick={() => { requestTab('collections'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Collections Manager</button>}
                   </div>
                 </div>
               )}
@@ -2298,13 +2314,19 @@ export default function DashboardView({
       </div>
 
       {/* CONTEXTUAL PAGE TITLE */}
-      <div className="mb-6 flex items-center gap-3 border-b border-slate-200 pb-4 dark:border-slate-800" id="admin-page-title">
+      <div className="mb-4 flex items-start gap-3 border-b border-slate-200 pb-3 dark:border-slate-800" id="admin-page-title">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
           <ActivePageIcon className="h-5 w-5" />
         </div>
-        <div className="min-w-0">
-          <h1 className="truncate text-xl font-black tracking-tight text-slate-950 dark:text-white sm:text-2xl">{activePage.label}</h1>
-          <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-slate-400">{activePage.group}</p>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+            <h1 className="truncate text-xl font-black tracking-tight text-slate-950 dark:text-white sm:text-2xl">{activePage.label}</h1>
+            <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-slate-400">{activePage.group}</p>
+          </div>
+          <div className="mt-1 text-xs leading-4 text-slate-500 dark:text-slate-400">
+            <p>Use this page to review and manage the store&apos;s {activePage.group.toLowerCase()} information and daily tasks.</p>
+            <p>Use the actions, filters and tabs below to work with records; save or confirm changes when prompted.</p>
+          </div>
         </div>
       </div>
 
@@ -2314,8 +2336,9 @@ export default function DashboardView({
       {/* METRICS & CHARTS TAB - COLORFUL BOOTSTRAP CARDS */}
       {activeTab === 'metrics' && (
         <div className="space-y-8" id="dashboard-tab-metrics">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4" id="dashboard-summary-cards">
           {/* Top Scorecard Grid - Bootstrap Colorful Palettes */}
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="contents">
             {/* Total Revenue card - Commercial Sales */}
             {isTabVisible('commercial-sales') && <div 
               onClick={() => requestTab('commercial-sales')}
@@ -2394,7 +2417,7 @@ export default function DashboardView({
                 </div>
               </div>
               <div className="mt-2 font-mono text-xl font-black text-slate-950 leading-none">
-                {products.length} <span className="font-sans text-[10px] uppercase text-emerald-800">ITEMs</span>
+                {serverSummary?.products ?? products.length} <span className="font-sans text-[10px] uppercase text-emerald-800">ITEMs</span>
               </div>
               <div className="mt-2 pt-1.5 border-t border-emerald-300 flex items-center justify-between text-[9px] font-mono font-bold uppercase tracking-wider text-slate-700">
                 <span>Active Catalog</span>
@@ -2425,7 +2448,7 @@ export default function DashboardView({
           </div>
 
           {/* HIGH-LEVEL STORE PERFORMANCE OVERVIEW - BOOTSTRAP COLORFUL BENTO */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3" id="performance-overview-bento">
+          <div className="contents" id="performance-overview-bento">
             {/* Sales Target Goal Card - BI */}
             <div 
               onClick={() => setActiveTab('bi')}
@@ -2520,6 +2543,7 @@ export default function DashboardView({
                 <span className="bg-emerald-200 dark:bg-emerald-800/80 text-emerald-950 dark:text-emerald-100 px-2 py-0.5 rounded-md">VIEW WMS ➔</span>
               </div>
             </div>}
+          </div>
           </div>
 
           {/* Graphical Analytics Charts */}
@@ -2931,8 +2955,23 @@ export default function DashboardView({
         </div>
       )}
 
-      {/* PRODUCTS TAB */}
-      {(activeTab === 'products' || activeTab === 'inventory') && (
+      {/* PRODUCTS TAB - direct product management without the inventory suite navigation */}
+      {activeTab === 'products' && (
+        <InventoryProducts
+          products={products}
+          onAddProduct={onAddProduct}
+          onUpdateProduct={onUpdateProduct}
+          onDeleteProduct={onDeleteProduct}
+          onClearAllProducts={onClearAllProducts}
+          onUpdateStoreSettings={onUpdateStoreSettings}
+          storeSettings={storeSettings}
+          categories={categories}
+          collections={collections}
+        />
+      )}
+
+      {/* INVENTORY TAB - complete inventory suite */}
+      {activeTab === 'inventory' && (
         <InventoryModule
           products={products}
           onAddProduct={onAddProduct}
@@ -4758,6 +4797,7 @@ export default function DashboardView({
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-6 space-y-8">
+                  <ContextualHelp compact line1="Review this customer's purchase history, lifetime value and recent account activity." line2="Use the actions below to contact the customer or work with their records without leaving the customer directory." />
                   {/* Stats Cards */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
@@ -4896,6 +4936,7 @@ export default function DashboardView({
                 </div>
 
                 <form onSubmit={handleUpdateCustomerSubmit} className="p-6 space-y-6">
+                  <ContextualHelp compact line1="Update the selected customer's contact details and account information." line2="Review the fields carefully and submit the form to save; closing this dialog discards unsaved edits." />
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-1.5">
                       <label className="font-mono text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Customer Name</label>
@@ -7002,6 +7043,8 @@ export default function DashboardView({
                     </button>
                   </div>
 
+                  <ContextualHelp compact line1="This receipt confirms the completed POS sale and shows the exact transaction details given to the customer." line2="Print or retain the receipt as required, then close it or start a new sale when finished." />
+
                   <div className="bg-white text-neutral-955 px-5 py-7 shadow-sm text-left border-t-8 border-neutral-950 select-text font-mono text-[10px]" id="pos-thermal-receipt-container">
                     <div className="text-center space-y-1 pb-5 border-b border-dashed border-neutral-350 flex flex-col items-center">
                       {storeSettings.logoUrl && (
@@ -7276,6 +7319,7 @@ export default function DashboardView({
                   </div>
 
                   <form onSubmit={handleRegisterPosCustomer} className="space-y-3">
+                    <ContextualHelp compact line1="Create a customer record directly from the cash register for loyalty and future purchase tracking." line2="Enter the required identity and contact details, then register the customer before assigning them to the sale." />
                     <div className="space-y-1">
                       <label className="font-mono text-[8px] uppercase font-bold tracking-widest text-neutral-400 block font-bold">Customer Full Name *</label>
                       <input

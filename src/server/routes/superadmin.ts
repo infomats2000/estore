@@ -3,6 +3,7 @@ import { prismaRaw } from '../prismaClient';
 import { authMiddleware, requireSuperAdmin } from '../middleware/authMiddleware';
 import { createAuthToken } from '../auth';
 import { ALL_FEATURES } from '../../constants/features';
+import { getPerformanceSnapshot } from '../performanceMetrics';
 
 const router = Router();
 const validFeatureIds = new Set(ALL_FEATURES.map((feature) => feature.id));
@@ -23,26 +24,25 @@ function normalizeFeaturesJson(value: unknown): string {
 router.use(authMiddleware);
 router.use(requireSuperAdmin);
 
+router.get('/performance', (_req, res) => {
+  res.json(getPerformanceSnapshot());
+});
+
 // GET /api/superadmin/metrics - Platform Overview Analytics
 router.get('/metrics', async (_req, res) => {
   try {
-    const totalTenants = await prismaRaw.tenant.count();
-    const activeTenants = await prismaRaw.tenant.count({ where: { status: 'ACTIVE' } });
-    const totalUsers = await prismaRaw.user.count();
-    const totalProducts = await prismaRaw.product.count();
-    const totalOrders = await prismaRaw.order.count();
-
-    const tenants = await prismaRaw.tenant.findMany({
-      include: { plan: true },
-    });
-
-    // Estimate Monthly Recurring Revenue (MRR) based on active plans
-    let estimatedMrr = 0;
-    tenants.forEach((t) => {
-      if (t.status === 'ACTIVE' && t.plan) {
-        estimatedMrr += t.plan.priceMonthly;
-      }
-    });
+    const [totalTenants, activeTenants, totalUsers, totalProducts, totalOrders, activePlanCounts] = await Promise.all([
+      prismaRaw.tenant.count(),
+      prismaRaw.tenant.count({ where: { status: 'ACTIVE' } }),
+      prismaRaw.user.count(),
+      prismaRaw.product.count(),
+      prismaRaw.order.count(),
+      prismaRaw.tenant.groupBy({ by: ['planId'], where: { status: 'ACTIVE', planId: { not: null } }, _count: { _all: true } }),
+    ]);
+    const planIds = activePlanCounts.map((row) => row.planId).filter((id): id is string => Boolean(id));
+    const plans = planIds.length ? await prismaRaw.plan.findMany({ where: { id: { in: planIds } }, select: { id: true, priceMonthly: true } }) : [];
+    const monthlyPrices = new Map(plans.map((plan) => [plan.id, plan.priceMonthly]));
+    const estimatedMrr = activePlanCounts.reduce((sum, row) => sum + (monthlyPrices.get(row.planId || '') || 0) * row._count._all, 0);
 
     res.json({
       totalTenants,
@@ -514,36 +514,33 @@ router.post('/invoices/run-auto-billing', async (req, res) => {
       include: { plan: true },
     });
 
-    let generatedCount = 0;
     const now = new Date();
-
-    for (const tenant of tenants) {
-      if (!tenant.plan || tenant.plan.priceMonthly <= 0) continue;
-
-      const num = `INV-${now.getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
-      const dueDate = new Date();
-      dueDate.setDate(dueDate.getDate() + 7);
-
-      await prismaRaw.tenantInvoice.create({
-        data: {
-          invoiceNumber: num,
-          tenantId: tenant.id,
-          planName: `${tenant.plan.name} Monthly Subscription`,
-          amount: tenant.plan.priceMonthly,
-          tax: 0,
-          total: tenant.plan.priceMonthly,
-          status: 'UNPAID',
-          dueDate,
-          sentAt: now,
-        },
-      });
-
-      generatedCount++;
-    }
+    const periodStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    const billable = tenants.filter((tenant) => tenant.plan && tenant.plan.priceMonthly > 0);
+    const existing = billable.length ? await prismaRaw.tenantInvoice.findMany({
+      where: { tenantId: { in: billable.map((tenant) => tenant.id) }, createdAt: { gte: periodStart } },
+      select: { tenantId: true },
+    }) : [];
+    const alreadyBilled = new Set(existing.map((invoice) => invoice.tenantId));
+    const dueDate = new Date(now);
+    dueDate.setDate(dueDate.getDate() + 7);
+    const invoices = billable.filter((tenant) => !alreadyBilled.has(tenant.id)).map((tenant, index) => ({
+      invoiceNumber: `INV-${now.getFullYear()}-${now.getTime()}-${index + 1}`,
+      tenantId: tenant.id,
+      planName: `${tenant.plan!.name} Monthly Subscription`,
+      amount: tenant.plan!.priceMonthly,
+      tax: 0,
+      total: tenant.plan!.priceMonthly,
+      status: 'UNPAID',
+      dueDate,
+      sentAt: now,
+    }));
+    if (invoices.length) await prismaRaw.tenantInvoice.createMany({ data: invoices });
+    const generatedCount = invoices.length;
 
     res.json({
       success: true,
-      message: `Auto-billing routine complete! Generated and emailed ${generatedCount} subscription invoices.`,
+      message: `Auto-billing routine complete. Generated ${generatedCount} new subscription invoices; ${alreadyBilled.size} tenants were already billed this month.`,
       generatedCount,
     });
   } catch (error: any) {

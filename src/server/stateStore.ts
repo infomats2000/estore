@@ -27,6 +27,8 @@ export interface AppStateStore {
   stockUnits: any[];
   warehouses: any[];
   stockTransfers: any[];
+  stocktakes: any[];
+  shrinkageRecords: any[];
 }
 
 export interface AdminExtrasStore {
@@ -61,7 +63,9 @@ const APP_STATE_DEFAULTS: AppStateStore = {
   repairJobs: [],
   stockUnits: [],
   warehouses: INITIAL_WAREHOUSES,
-  stockTransfers: []
+  stockTransfers: [],
+  stocktakes: [],
+  shrinkageRecords: []
 };
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value));

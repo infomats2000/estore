@@ -6,13 +6,7 @@ import {
   Award, Cpu, DollarSign, Building2, Tag, X, SlidersHorizontal, Check,
   Laptop, Monitor, Mouse, Clock, Zap, CheckCircle2, Package
 } from 'lucide-react';
-import ProductCompareModal from './components/ProductCompareModal';
-import ExitIntentModal from './components/ExitIntentModal';
-import OrderTrackingModal from './components/OrderTrackingModal';
-import POSRegisterView from './components/POSRegisterView';
 import CustomerFacingDisplayModal from './components/pos/CustomerFacingDisplayModal';
-import PCBuilderModal from './components/pcbuilder/PCBuilderModal';
-import CustomerPortalModal from './components/customer/CustomerPortalModal';
 
 import { Product, CartItem, Order, Coupon, CustomerProfile, Review, ReturnRequest, CustomerSegment, UpsellRule, FinanceTransaction, User, StoreSettings, DEFAULT_STORE_SETTINGS, PurchaseOrder, RepairJob, StockUnit, WarehouseLocation, StockTransfer, StocktakeSession, ShrinkageRecord } from './types';
 import { INITIAL_PRODUCTS, INITIAL_REVIEWS, INITIAL_COUPONS } from './data/products';
@@ -25,12 +19,10 @@ import CartDrawer from './components/CartDrawer';
 import NewsletterSection from './components/NewsletterSection';
 import FlashSaleBanner from './components/FlashSaleBanner';
 import StorefrontHero from './components/StorefrontHero';
-import DashboardView from './components/DashboardView';
 import OfflineStatusBanner from './components/OfflineStatusBanner';
 import { saveOfflineAppState, getOfflineCachedState, enqueueOfflineTransaction } from './utils/offlineSyncEngine';
 import { SaaSLandingPage } from './components/SaaSLandingPage';
 import { SaaSOnboardingModal } from './components/SaaSOnboardingModal';
-import { SuperAdminDashboard } from './components/SuperAdminDashboard';
 import { SaaSLoginPage } from './components/SaaSLoginPage';
 import { TenantProvider } from './context/TenantContext';
 import { TenantFeatureProvider } from './context/TenantFeatureContext';
@@ -42,10 +34,21 @@ import { ShopByCategoryGrid } from './components/ShopByCategoryGrid';
 const loadCheckoutModal = () => import('./components/CheckoutModal');
 const loadAccountDrawer = () => import('./components/AccountDrawer');
 const loadSettingsModal = () => import('./components/SettingsModal');
+const loadDashboardView = () => import('./components/DashboardView');
+const loadPOSRegisterView = () => import('./components/POSRegisterView');
+const loadSuperAdminDashboard = () => import('./components/SuperAdminDashboard').then((module) => ({ default: module.SuperAdminDashboard }));
 
 const CheckoutModal = lazy(loadCheckoutModal);
 const AccountDrawer = lazy(loadAccountDrawer);
 const SettingsModal = lazy(loadSettingsModal);
+const DashboardView = lazy(loadDashboardView);
+const POSRegisterView = lazy(loadPOSRegisterView);
+const SuperAdminDashboard = lazy(loadSuperAdminDashboard);
+const ProductCompareModal = lazy(() => import('./components/ProductCompareModal'));
+const ExitIntentModal = lazy(() => import('./components/ExitIntentModal'));
+const OrderTrackingModal = lazy(() => import('./components/OrderTrackingModal'));
+const PCBuilderModal = lazy(() => import('./components/pcbuilder/PCBuilderModal'));
+const CustomerPortalModal = lazy(() => import('./components/customer/CustomerPortalModal'));
 
 const INITIAL_CUSTOMERS: CustomerProfile[] = [
   {
@@ -232,9 +235,30 @@ const EMPTY_PROFILE: CustomerProfile = {
 
 const DEFAULT_PROFILE: CustomerProfile = EMPTY_PROFILE;
 
+const SINGLETON_STATE_DOMAINS = new Set(['storeSettings']);
+const getStateRecordId = (domain: string, value: any, index: number) => {
+  if (SINGLETON_STATE_DOMAINS.has(domain)) return 'singleton';
+  if (typeof value === 'string' || typeof value === 'number') return String(value);
+  return String(value?.id || value?.code || value?.orderNumber || value?.email || `legacy-${index}`);
+};
+
+const buildStateRecordMap = (state: Record<string, any>) => {
+  const records = new Map<string, { domain: string; recordId: string; data: any; serialized: string }>();
+  for (const [domain, value] of Object.entries(state)) {
+    const values = SINGLETON_STATE_DOMAINS.has(domain) ? [value] : (Array.isArray(value) ? value : []);
+    values.forEach((data, index) => {
+      const recordId = getStateRecordId(domain, data, index);
+      records.set(`${domain}:${recordId}`, { domain, recordId, data, serialized: JSON.stringify(data) });
+    });
+  }
+  return records;
+};
+
 export default function App() {
   const stateHydratedRef = useRef(false);
   const stateSyncTimeoutRef = useRef<number | null>(null);
+  const stateRecordHashesRef = useRef<Record<string, string>>({});
+  const needsStateRecordMigrationRef = useRef(false);
   const [isHydratingState, setIsHydratingState] = useState(true);
 
   // SaaS Platform States
@@ -244,6 +268,12 @@ export default function App() {
       const modeParam = params.get('mode');
       if (modeParam === 'store' || modeParam === 'landing' || modeParam === 'login' || modeParam === 'superadmin') {
         return modeParam;
+      }
+      const savedToken = localStorage.getItem('authToken');
+      const savedUser = localStorage.getItem('currentUser');
+      if (savedToken && savedUser) {
+        const parsedUser = JSON.parse(savedUser);
+        return parsedUser?.isSuperAdmin ? 'superadmin' : 'store';
       }
     } catch (e) {}
     return 'landing';
@@ -264,18 +294,36 @@ export default function App() {
 
   useEffect(() => {
     const token = localStorage.getItem('authToken');
-    if (token) {
-      fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
-        .then((res) => res.json())
+    if (!token) return;
+
+    let cancelled = false;
+    fetch('/api/auth/me', {
+      credentials: 'include',
+      headers: { Authorization: `Bearer ${token}` }
+    })
+        .then(async (res) => {
+          const data = await res.json();
+          if (!res.ok || !data.authenticated) throw new Error('Session expired');
+          return data;
+        })
         .then((data) => {
-          if (data.authenticated && data.user) {
+          if (!cancelled && data.user) {
             setCurrentUser(data.user);
             localStorage.setItem('currentUser', JSON.stringify(data.user));
+            const explicitMode = new URLSearchParams(window.location.search).get('mode');
+            if (!explicitMode) setSaasMode(data.user.isSuperAdmin ? 'superadmin' : 'store');
           }
         })
-        .catch((err) => console.error(err));
-    }
-  }, [saasMode]);
+        .catch(() => {
+          if (cancelled) return;
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('currentUser');
+          setCurrentUser(null);
+          setSaasMode('login');
+        });
+
+    return () => { cancelled = true; };
+  }, []);
 
 
 
@@ -390,19 +438,28 @@ export default function App() {
 
   const handleAddCustomer = (customer: CustomerProfile) => {
     setCustomers(prev => [...prev, customer]);
+    const token = localStorage.getItem('authToken') || '';
+    if (token) void fetch('/api/customers', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(customer),
+    }).catch(() => enqueueOfflineTransaction({ type: 'CUSTOMER_CREATE', method: 'POST', endpoint: '/api/customers', payload: customer }));
   };
 
   const handleDeleteCustomer = (id: string) => {
     setCustomers(prev => prev.filter(c => c.id !== id));
+    const token = localStorage.getItem('authToken') || '';
+    if (token) void fetch(`/api/customers/${encodeURIComponent(id)}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })
+      .catch(() => enqueueOfflineTransaction({ type: 'STATE_RECORD_UPDATE', method: 'DELETE', endpoint: `/api/customers/${encodeURIComponent(id)}`, payload: {} }));
   };
 
   const handleUpdateCustomer = (customer: CustomerProfile) => {
     setCustomers(prev => prev.map(c => c.id === customer.id ? customer : c));
+    const token = localStorage.getItem('authToken') || '';
+    if (token) void fetch(`/api/customers/${encodeURIComponent(customer.id)}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(customer),
+    }).catch(() => enqueueOfflineTransaction({ type: 'STATE_RECORD_UPDATE', method: 'PATCH', endpoint: `/api/customers/${encodeURIComponent(customer.id)}`, payload: customer }));
   };
-
-  useEffect(() => {
-    localStorage.setItem('techseller_customers_v4', JSON.stringify(customers));
-  }, [customers]);
 
   const [financeTransactions, setFinanceTransactions] = useState<FinanceTransaction[]>(() => {
     try {
@@ -428,14 +485,6 @@ export default function App() {
       return [];
     }
   });
-
-  useEffect(() => {
-    localStorage.setItem('techseller_finance_transactions_v4', JSON.stringify(financeTransactions));
-  }, [financeTransactions]);
-
-  useEffect(() => {
-    localStorage.setItem('techseller_users_v4', JSON.stringify(users));
-  }, [users]);
 
   // ── ERP PHASE 1 STATE ─────────────────────────────────────────────────────
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>(() => {
@@ -545,12 +594,6 @@ export default function App() {
       return saved ? JSON.parse(saved) : [];
     } catch { return []; }
   });
-
-  useEffect(() => { localStorage.setItem('techseller_purchase_orders_v4', JSON.stringify(purchaseOrders)); }, [purchaseOrders]);
-  useEffect(() => { localStorage.setItem('techseller_repair_jobs_v4', JSON.stringify(repairJobs)); }, [repairJobs]);
-  useEffect(() => { localStorage.setItem('techseller_stock_units_v4', JSON.stringify(stockUnits)); }, [stockUnits]);
-  useEffect(() => { localStorage.setItem('techseller_warehouses_v4', JSON.stringify(warehouses)); }, [warehouses]);
-  useEffect(() => { localStorage.setItem('techseller_stock_transfers_v4', JSON.stringify(stockTransfers)); }, [stockTransfers]);
 
   // ── ERP PHASE 3 STOCKTAKE STATE & HANDLERS ────────────────────────────────
   const [stocktakes, setStocktakes] = useState<StocktakeSession[]>(() => {
@@ -676,14 +719,6 @@ export default function App() {
     ];
   });
 
-  useEffect(() => {
-    localStorage.setItem('techseller_stocktakes_v4', JSON.stringify(stocktakes));
-  }, [stocktakes]);
-
-  useEffect(() => {
-    localStorage.setItem('techseller_shrinkage_records_v4', JSON.stringify(shrinkageRecords));
-  }, [shrinkageRecords]);
-
   const handleAddStocktake = (session: StocktakeSession) => {
     setStocktakes(prev => [session, ...prev]);
   };
@@ -800,17 +835,31 @@ export default function App() {
 
     const hydrateFromServer = async () => {
       try {
-        const response = await fetch('/api/state');
+        const token = localStorage.getItem('authToken') || '';
+        const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+        const response = await fetch('/api/state-records', { headers });
         let payload: any = null;
 
         if (response.ok) {
           payload = await response.json();
-          saveOfflineAppState(payload);
+          if (payload.__stateVersion !== 3) {
+            const legacyResponse = await fetch('/api/state', { headers });
+            payload = legacyResponse.ok ? await legacyResponse.json() : await getOfflineCachedState();
+            needsStateRecordMigrationRef.current = Boolean(token && payload);
+          }
+          await saveOfflineAppState(payload);
         } else {
-          payload = getOfflineCachedState();
+          payload = await getOfflineCachedState();
         }
 
         if (cancelled || !payload) return;
+
+        if (payload.__stateVersion === 3) {
+          const stateWithoutVersion = Object.fromEntries(Object.entries(payload).filter(([key]) => key !== '__stateVersion'));
+          stateRecordHashesRef.current = Object.fromEntries(
+            [...buildStateRecordMap(stateWithoutVersion).entries()].map(([key, record]) => [key, record.serialized]),
+          );
+        }
 
         if (payload.storeSettings) setStoreSettings((prev) => ({ ...prev, ...payload.storeSettings }));
         if (Array.isArray(payload.products)) setProducts(payload.products);
@@ -828,9 +877,13 @@ export default function App() {
         if (Array.isArray(payload.customerSegments)) setCustomerSegments(payload.customerSegments);
         if (Array.isArray(payload.upsellRules)) setUpsellRules(payload.upsellRules);
         if (Array.isArray(payload.collections)) setCollections(payload.collections);
+        if (Array.isArray(payload.warehouses)) setWarehouses(payload.warehouses);
+        if (Array.isArray(payload.stockTransfers)) setStockTransfers(payload.stockTransfers);
+        if (Array.isArray(payload.stocktakes)) setStocktakes(payload.stocktakes);
+        if (Array.isArray(payload.shrinkageRecords)) setShrinkageRecords(payload.shrinkageRecords);
       } catch (err) {
         console.warn('Could not hydrate app state from server, attempting offline local cache:', err);
-        const cached = getOfflineCachedState();
+        const cached = await getOfflineCachedState();
         if (cached && !cancelled) {
           if (cached.storeSettings) setStoreSettings((prev) => ({ ...prev, ...cached.storeSettings }));
           if (Array.isArray(cached.products)) setProducts(cached.products);
@@ -848,6 +901,10 @@ export default function App() {
           if (Array.isArray(cached.customerSegments)) setCustomerSegments(cached.customerSegments);
           if (Array.isArray(cached.upsellRules)) setUpsellRules(cached.upsellRules);
           if (Array.isArray(cached.collections)) setCollections(cached.collections);
+          if (Array.isArray(cached.warehouses)) setWarehouses(cached.warehouses);
+          if (Array.isArray(cached.stockTransfers)) setStockTransfers(cached.stockTransfers);
+          if (Array.isArray(cached.stocktakes)) setStocktakes(cached.stocktakes);
+          if (Array.isArray(cached.shrinkageRecords)) setShrinkageRecords(cached.shrinkageRecords);
         }
       } finally {
         stateHydratedRef.current = true;
@@ -869,8 +926,8 @@ export default function App() {
       window.clearTimeout(stateSyncTimeoutRef.current);
     }
 
-    stateSyncTimeoutRef.current = window.setTimeout(() => {
-      const payload = {
+    stateSyncTimeoutRef.current = window.setTimeout(async () => {
+      const slices = {
         storeSettings,
         products,
         reviews,
@@ -886,23 +943,69 @@ export default function App() {
         collections,
         purchaseOrders,
         repairJobs,
-        stockUnits
+        stockUnits,
+        warehouses,
+        stockTransfers,
+        stocktakes,
+        shrinkageRecords
       };
 
-      saveOfflineAppState(payload);
+      void saveOfflineAppState(slices);
 
-      if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        enqueueOfflineTransaction({ type: 'STATE_UPDATE', endpoint: '/api/state', payload });
+      const token = localStorage.getItem('authToken') || '';
+      if (!token) return;
+
+      const records = buildStateRecordMap(slices);
+      if (needsStateRecordMigrationRef.current) {
+        needsStateRecordMigrationRef.current = false;
+        const response = await fetch('/api/state-records/import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ state: slices }),
+        });
+        if (!response.ok) {
+          needsStateRecordMigrationRef.current = true;
+          return;
+        }
+        stateRecordHashesRef.current = Object.fromEntries([...records.entries()].map(([key, record]) => [key, record.serialized]));
         return;
       }
 
-      void fetch('/api/state', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      }).catch(() => {
-        enqueueOfflineTransaction({ type: 'STATE_UPDATE', endpoint: '/api/state', payload });
-      });
+      const currentKeys = new Set(records.keys());
+      const operations: Array<{ method: 'PUT' | 'DELETE'; endpoint: string; payload: any; key: string; serialized?: string }> = [];
+      for (const [key, record] of records) {
+        if (stateRecordHashesRef.current[key] !== record.serialized) {
+          operations.push({
+            method: 'PUT', key, serialized: record.serialized,
+            endpoint: `/api/state-records/${encodeURIComponent(record.domain)}/${encodeURIComponent(record.recordId)}`,
+            payload: { data: record.data },
+          });
+        }
+      }
+      for (const key of Object.keys(stateRecordHashesRef.current)) {
+        if (!currentKeys.has(key)) {
+          const separator = key.indexOf(':');
+          const domain = key.slice(0, separator);
+          const recordId = key.slice(separator + 1);
+          operations.push({ method: 'DELETE', key, endpoint: `/api/state-records/${encodeURIComponent(domain)}/${encodeURIComponent(recordId)}`, payload: {} });
+        }
+      }
+
+      for (const operation of operations) {
+        if (operation.method === 'DELETE') delete stateRecordHashesRef.current[operation.key];
+        else stateRecordHashesRef.current[operation.key] = operation.serialized || '';
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+          enqueueOfflineTransaction({ type: 'STATE_RECORD_UPDATE', method: operation.method, endpoint: operation.endpoint, payload: operation.payload });
+          continue;
+        }
+        void fetch(operation.endpoint, {
+          method: operation.method,
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          ...(operation.method === 'PUT' ? { body: JSON.stringify(operation.payload) } : {}),
+        }).catch(() => {
+          enqueueOfflineTransaction({ type: 'STATE_RECORD_UPDATE', method: operation.method, endpoint: operation.endpoint, payload: operation.payload });
+        });
+      }
     }, 500);
 
     return () => {
@@ -926,7 +1029,12 @@ export default function App() {
     collections,
     purchaseOrders,
     repairJobs,
-    stockUnits
+    stockUnits,
+    warehouses,
+    stockTransfers,
+    stocktakes,
+    shrinkageRecords,
+    isHydratingState
   ]);
 
   // STOREFRONT UI STATES
@@ -1077,27 +1185,6 @@ export default function App() {
     }
   }, [isDarkMode, isAdminMode]);
 
-  // SAVE STATES TO LOCAL STORAGE ON UPDATE
-  useEffect(() => {
-    localStorage.setItem('techseller_products_v4', JSON.stringify(products));
-  }, [products]);
-
-  useEffect(() => {
-    localStorage.setItem('techseller_reviews_v4', JSON.stringify(reviews));
-  }, [reviews]);
-
-  useEffect(() => {
-    localStorage.setItem('techseller_coupons_v4', JSON.stringify(coupons));
-  }, [coupons]);
-
-  useEffect(() => {
-    localStorage.setItem('techseller_orders_v4', JSON.stringify(orders));
-  }, [orders]);
-
-  useEffect(() => {
-    localStorage.setItem('techseller_returns_v4', JSON.stringify(returns));
-  }, [returns]);
-
   useEffect(() => {
     localStorage.setItem('techseller_cart_v4', JSON.stringify(cart));
   }, [cart]);
@@ -1109,48 +1196,6 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('techseller_recently_viewed_v4', JSON.stringify(recentlyViewed));
   }, [recentlyViewed]);
-
-  useEffect(() => {
-    localStorage.setItem('techseller_categories_v4', JSON.stringify(categories));
-  }, [categories]);
-
-  useEffect(() => {
-    localStorage.setItem('techseller_customer_segments_v4', JSON.stringify(customerSegments));
-  }, [customerSegments]);
-
-  useEffect(() => {
-    localStorage.setItem('techseller_upsell_rules_v4', JSON.stringify(upsellRules));
-  }, [upsellRules]);
-
-  useEffect(() => {
-    localStorage.setItem('techseller_collections_v4', JSON.stringify(collections));
-  }, [collections]);
-
-  // Real-time order status simulation interval
-  useEffect(() => {
-    const interval = setInterval(() => {
-      let hasUpdates = false;
-      const updatedOrders = orders.map(order => {
-        if (order.status === 'Pending') {
-          hasUpdates = true;
-          return { ...order, status: 'Processing' as const };
-        } else if (order.status === 'Processing') {
-          hasUpdates = true;
-          return { ...order, status: 'Shipped' as const };
-        } else if (order.status === 'Shipped') {
-          hasUpdates = true;
-          return { ...order, status: 'Delivered' as const };
-        }
-        return order;
-      });
-
-      if (hasUpdates) {
-        setOrders(updatedOrders);
-      }
-    }, 20000); // Transitions status every 20 seconds for the current session
-
-    return () => clearInterval(interval);
-  }, [orders]);
 
   // SYSTEM ALERT HELPER
   const triggerAlert = (message: string, type: 'success' | 'info' | 'error' = 'info') => {
@@ -1621,6 +1666,12 @@ export default function App() {
       return ord;
     });
     setOrders(updated);
+    const token = localStorage.getItem('authToken') || '';
+    const endpoint = `/api/orders/${encodeURIComponent(orderId)}/status`;
+    const payload = { status };
+    if (token) void fetch(endpoint, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(payload),
+    }).catch(() => enqueueOfflineTransaction({ type: 'STATE_RECORD_UPDATE', method: 'PATCH', endpoint, payload }));
     triggerAlert(`Order status updated to "${status}"`, 'success');
   };
 
@@ -2201,7 +2252,8 @@ export default function App() {
 
     return (
       <TenantProvider>
-        <SuperAdminDashboard
+        <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-sm text-slate-500">Loading Super Admin...</div>}>
+          <SuperAdminDashboard
           onBackToApp={() => {
             setIsAdminMode(true);
             setSaasMode('store');
@@ -2219,8 +2271,9 @@ export default function App() {
             setSaasMode('store');
             triggerAlert(`Super Admin now impersonating '${tenant.name}' with ALL feature modules unlocked!`, 'info');
           }}
-          currentUser={currentUser}
-        />
+            currentUser={currentUser}
+          />
+        </Suspense>
       </TenantProvider>
     );
   }
@@ -3061,36 +3114,43 @@ export default function App() {
 
       {/* Product Compare Modal */}
       {showCompareModal && compareList.length > 0 && (
-        <ProductCompareModal
-          compareList={compareList}
-          onClose={() => setShowCompareModal(false)}
-          onRemoveFromCompare={handleRemoveFromCompare}
-          onAddToCart={(p) => handleAddToCart(p)}
-          onClearCompare={() => setCompareList([])}
-        />
+        <Suspense fallback={null}>
+          <ProductCompareModal
+            compareList={compareList}
+            onClose={() => setShowCompareModal(false)}
+            onRemoveFromCompare={handleRemoveFromCompare}
+            onAddToCart={(p) => handleAddToCart(p)}
+            onClearCompare={() => setCompareList([])}
+          />
+        </Suspense>
       )}
 
       {/* Abandoned Cart Exit Intent Modal */}
       {!isAdminMode && (
-        <ExitIntentModal
-          cart={cart}
-          onApplyCoupon={handleApplyCoupon}
-          onOpenCart={() => setIsCartOpen(true)}
-        />
+        <Suspense fallback={null}>
+          <ExitIntentModal
+            cart={cart}
+            onApplyCoupon={handleApplyCoupon}
+            onOpenCart={() => setIsCartOpen(true)}
+          />
+        </Suspense>
       )}
 
       {/* Order Tracking Modal */}
       {showTrackOrderModal && (
-        <OrderTrackingModal
-          onClose={() => setShowTrackOrderModal(false)}
-          storeSettings={storeSettings}
-        />
+        <Suspense fallback={null}>
+          <OrderTrackingModal
+            onClose={() => setShowTrackOrderModal(false)}
+            storeSettings={storeSettings}
+          />
+        </Suspense>
       )}
 
       {/* POS Register Full-Screen Overlay */}
       {showPOSView && (
         <div className="fixed inset-0 z-50 bg-white dark:bg-neutral-950 overflow-auto" id="pos-register-overlay">
-          <POSRegisterView
+          <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-sm text-slate-500">Loading POS register...</div>}>
+            <POSRegisterView
             onClose={() => setShowPOSView(false)}
             products={products}
             categories={categories}
@@ -3099,6 +3159,23 @@ export default function App() {
             onUpdateCustomerProfile={handleUpdateCustomer}
             onCompleteSale={async (sale) => {
               const token = localStorage.getItem('authToken') || '';
+              const checkoutHeaders = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+              const catalogResponse = await fetch('/api/products/resolve', {
+                method: 'POST',
+                headers: checkoutHeaders,
+                body: JSON.stringify({ products: sale.items.map((item) => ({ id: item.product.id, name: item.product.name })) }),
+              });
+              const catalogPayload = await catalogResponse.json();
+              if (!catalogResponse.ok) throw new Error(catalogPayload.error || 'Unable to verify POS inventory.');
+              const relationalProducts: any[] = catalogPayload.products || [];
+              const normalizedName = (value: string) => value.trim().toLocaleLowerCase();
+              const resolvedProductIds = new Map<string, string>();
+              for (const item of sale.items) {
+                const match = relationalProducts.find((product) => product.id === item.product.id)
+                  || relationalProducts.find((product) => normalizedName(product.name || '') === normalizedName(item.product.name || ''));
+                if (!match) throw new Error(`${item.product.name} is not linked to an inventory record. Open the product in Inventory and save it before retrying.`);
+                resolvedProductIds.set(item.product.id, match.id);
+              }
               const methodMap: Record<string, string> = {
                 Cash: 'CASH',
                 'EFTPOS Card': 'EFTPOS',
@@ -3115,7 +3192,7 @@ export default function App() {
                   discount: sale.discount,
                   notes: [sale.notes, sale.purchaseOrder ? `PO: ${sale.purchaseOrder}` : ''].filter(Boolean).join('\n'),
                   items: sale.items.map((item: any) => ({
-                    productId: item.product.id,
+                    productId: resolvedProductIds.get(item.product.id),
                     quantity: item.quantity,
                     serialNumbers: item.selectedSerialNumbers || [],
                   })),
@@ -3126,7 +3203,6 @@ export default function App() {
                     status: 'CAPTURED',
                   })),
               };
-              const checkoutHeaders = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
               let response = await fetch('/api/pos/checkout', { method: 'POST', headers: checkoutHeaders, body: JSON.stringify(checkoutPayload) });
               let completed = await response.json();
               if (!response.ok && /Manager approval is required for discounts/.test(completed.error || '')) {
@@ -3159,7 +3235,8 @@ export default function App() {
               });
               return { orderNumber: persisted.orderNumber, changeDue: completed.changeDue };
             }}
-          />
+            />
+          </Suspense>
         </div>
       )}
 
@@ -3171,26 +3248,30 @@ export default function App() {
       )}
 
       {/* Interactive Custom PC Builder Modal */}
-      <PCBuilderModal
-        isOpen={showPCBuilderModal}
-        onClose={() => setShowPCBuilderModal(false)}
-        products={products}
-        onAddToCartBatch={handleAddToCartBatch}
-        onShowAlert={(title, msg, type) => triggerAlert(`${title}: ${msg}`, type === 'error' ? 'error' : 'success')}
-      />
+      <Suspense fallback={null}>
+        <PCBuilderModal
+          isOpen={showPCBuilderModal}
+          onClose={() => setShowPCBuilderModal(false)}
+          products={products}
+          onAddToCartBatch={handleAddToCartBatch}
+          onShowAlert={(title, msg, type) => triggerAlert(`${title}: ${msg}`, type === 'error' ? 'error' : 'success')}
+        />
+      </Suspense>
 
       {/* Customer Self-Service Portal Hub Modal */}
-      <CustomerPortalModal
-        isOpen={showCustomerPortalModal}
-        onClose={() => setShowCustomerPortalModal(false)}
-        orders={orders}
-        customerProfile={customerProfile}
-        products={products}
-        storeSettings={storeSettings}
-        onAddReturnRequest={handleAddReturnRequest}
-        onAddRepairJob={handleAddRepairJob}
-        onShowAlert={(msg, type) => triggerAlert(msg, type === 'error' ? 'error' : 'success')}
-      />
+      <Suspense fallback={null}>
+        <CustomerPortalModal
+          isOpen={showCustomerPortalModal}
+          onClose={() => setShowCustomerPortalModal(false)}
+          orders={orders}
+          customerProfile={customerProfile}
+          products={products}
+          storeSettings={storeSettings}
+          onAddReturnRequest={handleAddReturnRequest}
+          onAddRepairJob={handleAddRepairJob}
+          onShowAlert={(msg, type) => triggerAlert(msg, type === 'error' ? 'error' : 'success')}
+        />
+      </Suspense>
 
       <SaaSOnboardingModal
         isOpen={showOnboardingModal}

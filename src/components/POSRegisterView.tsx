@@ -123,6 +123,22 @@ export default function POSRegisterView({
     finally { setShiftBusy(false); }
   };
 
+  const ensureActiveShift = async () => {
+    if (activeShift) return activeShift;
+    const response = await fetch('/api/pos/shifts/open', {
+      method: 'POST',
+      headers: posAuthHeaders(),
+      body: JSON.stringify({ registerId: 'REGISTER-01', openingFloat: 0 }),
+    });
+    const result = await response.json();
+    const shift = result.shift;
+    if (!shift || (!response.ok && response.status !== 409)) {
+      throw new Error(result.error || 'Unable to initialize the register.');
+    }
+    setActiveShift(shift);
+    return shift;
+  };
+
   const handleCloseShift = async () => {
     if (!activeShift) return;
     const value = window.prompt('Count all cash in the drawer:', String(activeShift.openingFloat || 0));
@@ -287,6 +303,7 @@ export default function POSRegisterView({
   const total = subtotal; // Tax inclusive pricing
 
   const cashVal = parseFloat(cashTendered) || 0;
+  const effectiveCashTendered = cashVal > 0 ? cashVal : total;
   const changeDue = Math.max(0, cashVal - total);
   const splitTenderTotal = splitLines.reduce((sum, line) => sum + line.amount, 0);
 
@@ -303,12 +320,8 @@ export default function POSRegisterView({
 
   const handleCheckout = async () => {
     if (cart.length === 0) return;
-    if (!activeShift) {
-      setCheckoutError('Open the register shift before completing a sale.');
-      return;
-    }
 
-    if (paymentMethod === 'Cash' && cashVal < total) {
+    if (paymentMethod === 'Cash' && cashVal > 0 && cashVal < total) {
       setCheckoutError(`Cash tendered is less than the $${total.toFixed(2)} total.`);
       return;
     }
@@ -353,6 +366,7 @@ export default function POSRegisterView({
 
     const checkoutItems = cart.map((item) => ({ ...item, selectedSerialNumbers: selectedSerials[item.product.id] || [] })) as CartItem[];
     try {
+      const checkoutShift = await ensureActiveShift();
       const tenderMethod: PaymentSplitLine['method'] = paymentMethod === 'Cash'
         ? 'Cash'
         : paymentMethod === 'EFTPOS Card'
@@ -367,9 +381,9 @@ export default function POSRegisterView({
         purchaseOrder: posPoNumber.trim() || undefined,
         tenders: paymentMethod === 'Split Payment'
           ? splitLines.filter(line => line.amount > 0)
-          : [{ id: `${tenderMethod}-${Date.now()}`, method: tenderMethod, amount: paymentMethod === 'Cash' ? cashVal : total, reference: paymentReference.trim() || undefined }],
+          : [{ id: `${tenderMethod}-${Date.now()}`, method: tenderMethod, amount: paymentMethod === 'Cash' ? effectiveCashTendered : total, reference: paymentReference.trim() || undefined }],
         notes: `POS Sale (${paymentMethod})`,
-        shiftId: activeShift.id,
+        shiftId: checkoutShift.id,
       });
       const orderNo = completed && 'orderNumber' in completed && completed.orderNumber ? completed.orderNumber : `POS-${Date.now()}`;
       const orderData = {

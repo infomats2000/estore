@@ -17,6 +17,11 @@ test('saveImageFromBase64 writes a validated image to disk', async () => {
 
   assert.match(result.path, /^\/uploads\/test\//);
   assert.equal(result.extension, 'webp');
+  assert.equal(result.assets.length, 3);
+  assert.match(result.variants.thumbnail, /-thumb\.webp$/);
+  assert.match(result.variants.catalog, /-catalog\.webp$/);
+  assert.match(result.variants.detail, /-detail\.webp$/);
+  assert.equal(result.size, result.assets.reduce((sum, asset) => sum + asset.size, 0));
 
   const fullPath = path.join(tempDir, 'test', result.filename);
   const exists = await fs.stat(fullPath).then(() => true).catch(() => false);

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { CreditCard, DollarSign, ShieldCheck, CheckCircle2, AlertTriangle, Loader2, X, ExternalLink, RefreshCw, Send } from 'lucide-react';
+import { ContextualHelp } from './ContextualHelp';
 
 interface SuperAdminTenantChargeModalProps {
   tenant: any;
@@ -90,6 +91,8 @@ export const SuperAdminTenantChargeModal: React.FC<SuperAdminTenantChargeModalPr
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        <ContextualHelp className="mx-6 mt-4" compact line1="Create and process a subscription charge for the selected tenant store." line2="Confirm the amount, description and payment method carefully because successful charges become billing records." />
 
         {/* Modal Form */}
         <form onSubmit={handleChargeTenant} className="p-6 space-y-5">

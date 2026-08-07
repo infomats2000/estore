@@ -52,8 +52,10 @@ async function startServer() {
   const server = createHttpServer(app);
 
   try {
-    await seedDatabase();
-    console.log('Database seed initialized');
+    if (!isProd || process.env.SEED_ON_STARTUP === 'true') {
+      await seedDatabase();
+      console.log('Database seed initialized');
+    }
   } catch (error) {
     console.warn('Database seed skipped:', error);
   }
@@ -73,11 +75,20 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
+    app.use(express.static(distPath, {
+      setHeaders: (res, filePath) => {
+        if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        } else if (filePath.endsWith('index.html')) {
+          res.setHeader('Cache-Control', 'no-cache');
+        }
+      },
+    }));
     app.get('*', (req, res, next) => {
       if (req.path.startsWith('/api/')) {
         return next();
       }
+      res.setHeader('Cache-Control', 'no-cache');
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }

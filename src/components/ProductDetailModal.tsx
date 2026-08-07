@@ -56,7 +56,7 @@ export default function ProductDetailModal({
   // Reset states when product changes
   useEffect(() => {
     if (product) {
-      setSelectedImage(product.image);
+      setSelectedImage(product.imageVariants?.detail || product.image);
       setSelectedColor(product.colors && product.colors.length > 0 ? product.colors[0] : '');
       setSelectedSize(product.sizes && product.sizes.length > 0 ? product.sizes[0] : '');
       setQuantity(1);
@@ -117,7 +117,7 @@ export default function ProductDetailModal({
     : product.rating.toFixed(1);
 
   const isOutOfStock = product.stock <= 0;
-  const imageList = [product.image, ...(product.additionalImages || [])];
+  const imageList = [product.imageVariants?.detail || product.image, ...(product.additionalImages || [])];
 
   const handleReviewSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -192,6 +192,10 @@ export default function ProductDetailModal({
           >
             <img
               src={selectedImage || undefined}
+              srcSet={selectedImage === (product.imageVariants?.detail || product.image) && product.imageVariants
+                ? `${product.imageVariants.thumbnail} 320w, ${product.imageVariants.catalog} 800w, ${product.imageVariants.detail} 1600w`
+                : undefined}
+              sizes="(min-width: 768px) 50vw, 100vw"
               alt={product.name}
               className="max-h-full max-w-full object-contain p-2 select-none pointer-events-none"
               decoding="async"

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { prismaRaw } from '../prismaClient';
-import { findUserByEmail, verifyPassword, createAuthToken } from '../auth';
+import { findUserByEmail, verifyPassword, createAuthToken, verifyAuthToken, SESSION_MAX_AGE_MS } from '../auth';
 import { validateEnvironment } from '../envValidator';
 
 const router = Router();
@@ -60,7 +60,7 @@ router.post('/saas-login', async (req, res) => {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 24 * 60 * 60 * 1000,
+        maxAge: SESSION_MAX_AGE_MS,
       });
 
       return res.json({
@@ -113,7 +113,7 @@ router.post('/saas-login', async (req, res) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 24 * 60 * 60 * 1000,
+      maxAge: SESSION_MAX_AGE_MS,
     });
 
     return res.json({
@@ -127,6 +127,8 @@ router.post('/saas-login', async (req, res) => {
         isSuperAdmin: false,
         role,
         allowedFeatures,
+        tenantName: tenant?.name,
+        tenantSlug: tenant?.slug,
       },
       tenant: tenant ? {
         id: tenant.id,
@@ -173,9 +175,7 @@ router.get('/me', async (req, res) => {
       return res.status(401).json({ authenticated: false });
     }
 
-    const jwt = await import('jsonwebtoken');
-    const secret = process.env.JWT_SECRET || 'dev-secret';
-    const decoded = jwt.default.verify(token, secret) as any;
+    const decoded = verifyAuthToken(token);
 
     const user = await prismaRaw.user.findUnique({
       where: { id: decoded.userId },
@@ -205,6 +205,8 @@ router.get('/me', async (req, res) => {
         role: decoded.role,
         tenantId: decoded.tenantId,
         allowedFeatures: membership ? parseAllowedFeatures(membership.allowedFeaturesJson) : [],
+        tenantName: membership?.tenant.name,
+        tenantSlug: membership?.tenant.slug,
       },
       stores: user.tenantUsers.map((tu) => tu.tenant),
     });

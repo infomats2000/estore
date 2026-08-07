@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Layers, Plus, X, Edit2, Trash2, CheckCircle2, AlertTriangle, Loader2, Shield, Lock, Check } from 'lucide-react';
 import { ALL_FEATURES, DEFAULT_PLAN_FEATURES } from '../constants/features';
+import { ContextualHelp } from './ContextualHelp';
 
 interface PlanManagerModalProps {
   onClose: () => void;
@@ -178,6 +179,8 @@ export const PlanManagerModal: React.FC<PlanManagerModalProps> = ({ onClose, onP
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        <ContextualHelp className="mx-6 mt-4" compact line1="Manage billing tiers, prices, quotas and the modules included in each tenant plan." line2="Feature changes control what tenants can access, so review assignments before saving a plan." />
 
         {/* Modal Content Grid */}
         <div className="p-6 overflow-y-auto grid grid-cols-1 lg:grid-cols-12 gap-8">

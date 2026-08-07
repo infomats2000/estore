@@ -31,6 +31,7 @@ export const SaaSLoginPage: React.FC<SaaSLoginPageProps> = ({
       setLoading(true);
       const res = await fetch('/api/auth/saas-login', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: email.trim(),

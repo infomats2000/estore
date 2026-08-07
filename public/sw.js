@@ -1,4 +1,4 @@
-const CACHE_NAME = 'techseller-offline-v1';
+const CACHE_NAME = 'techseller-offline-v2';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -30,7 +30,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch Interceptor: Cache-First for static assets, Stale-While-Revalidate for GET API requests
+// Fetch interceptor: authenticated and tenant-scoped APIs always use the network.
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   const url = new URL(req.url);
@@ -40,56 +40,39 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Handle API GET requests with Stale-While-Revalidate
+  // Never put API responses in the shared browser cache. This prevents stale or
+  // cross-session tenant data and avoids a duplicate background request.
   if (url.pathname.startsWith('/api/')) {
+    event.respondWith(fetch(req));
+    return;
+  }
+
+  const isHashedAsset = /\/assets\/[^/]+-[A-Za-z0-9_-]+\.(?:js|css)$/.test(url.pathname);
+
+  // Hashed assets are immutable, so cache-first does not need revalidation.
+  if (isHashedAsset) {
     event.respondWith(
-      caches.open(CACHE_NAME).then((cache) => {
-        return fetch(req)
-          .then((networkResponse) => {
-            if (networkResponse.status === 200) {
-              cache.put(req, networkResponse.clone());
-            }
-            return networkResponse;
-          })
-          .catch(() => {
-            return cache.match(req).then((cachedResponse) => {
-              if (cachedResponse) {
-                return cachedResponse;
-              }
-              return new Response(JSON.stringify({ offline: true, error: 'Offline mode active' }), {
-                headers: { 'Content-Type': 'application/json' }
-              });
-            });
-          });
-      })
+      caches.match(req).then((cachedResponse) => cachedResponse || fetch(req).then((networkResponse) => {
+        if (networkResponse.status === 200) {
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, networkResponse.clone()));
+        }
+        return networkResponse;
+      }))
     );
     return;
   }
 
-  // Cache-First with Network Fallback for Static Assets
+  // Network-first for HTML and other mutable public assets.
   event.respondWith(
-    caches.match(req).then((cachedResponse) => {
-      if (cachedResponse) {
-        // Fetch background update in parallel
-        fetch(req).then((networkResponse) => {
-          if (networkResponse.status === 200) {
-            caches.open(CACHE_NAME).then((cache) => cache.put(req, networkResponse));
-          }
-        }).catch(() => {});
-        return cachedResponse;
-      }
-
-      return fetch(req).then((networkResponse) => {
+    fetch(req).then((networkResponse) => {
         if (networkResponse.status === 200 && req.url.startsWith('http')) {
           const responseToCache = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(req, responseToCache));
         }
         return networkResponse;
       }).catch(() => {
-        if (req.headers.get('accept')?.includes('text/html')) {
-          return caches.match('/index.html');
-        }
-      });
-    })
+        return caches.match(req).then((cachedResponse) => cachedResponse ||
+          (req.headers.get('accept')?.includes('text/html') ? caches.match('/index.html') : undefined));
+      })
   );
 });

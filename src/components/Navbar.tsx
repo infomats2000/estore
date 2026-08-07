@@ -33,9 +33,9 @@ interface NavbarProps {
   onOpenTrackOrder?: () => void;
   onOpenCompare?: () => void;
   compareCount?: number;
-  onOpenPOS?: () => void;
   onOpenPCBuilder?: () => void;
   onOpenCustomerPortal?: () => void;
+  onOpenPOS?: () => void;
   currentUser?: any;
   onLogoutAccount?: () => void;
 }
@@ -67,9 +67,9 @@ export default function Navbar({
   onOpenTrackOrder,
   onOpenCompare,
   compareCount = 0,
-  onOpenPOS,
   onOpenPCBuilder,
   onOpenCustomerPortal,
+  onOpenPOS,
   currentUser,
   onLogoutAccount,
 }: NavbarProps) {
@@ -124,6 +124,7 @@ export default function Navbar({
       <div className="bg-[#2f2f2f] border-b border-black/10 text-white transition-colors" id="storefront-main-header">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8 gap-4">
           
+          <div className="flex shrink-0 items-center gap-3">
           {/* Logo and Brand */}
           <button 
             onClick={() => {
@@ -145,10 +146,26 @@ export default function Navbar({
             </div>
             <div className="hidden sm:block">
               <span className="block font-sans text-lg font-black tracking-tight text-white uppercase leading-none">
-                {storeSettings?.storeName || 'INFOMAT'}
+                {isAdminMode ? (currentUser?.tenantName || storeSettings?.storeName || 'Tenant Store') : (storeSettings?.storeName || 'INFOMAT')}
               </span>
             </div>
           </button>
+
+          {isAdminMode && onOpenPOS && (
+            <button
+              type="button"
+              onClick={() => {
+                if (hasFeature('pos')) onOpenPOS();
+                else openFeatureGate('pos');
+              }}
+              className={`flex h-8 items-center whitespace-nowrap rounded-md border border-[#8f0000] bg-[#b30000] px-2.5 font-sans text-[10px] font-medium uppercase tracking-wide text-white shadow-sm transition-colors hover:bg-[#990000] ${hasFeature('pos') ? '' : 'opacity-70'}`}
+              title={hasFeature('pos') ? 'Launch retail in-store counter cash register (POS)' : 'POS feature locked—click to review plan access'}
+            >
+              {!hasFeature('pos') && <Lock className="mr-1 h-3 w-3 shrink-0" />}
+              Cash Register (POS)
+            </button>
+          )}
+          </div>
 
           {/* Middle Search Bar (hidden in admin mode) */}
           {!isAdminMode ? (
@@ -231,30 +248,8 @@ export default function Navbar({
             </div>
           ) : (
             <div className="hidden sm:flex items-center gap-3" id="admin-badge-container">
-              {onOpenPOS && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (hasFeature('pos')) {
-                      onOpenPOS();
-                    } else {
-                      openFeatureGate('pos');
-                    }
-                  }}
-                  className={`flex items-center gap-1.5 rounded-md border-2 px-3 py-2 font-mono text-[11px] font-black uppercase tracking-wider transition-all hover:scale-[1.03] ${
-                    hasFeature('pos')
-                      ? 'border-amber-200 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 shadow-lg shadow-amber-500/40 ring-2 ring-amber-300/50 hover:from-amber-400 hover:to-orange-400'
-                      : 'border-slate-700 bg-slate-800 text-slate-400 opacity-90'
-                  }`}
-                  title={hasFeature('pos') ? 'Launch retail in-store counter cash register (POS)' : 'POS Feature Locked - Click to Upgrade Tier'}
-                >
-                  {!hasFeature('pos') && <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
-                  <span>CASH REGISTER (POS)</span>
-                </button>
-              )}
-
-              <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tighter bg-gradient-to-r from-cyan-300 via-sky-200 to-blue-300 bg-clip-text text-transparent drop-shadow-[0_1px_6px_rgba(125,211,252,0.45)]">
-                infomat
+              <h2 className="text-xl sm:text-2xl font-black tracking-tighter bg-gradient-to-r from-cyan-300 via-sky-200 to-blue-300 bg-clip-text text-transparent drop-shadow-[0_1px_6px_rgba(125,211,252,0.45)] whitespace-nowrap">
+                Infomat ERP
               </h2>
             </div>
           )}
@@ -370,11 +365,11 @@ export default function Navbar({
                 href="/?mode=store&view=public"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-[10px] font-black uppercase tracking-wider shadow-xs transition-all cursor-pointer"
+                className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-sky-200 transition-colors hover:text-white"
                 title="Open the public storefront in a new tab"
                 id="view-public-storefront-btn"
               >
-                <Globe className="w-3.5 h-3.5" />
+                <Globe className="h-3.5 w-3.5" />
                 <span>View Storefront</span>
               </a>
             )}

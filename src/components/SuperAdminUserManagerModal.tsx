@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Users, UserPlus, Key, Trash2, Edit2, Shield, Store, CheckCircle2, AlertTriangle, Loader2, X, Search, Lock } from 'lucide-react';
+import { ContextualHelp } from './ContextualHelp';
 
 interface SuperAdminUserManagerModalProps {
   onClose: () => void;
@@ -272,6 +273,8 @@ export const SuperAdminUserManagerModal: React.FC<SuperAdminUserManagerModalProp
           </button>
         </div>
 
+        <ContextualHelp className="mx-6 mt-4" compact line1="Manage platform administrators, roles, passwords and the tenant stores each user may access." line2="Search for a user, then use the row actions; permission and password changes take effect on the next authenticated request." />
+
         {/* Modal Header Action Bar */}
         <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex flex-wrap items-center justify-between gap-4 shrink-0">
           <div className="relative flex-1 max-w-md">
@@ -453,6 +456,7 @@ export const SuperAdminUserManagerModal: React.FC<SuperAdminUserManagerModalProp
                 </button>
               </div>
 
+              <ContextualHelp className="mb-4" compact line1="Create a platform user with the identity and role entered below." line2="Use a valid email and temporary password, then assign only the access needed for their work." />
               <form onSubmit={handleCreateUser} className="space-y-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Full Name *</label>
@@ -561,6 +565,7 @@ export const SuperAdminUserManagerModal: React.FC<SuperAdminUserManagerModalProp
                 </button>
               </div>
 
+              <ContextualHelp className="mb-4" compact line1="Set a new sign-in password for this user when their current credential is unavailable or compromised." line2="Share the new password securely; it becomes active when this reset is submitted." />
               <form onSubmit={handleResetPassword} className="space-y-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase mb-1">New Password *</label>
@@ -607,6 +612,7 @@ export const SuperAdminUserManagerModal: React.FC<SuperAdminUserManagerModalProp
                 </button>
               </div>
 
+              <ContextualHelp className="mb-4" compact line1="Update this platform user's name, email or administrative role." line2="Review role changes carefully because they can increase or remove access to platform controls." />
               <form onSubmit={handleUpdateProfile} className="space-y-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Full Name *</label>
@@ -672,6 +678,7 @@ export const SuperAdminUserManagerModal: React.FC<SuperAdminUserManagerModalProp
                 </button>
               </div>
 
+              <ContextualHelp className="mb-4" compact line1="Choose which tenant store this user is permitted to access and administer." line2="Assign only the intended store; the updated scope applies to the user's authenticated access." />
               <form onSubmit={handleAssignStore} className="space-y-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Select Store Tenant *</label>

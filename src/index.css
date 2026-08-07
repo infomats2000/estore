@@ -196,3 +196,16 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* Subtle interactive feedback for tenant and platform administration only. */
+.admin-theme button:not(:disabled):hover,
+.super-admin-scope button:not(:disabled):hover {
+  outline: 1px solid rgba(148, 163, 184, 0.8);
+  outline-offset: 1px;
+}
+
+.admin-theme button:not(:disabled):focus-visible,
+.super-admin-scope button:not(:disabled):focus-visible {
+  outline: 2px solid rgba(96, 165, 250, 0.9);
+  outline-offset: 2px;
+}

@@ -60,6 +60,9 @@ model Tenant {
   inboundJobSteps    InboundJobStep[]
   goodsReceipts      GoodsReceipt[]
   inventoryMovements InventoryMovement[]
+  stateSlices        TenantStateSlice[]
+  stateRecords       TenantStateRecord[]
+  uploadedAssets     UploadedAsset[]
   posRegisterShifts  PosRegisterShift[]
   posCashMovements   PosCashMovement[]
   posPayments        PosPayment[]
@@ -74,6 +77,49 @@ model Tenant {
   @@index([slug])
   @@index([customDomain])
   @@map("tenants")
+}
+
+model TenantStateSlice {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  key       String
+  data      Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, key])
+  @@index([tenantId, updatedAt])
+  @@map("tenant_state_slices")
+}
+
+model TenantStateRecord {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  domain    String
+  recordId  String
+  data      Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, domain, recordId])
+  @@index([tenantId, domain, updatedAt])
+  @@map("tenant_state_records")
+}
+
+model UploadedAsset {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  path      String
+  sizeBytes Int
+  mimeType  String   @default("image/webp")
+  createdAt DateTime @default(now())
+
+  @@unique([tenantId, path])
+  @@index([tenantId, createdAt])
+  @@map("uploaded_assets")
 }
 
 model Plan {
@@ -117,17 +163,17 @@ model User {
 }
 
 model TenantUser {
-  id        String   @id @default(cuid())
-  tenantId  String
-  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role      String   @default("TENANT_STAFF") // TENANT_OWNER, TENANT_ADMIN, TENANT_STAFF
-  staffRole String   @default("Custom Staff")
-  isActive  Boolean  @default(true)
-  allowedFeaturesJson String @default("[]")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                  String   @id @default(cuid())
+  tenantId            String
+  tenant              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId              String
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role                String   @default("TENANT_STAFF") // TENANT_OWNER, TENANT_ADMIN, TENANT_STAFF
+  staffRole           String   @default("Custom Staff")
+  isActive            Boolean  @default(true)
+  allowedFeaturesJson String   @default("[]")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   @@unique([tenantId, userId])
   @@index([tenantId])
@@ -434,6 +480,7 @@ model Product {
   reviewsCount     Int            @default(0)
   sales            Int            @default(0)
   image            String         @default("")
+  imageVariants    String         @default("{}")
   additionalImages String         @default("[]")
   specs            String         @default("{}")
   tags             String         @default("[]")
@@ -447,6 +494,7 @@ model Product {
   orderItems       OrderItem[]
 
   @@index([tenantId])
+  @@index([tenantId, name])
   @@index([categoryId])
   @@index([name])
   @@map("products")
@@ -490,6 +538,7 @@ model Customer {
 
   @@unique([tenantId, email])
   @@index([tenantId])
+  @@index([tenantId, name])
   @@index([email])
   @@map("customers")
 }
@@ -540,6 +589,9 @@ model Order {
 
   @@unique([tenantId, orderNumber])
   @@index([tenantId])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, status, createdAt])
+  @@index([tenantId, paymentStatus, createdAt])
   @@index([customerId])
   @@index([status])
   @@index([createdAt])
@@ -636,29 +688,30 @@ model ActivityLog {
   createdAt DateTime @default(now())
 
   @@index([tenantId])
+  @@index([tenantId, createdAt])
   @@index([entity])
   @@index([createdAt])
   @@map("activity_logs")
 }
 
 model PosRegisterShift {
-  id                 String   @id @default(cuid())
-  tenantId           String
-  tenant             Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  registerId         String
-  openedByUserId     String
-  closedByUserId     String?
-  status             String   @default("OPEN")
-  openingFloat       Float    @default(0)
-  expectedCash       Float    @default(0)
-  countedCash        Float?
-  variance           Float?
-  varianceReason     String   @default("")
-  openedAt           DateTime @default(now())
-  closedAt           DateTime?
-  cashMovements      PosCashMovement[]
-  payments           PosPayment[]
-  returns            PosReturn[]
+  id             String            @id @default(cuid())
+  tenantId       String
+  tenant         Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  registerId     String
+  openedByUserId String
+  closedByUserId String?
+  status         String            @default("OPEN")
+  openingFloat   Float             @default(0)
+  expectedCash   Float             @default(0)
+  countedCash    Float?
+  variance       Float?
+  varianceReason String            @default("")
+  openedAt       DateTime          @default(now())
+  closedAt       DateTime?
+  cashMovements  PosCashMovement[]
+  payments       PosPayment[]
+  returns        PosReturn[]
 
   @@index([tenantId, registerId, status])
   @@index([tenantId, openedAt])
@@ -666,55 +719,56 @@ model PosRegisterShift {
 }
 
 model PosCashMovement {
-  id          String           @id @default(cuid())
-  tenantId    String
-  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  shiftId     String
-  shift       PosRegisterShift @relation(fields: [shiftId], references: [id], onDelete: Cascade)
-  type        String
-  amount      Float
-  reason      String
-  userId      String
-  createdAt   DateTime         @default(now())
+  id        String           @id @default(cuid())
+  tenantId  String
+  tenant    Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  shiftId   String
+  shift     PosRegisterShift @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  type      String
+  amount    Float
+  reason    String
+  userId    String
+  createdAt DateTime         @default(now())
 
   @@index([tenantId, shiftId, createdAt])
   @@map("pos_cash_movements")
 }
 
 model PosPayment {
-  id                String           @id @default(cuid())
-  tenantId          String
-  tenant            Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  shiftId           String?
-  shift             PosRegisterShift? @relation(fields: [shiftId], references: [id], onDelete: SetNull)
-  orderId           String
-  method            String
-  amount            Float
-  reference         String?
-  status            String
-  idempotencyKey    String
-  createdAt         DateTime         @default(now())
+  id             String            @id @default(cuid())
+  tenantId       String
+  tenant         Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  shiftId        String?
+  shift          PosRegisterShift? @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+  orderId        String
+  method         String
+  amount         Float
+  reference      String?
+  status         String
+  idempotencyKey String
+  createdAt      DateTime          @default(now())
 
   @@unique([tenantId, idempotencyKey, method])
   @@index([tenantId, orderId])
   @@index([tenantId, shiftId])
+  @@index([tenantId, createdAt])
   @@map("pos_payments")
 }
 
 model PosReturn {
-  id                String           @id @default(cuid())
+  id                String            @id @default(cuid())
   tenantId          String
-  tenant            Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant            Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   returnNumber      String
   orderId           String
   shiftId           String?
   shift             PosRegisterShift? @relation(fields: [shiftId], references: [id], onDelete: SetNull)
-  status            String           @default("COMPLETED")
+  status            String            @default("COMPLETED")
   refundMethod      String
   refundAmount      Float
   reason            String
   processedByUserId String
-  createdAt         DateTime         @default(now())
+  createdAt         DateTime          @default(now())
   items             PosReturnItem[]
 
   @@unique([tenantId, returnNumber])
@@ -724,19 +778,19 @@ model PosReturn {
 }
 
 model PosReturnItem {
-  id             String    @id @default(cuid())
-  tenantId       String
-  tenant         Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  returnId       String
-  posReturn      PosReturn @relation(fields: [returnId], references: [id], onDelete: Cascade)
-  orderItemId    String
-  productId      String
-  quantity       Int
-  serialNumber   String?
-  unitRefund     Float
-  disposition    String
-  restocked      Boolean   @default(false)
-  createdAt      DateTime  @default(now())
+  id           String    @id @default(cuid())
+  tenantId     String
+  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  returnId     String
+  posReturn    PosReturn @relation(fields: [returnId], references: [id], onDelete: Cascade)
+  orderItemId  String
+  productId    String
+  quantity     Int
+  serialNumber String?
+  unitRefund   Float
+  disposition  String
+  restocked    Boolean   @default(false)
+  createdAt    DateTime  @default(now())
 
   @@index([tenantId, returnId])
   @@index([tenantId, orderItemId])
@@ -745,27 +799,27 @@ model PosReturnItem {
 }
 
 model PosLayby {
-  id                 String             @id @default(cuid())
-  tenantId           String
-  tenant             Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  laybyNumber        String
-  customerId         String
-  customerName       String
-  shiftId            String?
-  status             String             @default("ACTIVE")
-  subtotal           Float
-  tax                Float
-  totalAmount        Float
-  paidAmount         Float              @default(0)
-  remainingBalance   Float
-  expiryDate         DateTime
-  notes              String             @default("")
-  createdByUserId    String
-  completedOrderId   String?
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
-  items              PosLaybyItem[]
-  payments           PosLaybyPayment[]
+  id               String            @id @default(cuid())
+  tenantId         String
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  laybyNumber      String
+  customerId       String
+  customerName     String
+  shiftId          String?
+  status           String            @default("ACTIVE")
+  subtotal         Float
+  tax              Float
+  totalAmount      Float
+  paidAmount       Float             @default(0)
+  remainingBalance Float
+  expiryDate       DateTime
+  notes            String            @default("")
+  createdByUserId  String
+  completedOrderId String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  items            PosLaybyItem[]
+  payments         PosLaybyPayment[]
 
   @@unique([tenantId, laybyNumber])
   @@index([tenantId, status, expiryDate])
@@ -774,17 +828,17 @@ model PosLayby {
 }
 
 model PosLaybyItem {
-  id             String   @id @default(cuid())
-  tenantId       String
-  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  laybyId        String
-  layby          PosLayby @relation(fields: [laybyId], references: [id], onDelete: Cascade)
-  productId      String
-  productName    String
-  quantity       Int
-  unitPrice      Float
-  serialNumbers  String   @default("[]")
-  createdAt      DateTime @default(now())
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  laybyId       String
+  layby         PosLayby @relation(fields: [laybyId], references: [id], onDelete: Cascade)
+  productId     String
+  productName   String
+  quantity      Int
+  unitPrice     Float
+  serialNumbers String   @default("[]")
+  createdAt     DateTime @default(now())
 
   @@index([tenantId, laybyId])
   @@index([tenantId, productId])
@@ -792,18 +846,18 @@ model PosLaybyItem {
 }
 
 model PosLaybyPayment {
-  id             String   @id @default(cuid())
-  tenantId       String
-  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  laybyId        String
-  layby          PosLayby @relation(fields: [laybyId], references: [id], onDelete: Cascade)
-  shiftId        String?
-  amount         Float
-  method         String
-  reference      String?
-  receiptNumber  String
+  id               String   @id @default(cuid())
+  tenantId         String
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  laybyId          String
+  layby            PosLayby @relation(fields: [laybyId], references: [id], onDelete: Cascade)
+  shiftId          String?
+  amount           Float
+  method           String
+  reference        String?
+  receiptNumber    String
   receivedByUserId String
-  createdAt      DateTime @default(now())
+  createdAt        DateTime @default(now())
 
   @@unique([tenantId, receiptNumber])
   @@index([tenantId, laybyId, createdAt])
@@ -811,38 +865,38 @@ model PosLaybyPayment {
 }
 
 model PosManagerApproval {
-  id               String   @id @default(cuid())
-  tenantId         String
-  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  action           String
-  entityId         String?
-  amount           Float?
-  reason           String
+  id                String    @id @default(cuid())
+  tenantId          String
+  tenant            Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  action            String
+  entityId          String?
+  amount            Float?
+  reason            String
   requestedByUserId String
-  approvedByUserId String
-  usedAt           DateTime?
-  expiresAt        DateTime
-  createdAt        DateTime @default(now())
+  approvedByUserId  String
+  usedAt            DateTime?
+  expiresAt         DateTime
+  createdAt         DateTime  @default(now())
 
   @@index([tenantId, action, expiresAt])
   @@map("pos_manager_approvals")
 }
 
 model PosPaymentAuthorization {
-  id               String   @id @default(cuid())
-  tenantId         String
-  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  shiftId          String
-  amount           Float
-  method           String
-  provider         String
-  status           String   @default("PENDING")
+  id                String   @id @default(cuid())
+  tenantId          String
+  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  shiftId           String
+  amount            Float
+  method            String
+  provider          String
+  status            String   @default("PENDING")
   providerReference String?
   requestedByUserId String
   confirmedByUserId String?
-  expiresAt        DateTime
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  expiresAt         DateTime
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   @@index([tenantId, shiftId, status])
   @@index([tenantId, providerReference])
@@ -870,6 +924,7 @@ model TenantInvoice {
   updatedAt       DateTime  @updatedAt
 
   @@index([tenantId])
+  @@index([tenantId, createdAt])
   @@index([status])
   @@index([invoiceNumber])
   @@map("tenant_invoices")
@@ -1021,5 +1076,6 @@ model InventoryMovement {
 
   @@index([tenantId, productId])
   @@index([tenantId, inboundJobId])
+  @@index([tenantId, createdAt])
   @@map("inventory_movements")
 }

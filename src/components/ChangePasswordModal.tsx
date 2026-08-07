@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { KeyRound, X, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
+import { ContextualHelp } from './ContextualHelp';
 
 interface ChangePasswordModalProps {
   onClose: () => void;
@@ -83,6 +84,8 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClos
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        <ContextualHelp className="mx-6 mt-4" compact line1="Replace the password used to sign in to this administrator account." line2="Enter the current password and a strong new password twice; other account settings are not changed." />
 
         {error && (
           <div className="mx-6 mt-4 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-2">

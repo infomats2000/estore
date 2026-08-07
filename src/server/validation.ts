@@ -12,6 +12,11 @@ export const productSchema = z.object({
   specs: z.record(z.string(), z.string()).optional(),
   tags: z.array(z.string()).optional(),
   image: z.string().optional(),
+  imageVariants: z.object({
+    thumbnail: z.string(),
+    catalog: z.string(),
+    detail: z.string()
+  }).optional(),
   additionalImages: z.array(z.string()).optional(),
   collection: z.string().optional(),
   colors: z.array(z.string()).optional(),

@@ -1,10 +1,10 @@
 export const normalizeProductForDb = (input: Record<string, any>): any => {
   const normalized: Record<string, any> = { ...input };
 
-  const jsonFields = ['specs', 'tags', 'additionalImages', 'colors', 'sizes', 'serialNumbers'] as const;
+  const jsonFields = ['specs', 'imageVariants', 'tags', 'additionalImages', 'colors', 'sizes', 'serialNumbers'] as const;
   for (const field of jsonFields) {
     if (normalized[field] === undefined || normalized[field] === null) {
-      normalized[field] = field === 'specs' ? '{}' : '[]';
+      normalized[field] = field === 'specs' || field === 'imageVariants' ? '{}' : '[]';
       continue;
     }
 
@@ -21,12 +21,12 @@ export const normalizeProductForDb = (input: Record<string, any>): any => {
 export const serializeProductForResponse = (product: Record<string, any>) => {
   const serialized = { ...product };
 
-  for (const field of ['specs', 'tags', 'additionalImages', 'colors', 'sizes', 'serialNumbers'] as const) {
+  for (const field of ['specs', 'imageVariants', 'tags', 'additionalImages', 'colors', 'sizes', 'serialNumbers'] as const) {
     if (typeof serialized[field] === 'string') {
       try {
         serialized[field] = JSON.parse(serialized[field]);
       } catch {
-        serialized[field] = field === 'specs' ? {} : [];
+        serialized[field] = field === 'specs' || field === 'imageVariants' ? {} : [];
       }
     }
   }

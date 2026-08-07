@@ -363,6 +363,11 @@ export interface Product {
   price: number;
   discountPrice?: number;
   image: string;
+  imageVariants?: {
+    thumbnail: string;
+    catalog: string;
+    detail: string;
+  };
   additionalImages: string[];
   rating: number;
   reviewsCount: number;

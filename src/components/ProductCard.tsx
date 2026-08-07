@@ -131,7 +131,9 @@ export default function ProductCard({
         id={`product-img-click-${product.id}`}
       >
         <img
-          src={product.image || null}
+          src={product.imageVariants?.catalog || product.image || undefined}
+          srcSet={product.imageVariants ? `${product.imageVariants.thumbnail} 320w, ${product.imageVariants.catalog} 800w, ${product.imageVariants.detail} 1600w` : undefined}
+          sizes={variant === 'list' ? '(min-width: 768px) 288px, 100vw' : '(min-width: 1280px) 25vw, (min-width: 768px) 33vw, 50vw'}
           alt={product.name}
           className="h-full w-full object-contain transition-transform duration-500 ease-out group-hover:scale-105"
           loading="lazy"
