@@ -11,6 +11,45 @@ import MasterDataManager from './masterdata/MasterDataManager';
 import { CustomDomainSettings } from './CustomDomainSettings';
 import { TenantBillingSettings } from './TenantBillingSettings';
 
+const DASHBOARD_MODULE_OPTIONS = [
+  { id: 'products', label: 'Products' },
+  { id: 'orders', label: 'Orders' },
+  { id: 'customers', label: 'Customers' },
+  { id: 'invoices', label: 'Invoicing' },
+  { id: 'inventory', label: 'Inventory' },
+  { id: 'purchase-orders', label: 'Purchase Orders' },
+  { id: 'suppliers', label: 'Suppliers' },
+  { id: 'warehouses', label: 'Warehouses' },
+  { id: 'shipping', label: 'Shipments' },
+  { id: 'finance', label: 'Finance & Accounting' },
+  { id: 'reports', label: 'ERP Reports' },
+  { id: 'bi', label: 'Business Intelligence' },
+  { id: 'payroll', label: 'Staff & Payroll' },
+  { id: 'master-data', label: 'Master Data Setup' },
+  { id: 'users', label: 'Staff Accounts' },
+  { id: 'repairs', label: 'Repairs' },
+  { id: 'returns', label: 'Returns' },
+  { id: 'analytics', label: 'Analytics' },
+  { id: 'stock-units', label: 'Stock Units' },
+  { id: 'ebay', label: 'Marketplace & Stores' },
+  { id: 'trade-accounts', label: 'Trade Accounts' },
+  { id: 'commercial-sales', label: 'Commercial Sales' },
+  { id: 'distribution', label: 'Distribution' },
+  { id: 'pricing-matrix', label: 'Pricing Matrix' },
+  { id: 'massive-inventory', label: 'Full Product Catalog' },
+  { id: 'procurement', label: 'Procurement' },
+  { id: 'wms', label: 'WMS' },
+  { id: 'logistics-dispatch', label: 'Logistics Dispatch' },
+  { id: 'coupons', label: 'Coupons' },
+  { id: 'segments', label: 'Customer Segments' },
+  { id: 'upsells', label: 'Upsells' },
+  { id: 'categories', label: 'Categories' },
+  { id: 'collections', label: 'Collections' },
+  { id: 'reviews', label: 'Reviews' },
+  { id: 'stores', label: 'Branch Locations' },
+  { id: 'refurb', label: 'Refurb Testing' },
+] as const;
+
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -118,6 +157,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         }
       };
     }
+  };
+
+  const hiddenDashboardTabs = Array.isArray(formData.hiddenDashboardTabs) ? formData.hiddenDashboardTabs : [];
+
+  const toggleDashboardModuleVisibility = (moduleId: string, visible: boolean) => {
+    const nextHidden = visible
+      ? hiddenDashboardTabs.filter((id) => id !== moduleId)
+      : Array.from(new Set([...hiddenDashboardTabs, moduleId]));
+    handleChange('hiddenDashboardTabs', nextHidden);
   };
 
   return (
@@ -791,6 +839,44 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <p className="text-slate-600 mt-0.5">
                     Export your store configuration to a JSON file or restore settings from a backup file anytime.
                   </p>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h5 className="font-bold text-sm text-slate-900">Dashboard Module Visibility</h5>
+                    <p className="text-xs text-slate-600 mt-1">
+                      Hide selected modules from the tenant admin dashboard navigation and shortcut cards.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleChange('hiddenDashboardTabs', [])}
+                    className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors"
+                  >
+                    Show All Modules
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {DASHBOARD_MODULE_OPTIONS.map((module) => {
+                    const isVisible = !hiddenDashboardTabs.includes(module.id);
+                    return (
+                      <label
+                        key={module.id}
+                        className="flex items-center justify-between gap-3 p-2.5 rounded-lg border border-slate-200 bg-slate-50/60 hover:bg-slate-100 cursor-pointer"
+                      >
+                        <span className="text-xs font-semibold text-slate-800">{module.label}</span>
+                        <input
+                          type="checkbox"
+                          checked={isVisible}
+                          onChange={(e) => toggleDashboardModuleVisibility(module.id, e.target.checked)}
+                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
+                        />
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
 

@@ -20,10 +20,9 @@ export const verifyPassword = async (password: string, hashedPassword: string) =
 
 const getJwtSecret = (): string => {
   const secret = process.env.JWT_SECRET;
-  if (!secret) {
+  if (!secret || secret.trim() === 'replace-with-a-long-random-string') {
     if (process.env.NODE_ENV === 'production' || process.env.VERCEL) {
-      console.warn('⚠️ [JWT WARNING] JWT_SECRET is not set in environment variables! Using secure default fallback.');
-      return 'prod-default-jwt-secret-infomats-2026';
+      throw new Error('JWT_SECRET is missing or placeholder in production environment.');
     }
     return 'dev-secret';
   }

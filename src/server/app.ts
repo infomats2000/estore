@@ -16,7 +16,8 @@ import { writeLog } from './logging';
 import { createPaymentAdapter, PaymentService } from './payments';
 import { buildRobotsTxt, buildSitemapXml, buildSeoMetadata } from './seo';
 
-dotenv.config();
+dotenv.config({ path: ['.env.local', '.env'] });
+dotenv.config({ path: '.env.development.local', override: true });
 
 const app = express();
 

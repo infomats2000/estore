@@ -4,7 +4,8 @@ import { getActiveTenantId } from './tenantContext';
 
 // This module is imported before app.ts has a chance to call dotenv.config().
 // Load it here so Prisma always receives the local development configuration.
-dotenv.config();
+dotenv.config({ path: ['.env.local', '.env'] });
+dotenv.config({ path: '.env.development.local', override: true });
 
 // Auto-resolve Vercel Environment Variables (POSTGRES_URL / PRISMA_DATABASE_URL -> DATABASE_URL)
 if (!process.env.DATABASE_URL) {

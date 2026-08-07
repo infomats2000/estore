@@ -11,6 +11,35 @@ export interface EnvValidationResult {
   };
 }
 
+const PLACEHOLDER_DB_HOSTS = new Set(['db.prisma.io', 'pooled.db.prisma.io', 'HOST']);
+
+function getDbHost(rawUrl: string): string {
+  try {
+    return new URL(rawUrl).hostname;
+  } catch {
+    return '';
+  }
+}
+
+function isPlaceholderDatabaseUrl(rawUrl: string): boolean {
+  if (!rawUrl) return true;
+
+  const host = getDbHost(rawUrl);
+  if (PLACEHOLDER_DB_HOSTS.has(host)) return true;
+
+  const lowered = rawUrl.toLowerCase();
+  return (
+    lowered.includes('user:password@host') ||
+    lowered.includes('replace-with') ||
+    lowered.includes('example.com/db_name')
+  );
+}
+
+function isPlaceholderJwtSecret(secret: string): boolean {
+  const trimmed = secret.trim();
+  return !trimmed || trimmed === 'replace-with-a-long-random-string';
+}
+
 /**
  * Reusable environment validator for production, Vercel, and local runtime environments.
  * Auto-resolves Vercel Postgres aliases (POSTGRES_URL, PRISMA_DATABASE_URL) to DATABASE_URL.
@@ -39,12 +68,16 @@ export function validateEnvironment(): EnvValidationResult {
   const isProduction = process.env.NODE_ENV === 'production' || !!process.env.VERCEL;
 
   // Validate DATABASE_URL
-  if (!process.env.DATABASE_URL) {
+  if (!process.env.DATABASE_URL || isPlaceholderDatabaseUrl(process.env.DATABASE_URL)) {
     missingVars.push('DATABASE_URL (or Vercel POSTGRES_URL / PRISMA_DATABASE_URL)');
+    const currentHost = process.env.DATABASE_URL ? getDbHost(process.env.DATABASE_URL) : '';
+    if (currentHost) {
+      warnings.push(`DATABASE_URL currently resolves to invalid/placeholder host: ${currentHost}`);
+    }
   }
 
   // Validate JWT_SECRET
-  if (!process.env.JWT_SECRET) {
+  if (!process.env.JWT_SECRET || isPlaceholderJwtSecret(process.env.JWT_SECRET)) {
     if (isProduction) {
       missingVars.push('JWT_SECRET');
     } else {

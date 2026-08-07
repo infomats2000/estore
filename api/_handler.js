@@ -24,28 +24,32 @@ var init_tenantContext = __esm({
 // src/server/prismaClient.ts
 import dotenv from "dotenv";
 import { PrismaClient } from "@prisma/client";
-var configuredDbUrl, isLocalDevelopment, configuredHost, dbUrl, prismaRaw, TENANT_SCOPED_MODELS, db;
+var configuredDbUrl, resolvedDbHost, prismaRaw, TENANT_SCOPED_MODELS, db;
 var init_prismaClient = __esm({
   "src/server/prismaClient.ts"() {
     init_tenantContext();
+    dotenv.config({ path: [".env.local", ".env"] });
+    dotenv.config({ path: ".env.development.local", override: true });
     if (!process.env.DATABASE_URL) {
-      process.env.DATABASE_URL = process.env.POSTGRES_URL || process.env.PRISMA_DATABASE_URL || process.env.POSTGRES_PRISMA_URL || process.env.POSTGRES_URL_NON_POOLING || "";
+      process.env.DATABASE_URL = process.env.POSTGRES_URL || process.env.PRISMA_DATABASE_URL || process.env.POSTGRES_PRISMA_URL || process.env.POSTGRES_URL_NON_POOLING;
     }
-    dotenv.config();
     configuredDbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.PRISMA_DATABASE_URL || process.env.POSTGRES_PRISMA_URL || process.env.POSTGRES_URL_NON_POOLING || "";
-    isLocalDevelopment = process.env.NODE_ENV !== "production" && !process.env.VERCEL;
-    configuredHost = (() => {
+    resolvedDbHost = (() => {
       try {
-        return new URL(configuredDbUrl).hostname;
+        return new URL(configuredDbUrl).host;
       } catch {
         return "";
       }
     })();
-    dbUrl = isLocalDevelopment && ["pooled.db.prisma.io", "db.prisma.io"].includes(configuredHost) ? "postgresql://postgres@localhost:5432/store_erp_local?schema=public" : configuredDbUrl;
+    if (resolvedDbHost) {
+      console.log(`[DB] Prisma connected via host: ${resolvedDbHost}`);
+    } else {
+      console.warn("[DB] DATABASE_URL is not configured or invalid.");
+    }
     prismaRaw = new PrismaClient({
       datasources: {
         db: {
-          url: dbUrl
+          url: configuredDbUrl
         }
       }
     });
@@ -145,10 +149,9 @@ var init_auth = __esm({
     verifyPassword = async (password, hashedPassword) => bcrypt.compare(password, hashedPassword);
     getJwtSecret = () => {
       const secret = process.env.JWT_SECRET;
-      if (!secret) {
+      if (!secret || secret.trim() === "replace-with-a-long-random-string") {
         if (process.env.NODE_ENV === "production" || process.env.VERCEL) {
-          console.warn("\u26A0\uFE0F [JWT WARNING] JWT_SECRET is not set in environment variables! Using secure default fallback.");
-          return "prod-default-jwt-secret-infomats-2026";
+          throw new Error("JWT_SECRET is missing or placeholder in production environment.");
         }
         return "dev-secret";
       }
@@ -183,6 +186,25 @@ var init_auth = __esm({
 });
 
 // src/server/envValidator.ts
+var PLACEHOLDER_DB_HOSTS = /* @__PURE__ */ new Set(["db.prisma.io", "pooled.db.prisma.io", "HOST"]);
+function getDbHost(rawUrl) {
+  try {
+    return new URL(rawUrl).hostname;
+  } catch {
+    return "";
+  }
+}
+function isPlaceholderDatabaseUrl(rawUrl) {
+  if (!rawUrl) return true;
+  const host = getDbHost(rawUrl);
+  if (PLACEHOLDER_DB_HOSTS.has(host)) return true;
+  const lowered = rawUrl.toLowerCase();
+  return lowered.includes("user:password@host") || lowered.includes("replace-with") || lowered.includes("example.com/db_name");
+}
+function isPlaceholderJwtSecret(secret) {
+  const trimmed = secret.trim();
+  return !trimmed || trimmed === "replace-with-a-long-random-string";
+}
 function validateEnvironment() {
   if (!process.env.DATABASE_URL) {
     const resolvedUrl = process.env.POSTGRES_URL || process.env.PRISMA_DATABASE_URL || process.env.POSTGRES_PRISMA_URL || process.env.POSTGRES_URL_NON_POOLING;
@@ -196,10 +218,14 @@ function validateEnvironment() {
   const missingVars = [];
   const warnings = [];
   const isProduction = process.env.NODE_ENV === "production" || !!process.env.VERCEL;
-  if (!process.env.DATABASE_URL) {
+  if (!process.env.DATABASE_URL || isPlaceholderDatabaseUrl(process.env.DATABASE_URL)) {
     missingVars.push("DATABASE_URL (or Vercel POSTGRES_URL / PRISMA_DATABASE_URL)");
+    const currentHost = process.env.DATABASE_URL ? getDbHost(process.env.DATABASE_URL) : "";
+    if (currentHost) {
+      warnings.push(`DATABASE_URL currently resolves to invalid/placeholder host: ${currentHost}`);
+    }
   }
-  if (!process.env.JWT_SECRET) {
+  if (!process.env.JWT_SECRET || isPlaceholderJwtSecret(process.env.JWT_SECRET)) {
     if (isProduction) {
       missingVars.push("JWT_SECRET");
     } else {
@@ -451,7 +477,8 @@ var DEFAULT_STORE_SETTINGS = {
   productRams: ["8GB DDR4", "16GB DDR4", "32GB DDR4", "64GB DDR4", "16GB Unified", "32GB Unified"],
   productStorages: ["256GB NVMe SSD", "512GB NVMe SSD", "1TB NVMe SSD", "2TB NVMe SSD"],
   productWarranties: ["3 Months", "6 Months", "12 Months Commercial", "24 Months Extended"],
-  productScreenSizes: ['13.3"', '14.0"', '15.6"', '16.0"', '27" 4K Monitor']
+  productScreenSizes: ['13.3"', '14.0"', '15.6"', '16.0"', '27" 4K Monitor'],
+  hiddenDashboardTabs: []
 };
 
 // src/data/products.ts
@@ -2195,65 +2222,6 @@ router3.put("/tenants/:id", async (req, res) => {
     res.status(500).json({ error: error.message || "Failed to update tenant" });
   }
 });
-router3.post("/tenants/:id/custom-plan", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const {
-      planName,
-      priceMonthly = 0,
-      priceYearly = 0,
-      maxProducts = 1e3,
-      maxOrdersPerMonth = 1e4,
-      maxStaff = 5,
-      features = [],
-      billingProvider = "stripe"
-    } = req.body;
-    const tenant = await prismaRaw.tenant.findUnique({ where: { id } });
-    if (!tenant) {
-      return res.status(404).json({ error: "Tenant store not found." });
-    }
-    const cleanName = planName || `${tenant.name} Custom Tier`;
-    const planCode = `CUSTOM_${tenant.slug.toUpperCase().replace(/[^A-Z0-9]/g, "")}_${Date.now().toString().slice(-4)}`;
-    const customPlan = await prismaRaw.plan.create({
-      data: {
-        name: cleanName,
-        code: planCode,
-        description: `Tailored custom subscription tier for ${tenant.name}`,
-        priceMonthly: parseFloat(priceMonthly),
-        priceYearly: parseFloat(priceYearly),
-        maxProducts: parseInt(maxProducts, 10),
-        maxOrdersPerMonth: parseInt(maxOrdersPerMonth, 10),
-        maxStaff: parseInt(maxStaff, 10),
-        customDomainAllowed: true,
-        featuresJson: JSON.stringify(features),
-        isPopular: false,
-        isActive: true
-      }
-    });
-    const nextPeriodEnd = /* @__PURE__ */ new Date();
-    nextPeriodEnd.setMonth(nextPeriodEnd.getMonth() + 1);
-    const updatedTenant = await prismaRaw.tenant.update({
-      where: { id },
-      data: {
-        planId: customPlan.id,
-        subscriptionStatus: "active",
-        currentPeriodEnd: nextPeriodEnd,
-        stripeCustomerId: billingProvider === "stripe" ? `cus_custom_${tenant.id.slice(-6)}` : tenant.stripeCustomerId,
-        stripeSubscriptionId: billingProvider === "stripe" ? `sub_custom_${Date.now()}` : tenant.stripeSubscriptionId
-      },
-      include: { plan: true }
-    });
-    res.json({
-      success: true,
-      message: `Custom tier plan '${customPlan.name}' created and assigned to '${tenant.name}' successfully!`,
-      plan: customPlan,
-      tenant: updatedTenant
-    });
-  } catch (error) {
-    console.error("Custom Plan Creation Error:", error);
-    res.status(500).json({ error: error.message || "Failed to assign custom plan" });
-  }
-});
 router3.post("/tenants/:id/charge", async (req, res) => {
   try {
     const { id } = req.params;
@@ -2902,9 +2870,10 @@ router4.post("/saas-login", async (req, res) => {
   try {
     const envCheck = validateEnvironment();
     if (!envCheck.isValid) {
+      const configurationLocation = process.env.VERCEL || process.env.NODE_ENV === "production" ? "Vercel Project Settings" : ".env.development.local, .env.local, or .env";
       return res.status(500).json({
         success: false,
-        error: `Server Configuration Error: Missing required environment variables (${envCheck.missingVars.join(", ")}). Please set these in Vercel Project Settings.`,
+        error: `Server Configuration Error: Missing required environment variables (${envCheck.missingVars.join(", ")}). Please set these in ${configurationLocation}.`,
         missingVars: envCheck.missingVars
       });
     }
@@ -3387,7 +3356,8 @@ var buildSitemapXml = (urls) => `<?xml version="1.0" encoding="UTF-8"?>
 </urlset>`;
 
 // src/server/app.ts
-dotenv2.config();
+dotenv2.config({ path: [".env.local", ".env"] });
+dotenv2.config({ path: ".env.development.local", override: true });
 var app = express2();
 var stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
 app.use(express2.json({ limit: "10mb" }));
@@ -3523,7 +3493,15 @@ var app_default = app;
 // api/_handler.ts
 async function handler(req, res) {
   try {
-    validateEnvironment();
+    const env = validateEnvironment();
+    if (!env.isValid) {
+      return res.status(500).json({
+        success: false,
+        error: "Environment validation failed. Check Vercel DATABASE_URL and JWT_SECRET values.",
+        missing: env.missingVars,
+        warnings: env.warnings
+      });
+    }
     return app_default(req, res);
   } catch (error) {
     console.error("[Vercel Serverless Invocation Error]:", error);

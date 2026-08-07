@@ -322,6 +322,8 @@ export default function DashboardView({
 
   const { hasFeature, openFeatureGate } = useTenantFeatures();
 
+  const hiddenTabSet = new Set((storeSettings?.hiddenDashboardTabs || []).filter(Boolean));
+
   // Maps admin tabs to the tenant plan feature that must be unlocked to access them
   const TAB_FEATURE_MAP: Partial<Record<TabId, string>> = {
     finance: 'finance_ledger',
@@ -350,10 +352,15 @@ export default function DashboardView({
     return !!requiredFeature && !hasFeature(requiredFeature);
   };
 
-  const isTabVisible = (id: string): boolean => !isTabLocked(id);
+  const isTabHidden = (id: string): boolean => id !== 'metrics' && hiddenTabSet.has(id);
+
+  const isTabVisible = (id: string): boolean => !isTabLocked(id) && !isTabHidden(id);
 
   // Single gatekeeper for tab navigation: blocks locked modules and opens the upgrade prompt instead
   const requestTab = (id: string) => {
+    if (isTabHidden(id)) {
+      return;
+    }
     const requiredFeature = TAB_FEATURE_MAP[id as TabId];
     if (requiredFeature && !hasFeature(requiredFeature)) {
       openFeatureGate(requiredFeature);
@@ -465,7 +472,7 @@ export default function DashboardView({
     if (activeTab !== 'metrics' && !isTabVisible(activeTab)) {
       setActiveTab('metrics');
     }
-  }, [activeTab, hasFeature]);
+  }, [activeTab, hasFeature, storeSettings?.hiddenDashboardTabs]);
 
   React.useEffect(() => {
     if (!invoiceBuilderOpen || activeTab !== 'invoices') return;

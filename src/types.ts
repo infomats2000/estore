@@ -715,6 +715,7 @@ export interface StoreSettings {
   productStorages?: string[];
   productWarranties?: string[];
   productScreenSizes?: string[];
+  hiddenDashboardTabs?: string[];
 }
 
 export const DEFAULT_STORE_SETTINGS: StoreSettings = {
@@ -773,7 +774,8 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   productRams: ['8GB DDR4', '16GB DDR4', '32GB DDR4', '64GB DDR4', '16GB Unified', '32GB Unified'],
   productStorages: ['256GB NVMe SSD', '512GB NVMe SSD', '1TB NVMe SSD', '2TB NVMe SSD'],
   productWarranties: ['3 Months', '6 Months', '12 Months Commercial', '24 Months Extended'],
-  productScreenSizes: ['13.3"', '14.0"', '15.6"', '16.0"', '27" 4K Monitor']
+  productScreenSizes: ['13.3"', '14.0"', '15.6"', '16.0"', '27" 4K Monitor'],
+  hiddenDashboardTabs: [],
 };
 
 // ============================================================

@@ -47,7 +47,7 @@ export const SaaSLandingPage: React.FC<SaaSLandingPageProps> = ({
                 StoreERP
               </span>
               <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 font-semibold border border-indigo-500/20">
-                SaaS Cloud
+                Hardware ERP
               </span>
             </div>
           </div>
@@ -82,18 +82,18 @@ export const SaaSLandingPage: React.FC<SaaSLandingPageProps> = ({
       <section className="relative pt-24 pb-20 px-6 max-w-7xl mx-auto text-center">
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900/90 border border-slate-800 mb-8 text-sm text-indigo-400 font-medium">
           <Sparkles className="w-4 h-4 text-indigo-400" />
-          <span>Multi-Tenant Retail & Point-of-Sale SaaS Platform</span>
+          <span>Computer Hardware Business ERP Platform</span>
         </div>
 
         <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-8 leading-tight max-w-5xl mx-auto">
-          Intelligent ERP Solution to Manage Computer Hardwaer Business <br />
+          Intelligent ERP Solution for Computer Hardware Businesses <br />
           <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400">
-            Multi-Tenant SaaS Powerhouse
+            Information Powerhouse
           </span>
         </h1>
 
         <p className="text-xl text-slate-400 max-w-3xl mx-auto mb-12 leading-relaxed">
-          Create, manage, and scale thousands of independent retail stores under your brand. Complete with custom top-level domain support, Stripe recurring subscriptions, automated inventory isolation, and POS engine.
+          Manage inventory, procurement, sales, POS, warranty tracking, service jobs, and finance for your computer hardware business from one unified ERP workspace.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 max-w-md mx-auto mb-16">
@@ -101,7 +101,7 @@ export const SaaSLandingPage: React.FC<SaaSLandingPageProps> = ({
             onClick={() => onOpenOnboarding('GROWTH')}
             className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-600 to-pink-600 text-white font-bold text-lg shadow-xl shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:scale-105 transition duration-200"
           >
-            Start Free 14-Day Trial
+            Start Your ERP Setup
           </button>
           <button
             onClick={onOpenStoreERP}
@@ -115,33 +115,33 @@ export const SaaSLandingPage: React.FC<SaaSLandingPageProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 text-left mt-16">
           <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-sm">
             <Globe className="w-8 h-8 text-indigo-400 mb-4" />
-            <h3 className="text-lg font-bold text-white mb-2">Custom Top-Level Domains</h3>
+            <h3 className="text-lg font-bold text-white mb-2">Multi-Branch Operations</h3>
             <p className="text-sm text-slate-400">
-              Each tenant gets full white-label support for custom domain names (e.g. <code className="text-indigo-300">yourbrand.com</code>) with instant SSL certificate routing.
+              Operate retail outlets, warehouse counters, and service desks with centralized control and branch-level visibility.
             </p>
           </div>
 
           <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-sm">
             <ShieldCheck className="w-8 h-8 text-purple-400 mb-4" />
-            <h3 className="text-lg font-bold text-white mb-2">Zero-Leak Multi-Tenancy</h3>
+            <h3 className="text-lg font-bold text-white mb-2">Stock Accuracy & Traceability</h3>
             <p className="text-sm text-slate-400">
-              Prisma Query Extension level enforcement automatically injects tenant filters into every single SQL query, guaranteeing complete data isolation.
+              Track serial numbers, batches, warranty status, and movement history so every hardware item is accounted for.
             </p>
           </div>
 
           <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-sm">
             <DollarSign className="w-8 h-8 text-emerald-400 mb-4" />
-            <h3 className="text-lg font-bold text-white mb-2">Stripe Subscription Billing</h3>
+            <h3 className="text-lg font-bold text-white mb-2">Sales, Margins & Finance</h3>
             <p className="text-sm text-slate-400">
-              Automated recurring billing, instant checkout, customer self-service portal, and feature quota enforcement out of the box.
+              Control quotations, invoices, receivables, payables, and profitability with built-in financial workflows.
             </p>
           </div>
 
           <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-sm">
             <Layers className="w-8 h-8 text-pink-400 mb-4" />
-            <h3 className="text-lg font-bold text-white mb-2">Super Admin Controls</h3>
+            <h3 className="text-lg font-bold text-white mb-2">Service & Repair Management</h3>
             <p className="text-sm text-slate-400">
-              Centralized platform metrics tracking total active stores, MRR, store suspensions, staff management, and system-wide settings.
+              Handle diagnostics, repair queues, spare parts usage, technician assignments, and turnaround tracking in one place.
             </p>
           </div>
         </div>
@@ -150,9 +150,9 @@ export const SaaSLandingPage: React.FC<SaaSLandingPageProps> = ({
       {/* Pricing Section */}
       <section className="py-24 px-6 max-w-7xl mx-auto">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold mb-4">Flexible SaaS Subscription Plans</h2>
+          <h2 className="text-4xl font-bold mb-4">Flexible Hardware ERP Plans</h2>
           <p className="text-slate-400 max-w-2xl mx-auto mb-8">
-            Choose the perfect plan for your retail store or franchise network. Upgrade or cancel anytime.
+            Choose the right ERP package for your computer hardware retail, wholesale, and repair operations.
           </p>
 
           {/* Billing Cycle Toggle */}
@@ -263,9 +263,9 @@ export const SaaSLandingPage: React.FC<SaaSLandingPageProps> = ({
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Store className="w-5 h-5 text-indigo-400" />
-            <span className="font-semibold text-slate-300">StoreERP SaaS Platform</span>
+            <span className="font-semibold text-slate-300">StoreERP Hardware Business ERP</span>
           </div>
-          <p>© 2026 StoreERP Inc. Powered by Multi-Tenant Architecture & Custom Top-Level Domain Routing.</p>
+          <p>© 2026 StoreERP Inc. Built for computer hardware inventory, sales, procurement, and service excellence.</p>
         </div>
       </footer>
     </div>

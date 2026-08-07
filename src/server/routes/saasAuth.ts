@@ -10,9 +10,12 @@ router.post('/saas-login', async (req, res) => {
   try {
     const envCheck = validateEnvironment();
     if (!envCheck.isValid) {
+      const configurationLocation = process.env.VERCEL || process.env.NODE_ENV === 'production'
+        ? 'Vercel Project Settings'
+        : '.env.development.local, .env.local, or .env';
       return res.status(500).json({
         success: false,
-        error: `Server Configuration Error: Missing required environment variables (${envCheck.missingVars.join(', ')}). Please set these in Vercel Project Settings.`,
+        error: `Server Configuration Error: Missing required environment variables (${envCheck.missingVars.join(', ')}). Please set these in ${configurationLocation}.`,
         missingVars: envCheck.missingVars,
       });
     }

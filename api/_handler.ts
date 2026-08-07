@@ -3,7 +3,15 @@ import app from '../src/server/app';
 
 export default async function handler(req: any, res: any) {
   try {
-    validateEnvironment();
+    const env = validateEnvironment();
+    if (!env.isValid) {
+      return res.status(500).json({
+        success: false,
+        error: 'Environment validation failed. Check Vercel DATABASE_URL and JWT_SECRET values.',
+        missing: env.missingVars,
+        warnings: env.warnings,
+      });
+    }
     return app(req, res);
   } catch (error: any) {
     console.error('[Vercel Serverless Invocation Error]:', error);
