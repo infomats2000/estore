@@ -110,6 +110,7 @@ export const DASHBOARD_TAB_FEATURE_MAP: Record<string, string> = {
   metrics: 'pos', products: 'pos', orders: 'pos', customers: 'pos', invoices: 'pos',
   inventory: 'pos', returns: 'pos', categories: 'pos', collections: 'pos',
   'purchase-orders': 'procurement', suppliers: 'procurement', procurement: 'procurement', shipping: 'procurement',
+  'inbound-jobs': 'procurement',
   warehouses: 'wms_inventory', wms: 'wms_inventory', 'stock-units': 'wms_inventory',
   'logistics-dispatch': 'wms_inventory', 'massive-inventory': 'wms_inventory',
   'trade-accounts': 'trade_accounts', 'commercial-sales': 'trade_accounts',

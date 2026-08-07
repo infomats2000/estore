@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lock, Mail, ArrowRight, Loader2, AlertCircle, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { Lock, Mail, ArrowRight, Loader2, AlertCircle, CheckCircle2, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 
 interface SaaSLoginPageProps {
   onLoginSuccess: (data: { user: any; tenant?: any; isSuperAdmin: boolean; token: string }) => void;
@@ -12,6 +12,7 @@ export const SaaSLoginPage: React.FC<SaaSLoginPageProps> = ({
 }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -46,7 +47,13 @@ export const SaaSLoginPage: React.FC<SaaSLoginPageProps> = ({
       }
 
       if (!res.ok) {
-        throw new Error(data.error || data.message || 'Invalid email or password.');
+        if (res.status === 401 && data.error?.includes('account not found')) {
+          throw new Error('Login failed: no account exists for this email address.');
+        }
+        if (res.status === 401 && data.error?.includes('Incorrect password')) {
+          throw new Error('Login failed: the password is incorrect.');
+        }
+        throw new Error(data.error || data.message || 'Login failed: check your email and password.');
       }
 
 
@@ -86,7 +93,7 @@ export const SaaSLoginPage: React.FC<SaaSLoginPageProps> = ({
           </div>
 
           <h1 className="text-2xl font-black text-white tracking-tight">
-            Sign In to StoreERP
+            Sign In to Infomat ERP
           </h1>
           <p className="text-xs text-slate-400 mt-1">
             Enter your account credentials to access your portal
@@ -133,13 +140,22 @@ export const SaaSLoginPage: React.FC<SaaSLoginPageProps> = ({
             <div className="relative">
               <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 required
                 placeholder="••••••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition text-sm"
+                className="w-full pl-10 pr-11 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition text-sm"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword((isVisible) => !isVisible)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-white transition"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                title={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
           </div>
 
@@ -166,9 +182,9 @@ export const SaaSLoginPage: React.FC<SaaSLoginPageProps> = ({
             onClick={onBackToLanding}
             className="hover:text-white transition flex items-center gap-1 font-medium"
           >
-            ← SaaS Landing Page
+            ← Go to Home
           </button>
-          <span className="font-mono">StoreERP © 2026</span>
+          <span className="font-mono">Infomat ERP © 2026</span>
         </div>
       </div>
     </div>

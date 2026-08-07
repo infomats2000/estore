@@ -703,12 +703,67 @@ export interface StoreSettings {
   showAnnouncementBar: boolean;
   themePrimaryColor: string;
   themeAccentColor: string;
+  storefrontBackgroundColor: string;
+  storefrontSurfaceColor: string;
+  storefrontTextColor: string;
+  storefrontMutedTextColor: string;
+  storefrontHeaderColor: string;
+  storefrontHeaderTextColor: string;
+  storefrontFooterColor: string;
+  storefrontFooterTextColor: string;
+  storefrontBorderColor: string;
+  storefrontButtonTextColor: string;
+  storefrontFontStyle: 'modern' | 'classic' | 'rounded';
+  storefrontCornerStyle: 'square' | 'soft' | 'rounded';
   freeShippingThreshold: number;
   whyShopHeadingTop: string;
   whyShopHeadingHighlight: string;
   whyShopHeadingBottom: string;
   whyShopBodyText: string;
   whyShopBulletPoints: string[];
+  showFlashSaleBanner: boolean;
+  flashSaleTitle: string;
+  flashSaleText: string;
+  flashSaleCouponCode: string;
+  showCategorySection: boolean;
+  categorySectionEyebrow: string;
+  categorySectionTitle: string;
+  categorySectionDescription: string;
+  catalogSectionEyebrow: string;
+  catalogSectionTitle: string;
+  catalogStyle: 'classic' | 'compact' | 'minimal' | 'list';
+  catalogFilterPosition: 'top' | 'left';
+  storefrontSectionOrder: Array<'hero' | 'flashSale' | 'categories' | 'catalog' | 'brands' | 'recentlyViewed' | 'whyShop' | 'newsletter'>;
+  showWhyShopSection: boolean;
+  showHeroBanner: boolean;
+  heroEyebrow: string;
+  heroTitle: string;
+  heroHighlight: string;
+  heroDescription: string;
+  heroImageUrl: string;
+  heroPrimaryButtonText: string;
+  heroPrimaryButtonUrl: string;
+  heroSecondaryButtonText: string;
+  heroSecondaryButtonUrl: string;
+  showNewsletterSection: boolean;
+  newsletterEyebrow: string;
+  newsletterTitle: string;
+  newsletterDescription: string;
+  newsletterButtonText: string;
+  showServiceHighlights: boolean;
+  shippingHighlightTitle: string;
+  shippingHighlightText: string;
+  supportHighlightTitle: string;
+  supportHighlightText: string;
+  showStorefrontFooter: boolean;
+  footerCategoriesHeading: string;
+  footerCustomerCareHeading: string;
+  footerWarrantyText: string;
+  footerReturnsText: string;
+  footerShippingText: string;
+  footerCopyrightText: string;
+  footerOwnershipText: string;
+  footerPaymentsText: string;
   productConditions?: string[];
   productCpus?: string[];
   productRams?: string[];
@@ -756,6 +811,18 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   showAnnouncementBar: true,
   themePrimaryColor: '#0f172a',
   themeAccentColor: '#3b82f6',
+  storefrontBackgroundColor: '#f8f8f8',
+  storefrontSurfaceColor: '#ffffff',
+  storefrontTextColor: '#1a1a1a',
+  storefrontMutedTextColor: '#64748b',
+  storefrontHeaderColor: '#2f2f2f',
+  storefrontHeaderTextColor: '#ffffff',
+  storefrontFooterColor: '#2f2f2f',
+  storefrontFooterTextColor: '#ffffff',
+  storefrontBorderColor: '#d4d4d4',
+  storefrontButtonTextColor: '#ffffff',
+  storefrontFontStyle: 'modern',
+  storefrontCornerStyle: 'soft',
   freeShippingThreshold: 0,
   whyShopHeadingTop: "Australia's Leader in",
   whyShopHeadingHighlight: 'Premium Refurbished',
@@ -769,6 +836,49 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
     'Certified Refurbished Grade A',
     'Genuine Windows Licenses'
   ],
+  showFlashSaleBanner: true,
+  flashSaleTitle: 'Flash Sale',
+  flashSaleText: 'Extra 10% Off Everything!',
+  flashSaleCouponCode: 'FLASH10',
+  showCategorySection: true,
+  categorySectionEyebrow: 'Quick Navigation',
+  categorySectionTitle: 'Shop by Category',
+  categorySectionDescription: 'Real-time dynamic category catalog mapped to store inventory',
+  catalogSectionEyebrow: 'Collection',
+  catalogSectionTitle: 'Products',
+  catalogStyle: 'classic',
+  catalogFilterPosition: 'top',
+  storefrontSectionOrder: ['hero', 'flashSale', 'categories', 'catalog', 'brands', 'recentlyViewed', 'whyShop', 'newsletter'],
+  showWhyShopSection: true,
+  showHeroBanner: true,
+  heroEyebrow: 'Business Technology, Ready to Perform',
+  heroTitle: 'Reliable Hardware for Every Workspace',
+  heroHighlight: 'Certified & Warranty Backed',
+  heroDescription: 'Shop professionally tested computers, components and accessories with local support.',
+  heroImageUrl: '/images/app_logo.jpg',
+  heroPrimaryButtonText: 'Shop All Products',
+  heroPrimaryButtonUrl: '#product-catalog-grid',
+  heroSecondaryButtonText: 'Contact Us',
+  heroSecondaryButtonUrl: '#store-footer',
+  showNewsletterSection: true,
+  newsletterEyebrow: 'Exclusive Insights & Priority Access',
+  newsletterTitle: 'Subscribe to INFOMAT News',
+  newsletterDescription: 'Get the latest tech news, hardware arrivals and exclusive deals delivered to your inbox.',
+  newsletterButtonText: 'Subscribe',
+  showServiceHighlights: true,
+  shippingHighlightTitle: 'Fast Shipping',
+  shippingHighlightText: 'Australia Wide Delivery',
+  supportHighlightTitle: 'Expert Support',
+  supportHighlightText: '100% Local Tech Team',
+  showStorefrontFooter: true,
+  footerCategoriesHeading: 'Hardware Categories',
+  footerCustomerCareHeading: 'Customer Care',
+  footerWarrantyText: '12 Month Express Warranty',
+  footerReturnsText: '30 Day Returns Policy',
+  footerShippingText: 'Free Express Shipping Over $100',
+  footerCopyrightText: '© 2026 INFOMAT. All rights reserved.',
+  footerOwnershipText: '100% Australian Owned',
+  footerPaymentsText: 'Payments: Visa / MC / Amex / PayPal',
   productConditions: ['Brand New', 'Like New', 'Refurbished - Grade A', 'Refurbished - Grade B', 'Refurbished - Grade C', 'Open Box', 'For Parts / Repair'],
   productCpus: ['Intel Core i5', 'Intel Core i7', 'Intel Core i9', 'Apple M1', 'Apple M2', 'Apple M3', 'AMD Ryzen 5', 'AMD Ryzen 7'],
   productRams: ['8GB DDR4', '16GB DDR4', '32GB DDR4', '64GB DDR4', '16GB Unified', '32GB Unified'],
@@ -1531,4 +1641,3 @@ export interface EmailReportPayload {
   format: 'pdf' | 'csv' | 'html';
   customNotes?: string;
 }
-

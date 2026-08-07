@@ -7,7 +7,7 @@ test('every dashboard module maps to a known plan feature', () => {
   const knownFeatures = new Set(ALL_FEATURES.map((feature) => feature.id));
   const expectedTabs = [
     'metrics', 'products', 'orders', 'customers', 'invoices', 'inventory',
-    'purchase-orders', 'suppliers', 'warehouses', 'bi', 'reports', 'payroll',
+    'purchase-orders', 'inbound-jobs', 'suppliers', 'warehouses', 'bi', 'reports', 'payroll',
     'shipping', 'finance', 'master-data', 'ebay', 'commercial-sales',
     'massive-inventory', 'wms', 'procurement', 'pricing-matrix',
     'logistics-dispatch', 'automation', 'users', 'repairs', 'returns',

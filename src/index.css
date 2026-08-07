@@ -12,7 +12,18 @@
   --storefront-font-sans: "Inter", "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --storefront-font-mono: "Inter", "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --storefront-bg: #f8f8f8;
+  --storefront-surface: #ffffff;
   --storefront-text: #1a1a1a;
+  --storefront-muted: #64748b;
+  --storefront-primary: #0f172a;
+  --storefront-accent: #3b82f6;
+  --storefront-header: #2f2f2f;
+  --storefront-header-text: #ffffff;
+  --storefront-footer: #2f2f2f;
+  --storefront-footer-text: #ffffff;
+  --storefront-border: #d4d4d4;
+  --storefront-button-text: #ffffff;
+  --storefront-radius: 8px;
 
   --admin-font-sans: "Inter", "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --admin-font-mono: "Inter", "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -35,6 +46,31 @@ body {
   background-color: var(--storefront-bg);
   color: var(--storefront-text);
 }
+
+/* Tenant storefront branding is deliberately scoped away from .admin-theme. */
+#store-app-root.storefront-theme #storefront-announcement-bar { background: var(--storefront-primary) !important; color: var(--storefront-header-text) !important; }
+#store-app-root.storefront-theme #storefront-main-header { background: var(--storefront-header) !important; color: var(--storefront-header-text) !important; }
+#store-app-root.storefront-theme #desktop-category-nav,
+#store-app-root.storefront-theme #storefront-hero,
+#store-app-root.storefront-theme #newsletter-footer-section { background: var(--storefront-surface) !important; color: var(--storefront-text) !important; border-color: var(--storefront-border) !important; }
+#store-app-root.storefront-theme #store-footer { background: var(--storefront-footer) !important; color: var(--storefront-footer-text) !important; }
+#store-app-root.storefront-theme .storefront-scope { color: var(--storefront-text); }
+#store-app-root.storefront-theme .storefront-scope .bg-white { background-color: var(--storefront-surface) !important; }
+#store-app-root.storefront-theme .storefront-scope .text-neutral-900,
+#store-app-root.storefront-theme .storefront-scope .text-slate-900 { color: var(--storefront-text) !important; }
+#store-app-root.storefront-theme .storefront-scope .text-neutral-500,
+#store-app-root.storefront-theme .storefront-scope .text-neutral-600,
+#store-app-root.storefront-theme .storefront-scope .text-slate-500,
+#store-app-root.storefront-theme .storefront-scope .text-slate-600 { color: var(--storefront-muted) !important; }
+#store-app-root.storefront-theme .storefront-scope .bg-blue-600,
+#store-app-root.storefront-theme .storefront-scope .bg-indigo-600 { background-color: var(--storefront-accent) !important; color: var(--storefront-button-text) !important; }
+#store-app-root.storefront-theme .storefront-scope .text-blue-600,
+#store-app-root.storefront-theme .storefront-scope .text-indigo-600 { color: var(--storefront-accent) !important; }
+#store-app-root.storefront-theme .storefront-scope [class*="border-neutral"],
+#store-app-root.storefront-theme .storefront-scope [class*="border-slate"] { border-color: var(--storefront-border); }
+#store-app-root.storefront-theme .storefront-scope .rounded-lg,
+#store-app-root.storefront-theme .storefront-scope .rounded-xl,
+#store-app-root.storefront-theme .storefront-scope .rounded-2xl { border-radius: var(--storefront-radius); }
 
 #store-app-root.admin-theme {
   --font-sans: var(--admin-font-sans);

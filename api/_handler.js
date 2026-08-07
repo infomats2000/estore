@@ -10,6 +10,9 @@ var __export = (target, all) => {
 
 // src/server/tenantContext.ts
 import { AsyncLocalStorage } from "async_hooks";
+function getTenantContext() {
+  return tenantLocalStorage.getStore();
+}
 function getActiveTenantId() {
   const store = tenantLocalStorage.getStore();
   return store?.tenantId || "default-tenant";
@@ -1264,6 +1267,167 @@ async function seedMasterData() {
   }
 }
 
+// src/server/middleware/authMiddleware.ts
+init_auth();
+init_prismaClient();
+init_tenantContext();
+async function authMiddleware(req, res, next) {
+  try {
+    const authHeader = req.headers.authorization;
+    const cookieToken = req.cookies?.token || req.cookies?.authToken;
+    let token = "";
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      token = authHeader.substring(7);
+    } else if (cookieToken) {
+      token = cookieToken;
+    }
+    if (!token) {
+      return res.status(401).json({ error: "Unauthorized", message: "Authentication token missing." });
+    }
+    const decoded = verifyAuthToken(token);
+    const userId = decoded.userId || decoded.sub;
+    let isSuperAdmin = !!decoded.isSuperAdmin;
+    let email = decoded.email;
+    if (userId) {
+      const dbUser = await prismaRaw.user.findUnique({
+        where: { id: userId },
+        select: { id: true, email: true, isSuperAdmin: true }
+      });
+      if (dbUser) {
+        if (dbUser.isSuperAdmin) isSuperAdmin = true;
+        if (!email) email = dbUser.email;
+      }
+    }
+    req.user = {
+      ...decoded,
+      userId: userId || decoded.userId,
+      email,
+      isSuperAdmin
+    };
+    res.locals.user = req.user;
+    const authenticatedTenantId = decoded.tenantId;
+    if (authenticatedTenantId) {
+      const tenant = await prismaRaw.tenant.findUnique({
+        where: { id: authenticatedTenantId },
+        select: { id: true, slug: true, customDomain: true, status: true }
+      });
+      if (!tenant) {
+        return res.status(403).json({ error: "Forbidden", message: "Token tenant no longer exists." });
+      }
+      if (!isSuperAdmin) {
+        const membership = await prismaRaw.tenantUser.findUnique({
+          where: { tenantId_userId: { tenantId: authenticatedTenantId, userId: userId || "" } },
+          select: { role: true }
+        });
+        if (!membership) {
+          return res.status(403).json({ error: "Forbidden", message: "User is no longer assigned to this tenant." });
+        }
+        req.user.role = membership.role;
+      }
+      if (tenant.status === "SUSPENDED" && !isSuperAdmin) {
+        return res.status(403).json({ error: "Tenant Account Suspended" });
+      }
+      const existingContext = getTenantContext();
+      return tenantLocalStorage.run(
+        {
+          ...existingContext,
+          tenantId: tenant.id,
+          tenantSlug: tenant.slug,
+          customDomain: tenant.customDomain || void 0,
+          userId,
+          userRole: req.user.role,
+          isSuperAdmin
+        },
+        () => next()
+      );
+    }
+    next();
+  } catch (error) {
+    return res.status(401).json({ error: "Unauthorized", message: "Invalid or expired session token." });
+  }
+}
+async function requireSuperAdmin(req, res, next) {
+  if (req.user && req.user.isSuperAdmin) {
+    return next();
+  }
+  const userId = req.user?.userId || req.user?.sub;
+  if (userId) {
+    const dbUser = await prismaRaw.user.findUnique({
+      where: { id: userId },
+      select: { isSuperAdmin: true }
+    });
+    if (dbUser && dbUser.isSuperAdmin) {
+      if (req.user) req.user.isSuperAdmin = true;
+      return next();
+    }
+  }
+  return res.status(403).json({ error: "Forbidden", message: "Super Admin access required for this operation." });
+}
+function requireTenantRole(allowedRoles) {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    if (req.user.isSuperAdmin) {
+      return next();
+    }
+    const currentRole = req.user.role || "TENANT_STAFF";
+    if (!allowedRoles.includes(currentRole)) {
+      return res.status(403).json({ error: "Forbidden", message: "Insufficient role permissions for this operation." });
+    }
+    next();
+  };
+}
+
+// src/server/middleware/featureEnforcer.ts
+init_prismaClient();
+init_tenantContext();
+var ENTITLED_STATUSES = /* @__PURE__ */ new Set(["active", "trialing"]);
+function parsePlanFeatures(featuresJson) {
+  try {
+    const parsed = JSON.parse(featuresJson || "[]");
+    return Array.isArray(parsed) ? parsed.filter((value) => typeof value === "string") : [];
+  } catch {
+    return [];
+  }
+}
+function requirePlanFeature(featureId) {
+  return async (_req, res, next) => {
+    try {
+      const tenant = await prismaRaw.tenant.findUnique({
+        where: { id: getActiveTenantId() },
+        select: {
+          subscriptionStatus: true,
+          currentPeriodEnd: true,
+          plan: { select: { name: true, featuresJson: true } }
+        }
+      });
+      const status = String(tenant?.subscriptionStatus || "").toLowerCase();
+      if (!tenant?.plan || !ENTITLED_STATUSES.has(status)) {
+        return res.status(402).json({
+          error: "Subscription Inactive",
+          message: "An active or trialing subscription is required for this module."
+        });
+      }
+      if (tenant.currentPeriodEnd && tenant.currentPeriodEnd.getTime() < Date.now() && status !== "trialing") {
+        return res.status(402).json({ error: "Subscription Expired", message: "The subscription billing period has ended." });
+      }
+      const features = parsePlanFeatures(tenant.plan.featuresJson);
+      if (featureId !== "pos" && !features.includes(featureId)) {
+        return res.status(403).json({
+          error: "Feature Not Included",
+          message: `${featureId} is not included in the ${tenant.plan.name} plan.`,
+          featureId
+        });
+      }
+      next();
+    } catch (error) {
+      console.error("Feature Enforcement Error:", error);
+      return res.status(503).json({ error: "Unable to verify plan entitlement." });
+    }
+  };
+}
+
 // src/server/legacyRoutes.ts
 var router = express.Router();
 router.use(cookieParser());
@@ -1573,7 +1737,7 @@ router.put("/api/settings", requireAuth, async (req, res) => {
     handleError(err, res);
   }
 });
-router.post("/api/reports/email", async (req, res) => {
+router.post("/api/reports/email", authMiddleware, requirePlanFeature("analytics_reports"), async (req, res) => {
   try {
     const { payload, reportData } = req.body || {};
     if (!payload?.recipientEmail || !reportData?.title) {
@@ -1589,6 +1753,7 @@ router.post("/api/reports/email", async (req, res) => {
     handleError(err, res);
   }
 });
+router.use("/api/ebay", authMiddleware, requirePlanFeature("api_access"));
 router.get("/api/ebay/oauth/authorize", (req, res) => {
   const marketplace = req.query.marketplace || "EBAY_AU";
   const clientId = "TechSeller-ERP-PRD-18928374-4819";
@@ -1686,6 +1851,7 @@ router.post("/api/ebay/orders/shipment", (req, res) => {
     handleError(err, res);
   }
 });
+router.use("/api/master-data", authMiddleware, requirePlanFeature("master_data"));
 var getMasterDataModel = (entity) => {
   switch (entity) {
     case "categories":
@@ -1972,70 +2138,109 @@ var onboarding_default = router2;
 // src/server/routes/superadmin.ts
 init_prismaClient();
 import { Router as Router2 } from "express";
-
-// src/server/middleware/authMiddleware.ts
 init_auth();
-init_prismaClient();
-async function authMiddleware(req, res, next) {
-  try {
-    const authHeader = req.headers.authorization;
-    const cookieToken = req.cookies?.token || req.cookies?.authToken;
-    let token = "";
-    if (authHeader && authHeader.startsWith("Bearer ")) {
-      token = authHeader.substring(7);
-    } else if (cookieToken) {
-      token = cookieToken;
-    }
-    if (!token) {
-      return res.status(401).json({ error: "Unauthorized", message: "Authentication token missing." });
-    }
-    const decoded = verifyAuthToken(token);
-    const userId = decoded.userId || decoded.sub;
-    let isSuperAdmin = !!decoded.isSuperAdmin;
-    let email = decoded.email;
-    if (userId) {
-      const dbUser = await prismaRaw.user.findUnique({
-        where: { id: userId },
-        select: { id: true, email: true, isSuperAdmin: true }
-      });
-      if (dbUser) {
-        if (dbUser.isSuperAdmin) isSuperAdmin = true;
-        if (!email) email = dbUser.email;
-      }
-    }
-    req.user = {
-      ...decoded,
-      userId: userId || decoded.userId,
-      email,
-      isSuperAdmin
-    };
-    res.locals.user = req.user;
-    next();
-  } catch (error) {
-    return res.status(401).json({ error: "Unauthorized", message: "Invalid or expired session token." });
-  }
-}
-async function requireSuperAdmin(req, res, next) {
-  if (req.user && req.user.isSuperAdmin) {
-    return next();
-  }
-  const userId = req.user?.userId || req.user?.sub;
-  if (userId) {
-    const dbUser = await prismaRaw.user.findUnique({
-      where: { id: userId },
-      select: { isSuperAdmin: true }
-    });
-    if (dbUser && dbUser.isSuperAdmin) {
-      if (req.user) req.user.isSuperAdmin = true;
-      return next();
-    }
-  }
-  return res.status(403).json({ error: "Forbidden", message: "Super Admin access required for this operation." });
-}
+
+// src/constants/features.ts
+var ALL_FEATURES = [
+  {
+    id: "pos",
+    name: "POS Cash Register",
+    category: "Sales & In-Store",
+    description: "In-store retail counter cash register with barcode scanner support",
+    iconName: "ShoppingCart"
+  },
+  {
+    id: "custom_domain",
+    name: "Custom Top-Level Domain (TLD)",
+    category: "Branding & Domain",
+    description: "Bind your own top-level domain name (e.g. www.mybrandstore.com)",
+    iconName: "Globe"
+  },
+  {
+    id: "marketing",
+    name: "Marketing & Growth Suite",
+    category: "Sales & Growth",
+    description: "Coupons, promo codes, customer segmentation, and upsell rules",
+    iconName: "Sparkles"
+  },
+  {
+    id: "trade_accounts",
+    name: "B2B Trade Accounts & Credit",
+    category: "B2B Wholesale",
+    description: "Trade customer credit limits, payment terms (Net 30/60), and PO invoices",
+    iconName: "Building2"
+  },
+  {
+    id: "procurement",
+    name: "Procurement & Purchase Orders",
+    category: "Inventory & Supply Chain",
+    description: "Supplier PO creation, Goods Received Notes (GRN), and vendor management",
+    iconName: "Truck"
+  },
+  {
+    id: "wms_inventory",
+    name: "Multi-Warehouse & WMS",
+    category: "Inventory & Supply Chain",
+    description: "Multi-warehouse stock transfers, bin locations, and stocktakes",
+    iconName: "Package"
+  },
+  {
+    id: "repair_jobs",
+    name: "Repair & Service Ticketing",
+    category: "Service & Maintenance",
+    description: "Hardware repair job tracking, RMA returns, and service ticketing",
+    iconName: "Wrench"
+  },
+  {
+    id: "pc_builder",
+    name: "Custom PC Builder Engine",
+    category: "E-Commerce Tools",
+    description: "Interactive component compatibility builder for hardware stores",
+    iconName: "Cpu"
+  },
+  {
+    id: "finance_ledger",
+    name: "Financial Ledger & Expenses",
+    category: "Finance & Accounting",
+    description: "Double-entry bookkeeping, expense tracking, and P&L reports",
+    iconName: "DollarSign"
+  },
+  {
+    id: "api_access",
+    name: "REST API & Webhooks Integration",
+    category: "Developer & Integrations",
+    description: "Programmatic API keys, webhook notifications, and custom ERP integration",
+    iconName: "Code"
+  },
+  { id: "analytics_reports", name: "Analytics, BI & ERP Reports", category: "Analytics & Executive", description: "Business intelligence dashboards, analytics, and ERP reports", iconName: "BarChart3" },
+  { id: "payroll_hr", name: "Staff & Payroll", category: "Finance & HR", description: "Staff rostering, payroll, commissions, and HR operations", iconName: "Coins" },
+  { id: "workflow_automation", name: "Workflow Automation", category: "Automation", description: "Visual workflow automation, alerts, and scheduled actions", iconName: "Zap" },
+  { id: "staff_rbac", name: "Staff Accounts & RBAC", category: "Administration", description: "Staff accounts, roles, and granular access controls", iconName: "ShieldCheck" },
+  { id: "multi_store", name: "Multi-Store Branch Management", category: "Omnichannel & Stores", description: "Branch locations, registers, and inter-store operations", iconName: "MapPin" },
+  { id: "master_data", name: "Master Data & Lookup Tables", category: "Catalog & Setup", description: "Store lookup tables, catalog metadata, and operational setup", iconName: "SlidersHorizontal" }
+];
+var DEFAULT_PLAN_FEATURES = {
+  FREE: ["pos"],
+  STARTER: ["pos", "marketing", "pc_builder"],
+  GROWTH: ["pos", "custom_domain", "marketing", "trade_accounts", "procurement", "wms_inventory", "pc_builder", "analytics_reports", "staff_rbac", "master_data"],
+  ENTERPRISE: ALL_FEATURES.map((feature) => feature.id)
+};
 
 // src/server/routes/superadmin.ts
-init_auth();
 var router3 = Router2();
+var validFeatureIds = new Set(ALL_FEATURES.map((feature) => feature.id));
+function normalizeFeaturesJson(value) {
+  let parsed = value;
+  if (typeof value === "string") {
+    try {
+      parsed = JSON.parse(value);
+    } catch {
+      parsed = [];
+    }
+  }
+  const features = Array.isArray(parsed) ? parsed.filter((id) => typeof id === "string" && validFeatureIds.has(id)) : [];
+  return JSON.stringify(Array.from(/* @__PURE__ */ new Set(["pos", ...features])));
+}
 router3.use(authMiddleware);
 router3.use(requireSuperAdmin);
 router3.get("/metrics", async (_req, res) => {
@@ -2557,6 +2762,7 @@ router3.post("/plans", async (req, res) => {
     if (existing) {
       return res.status(400).json({ error: `Plan code '${cleanCode}' already exists.` });
     }
+    const normalizedFeatures = normalizeFeaturesJson(featuresJson);
     const plan = await prismaRaw.plan.create({
       data: {
         name,
@@ -2567,8 +2773,8 @@ router3.post("/plans", async (req, res) => {
         maxProducts: parseInt(maxProducts || "100", 10),
         maxOrdersPerMonth: parseInt(maxOrdersPerMonth || "1000", 10),
         maxStaff: parseInt(maxStaff || "2", 10),
-        customDomainAllowed: !!customDomainAllowed,
-        featuresJson: typeof featuresJson === "string" ? featuresJson : JSON.stringify(featuresJson || []),
+        customDomainAllowed: JSON.parse(normalizedFeatures).includes("custom_domain"),
+        featuresJson: normalizedFeatures,
         isPopular: !!isPopular
       }
     });
@@ -2593,6 +2799,7 @@ router3.put("/plans/:id", async (req, res) => {
       isPopular,
       isActive
     } = req.body;
+    const normalizedFeatures = featuresJson !== void 0 ? normalizeFeaturesJson(featuresJson) : void 0;
     const updated = await prismaRaw.plan.update({
       where: { id },
       data: {
@@ -2603,8 +2810,8 @@ router3.put("/plans/:id", async (req, res) => {
         maxProducts: maxProducts !== void 0 ? parseInt(maxProducts, 10) : void 0,
         maxOrdersPerMonth: maxOrdersPerMonth !== void 0 ? parseInt(maxOrdersPerMonth, 10) : void 0,
         maxStaff: maxStaff !== void 0 ? parseInt(maxStaff, 10) : void 0,
-        customDomainAllowed: customDomainAllowed !== void 0 ? !!customDomainAllowed : void 0,
-        featuresJson: typeof featuresJson === "string" ? featuresJson : featuresJson ? JSON.stringify(featuresJson) : void 0,
+        customDomainAllowed: normalizedFeatures !== void 0 ? JSON.parse(normalizedFeatures).includes("custom_domain") : customDomainAllowed !== void 0 ? !!customDomainAllowed : void 0,
+        featuresJson: normalizedFeatures,
         isPopular: isPopular !== void 0 ? !!isPopular : void 0,
         isActive: isActive !== void 0 ? !!isActive : void 0
       }
@@ -2866,6 +3073,14 @@ init_prismaClient();
 init_auth();
 import { Router as Router3 } from "express";
 var router4 = Router3();
+var parseAllowedFeatures = (value) => {
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((feature) => typeof feature === "string") : [];
+  } catch {
+    return [];
+  }
+};
 router4.post("/saas-login", async (req, res) => {
   try {
     const envCheck = validateEnvironment();
@@ -2930,6 +3145,10 @@ router4.post("/saas-login", async (req, res) => {
     const tenantId = selectedTenantUser ? selectedTenantUser.tenantId : "default-tenant";
     const role = selectedTenantUser ? selectedTenantUser.role : "TENANT_OWNER";
     const tenant = selectedTenantUser ? selectedTenantUser.tenant : null;
+    if (selectedTenantUser && !selectedTenantUser.isActive) {
+      return res.status(403).json({ error: "This staff account has been deactivated. Contact your tenant administrator." });
+    }
+    const allowedFeatures = selectedTenantUser ? parseAllowedFeatures(selectedTenantUser.allowedFeaturesJson) : [];
     const token = createAuthToken({
       userId: user.id,
       email: user.email,
@@ -2952,7 +3171,8 @@ router4.post("/saas-login", async (req, res) => {
         name: user.name,
         email: user.email,
         isSuperAdmin: false,
-        role
+        role,
+        allowedFeatures
       },
       tenant: tenant ? {
         id: tenant.id,
@@ -3001,6 +3221,10 @@ router4.get("/me", async (req, res) => {
     if (!user) {
       return res.status(401).json({ authenticated: false });
     }
+    const membership = user.tenantUsers.find((tenantUser) => tenantUser.tenantId === decoded.tenantId);
+    if (membership && !membership.isActive) {
+      return res.status(403).json({ authenticated: false });
+    }
     res.json({
       authenticated: true,
       user: {
@@ -3009,7 +3233,8 @@ router4.get("/me", async (req, res) => {
         email: user.email,
         isSuperAdmin: user.isSuperAdmin,
         role: decoded.role,
-        tenantId: decoded.tenantId
+        tenantId: decoded.tenantId,
+        allowedFeatures: membership ? parseAllowedFeatures(membership.allowedFeaturesJson) : []
       },
       stores: user.tenantUsers.map((tu) => tu.tenant)
     });
@@ -3061,6 +3286,7 @@ init_prismaClient();
 init_tenantContext();
 import { Router as Router4 } from "express";
 var router5 = Router4();
+router5.use(authMiddleware);
 router5.get("/overview", async (req, res) => {
   try {
     const tenantId = getActiveTenantId();
@@ -3112,19 +3338,20 @@ router5.get("/overview", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-router5.post("/change-plan", authMiddleware, async (req, res) => {
+router5.post("/change-plan", requireTenantRole(["TENANT_OWNER", "TENANT_ADMIN"]), async (req, res) => {
   try {
     const tenantId = getActiveTenantId();
     const { planId } = req.body;
     const plan = await prismaRaw.plan.findUnique({ where: { id: planId } });
-    if (!plan) {
+    if (!plan || !plan.isActive) {
       return res.status(400).json({ error: "Selected plan tier does not exist." });
     }
     const updatedTenant = await prismaRaw.tenant.update({
       where: { id: tenantId },
       data: {
         planId: plan.id,
-        subscriptionStatus: "active"
+        subscriptionStatus: "active",
+        currentPeriodEnd: new Date((/* @__PURE__ */ new Date()).setMonth((/* @__PURE__ */ new Date()).getMonth() + 1))
       },
       include: { plan: true }
     });
@@ -3137,7 +3364,7 @@ router5.post("/change-plan", authMiddleware, async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-router5.post("/setup-recurring-payment", authMiddleware, async (req, res) => {
+router5.post("/setup-recurring-payment", requireTenantRole(["TENANT_OWNER", "TENANT_ADMIN"]), async (req, res) => {
   try {
     const tenantId = getActiveTenantId();
     const { paymentProvider = "stripe", paymentToken, billingCycle = "monthly" } = req.body;
@@ -3177,6 +3404,508 @@ router5.post("/setup-recurring-payment", authMiddleware, async (req, res) => {
   }
 });
 var tenantBilling_default = router5;
+
+// src/server/routes/inboundJobs.ts
+init_prismaClient();
+init_tenantContext();
+import { Router as Router5 } from "express";
+import { z as z3 } from "zod";
+
+// src/server/inboundWorkflow.ts
+var NEW_STOCK_STEPS = ["IDENTIFICATION", "PHYSICAL_INSPECTION", "COSTING", "QC_APPROVAL", "PUT_AWAY", "INVENTORY_RELEASE"];
+var USED_DEVICE_STEPS = ["IDENTIFICATION", "PHYSICAL_INSPECTION", "DATA_SANITIZATION", "DIAGNOSTICS", "REPAIR", "RETEST", "GRADING", "COSTING", "QC_APPROVAL", "PUT_AWAY", "INVENTORY_RELEASE"];
+function workflowForItemType(itemType) {
+  const keys = ["USED_DEVICE", "DATA_BEARING_DEVICE", "CUSTOMER_RETURN"].includes(itemType) ? USED_DEVICE_STEPS : NEW_STOCK_STEPS;
+  return keys.map((stepKey, sequence) => ({
+    stepKey,
+    sequence,
+    required: true,
+    status: sequence === 0 ? "READY" : "PENDING"
+  }));
+}
+function firstIncompleteStep(steps) {
+  return [...steps].sort((a, b) => a.sequence - b.sequence).find((step) => step.required && !["COMPLETED", "FAILED"].includes(step.status));
+}
+function canCompleteStep(steps, stepId) {
+  const ordered = [...steps].sort((a, b) => a.sequence - b.sequence);
+  const index = ordered.findIndex((step) => step.id === stepId);
+  if (index < 0) return false;
+  return ordered.slice(0, index).every((step) => !step.required || ["COMPLETED", "FAILED"].includes(step.status));
+}
+
+// src/server/routes/inboundJobs.ts
+var router6 = Router5();
+router6.use(authMiddleware, requirePlanFeature("procurement"));
+var itemSchema = z3.object({
+  purchaseOrderLineRef: z3.string().optional(),
+  productId: z3.string().optional(),
+  productName: z3.string().min(1),
+  itemType: z3.string().default("NEW_STOCK"),
+  manufacturerSerial: z3.string().trim().optional(),
+  serviceTag: z3.string().trim().optional(),
+  imei: z3.string().trim().optional(),
+  expectedQuantity: z3.number().int().positive().default(1),
+  deliveredQuantity: z3.number().int().nonnegative().default(1),
+  acceptedQuantity: z3.number().int().nonnegative().default(1),
+  rejectedQuantity: z3.number().int().nonnegative().default(0),
+  purchaseCost: z3.number().nonnegative().default(0)
+}).refine((item) => item.acceptedQuantity + item.rejectedQuantity <= item.deliveredQuantity, "Accepted and rejected quantities exceed delivered quantity");
+var createJobSchema = z3.object({
+  jobType: z3.string().default("SUPPLIER_RECEIPT"),
+  priority: z3.string().default("NORMAL"),
+  purchaseOrderRef: z3.string().optional(),
+  supplierName: z3.string().min(1),
+  warehouseId: z3.string().optional(),
+  supplierInvoiceNumber: z3.string().optional(),
+  deliveryDocketNumber: z3.string().optional(),
+  carrier: z3.string().optional(),
+  trackingNumber: z3.string().optional(),
+  notes: z3.string().optional(),
+  items: z3.array(itemSchema).min(1)
+});
+var includeJob = { items: { include: { steps: { orderBy: { sequence: "asc" } } } }, receipts: true };
+router6.get("/", async (req, res) => {
+  try {
+    const tenantId = getActiveTenantId();
+    const status = typeof req.query.status === "string" ? req.query.status : void 0;
+    const jobs = await prismaRaw.inboundJob.findMany({
+      where: { tenantId, ...status && status !== "ALL" ? { status } : {} },
+      include: includeJob,
+      orderBy: { createdAt: "desc" }
+    });
+    res.json({ jobs });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+router6.post("/", requireTenantRole(["TENANT_OWNER", "TENANT_ADMIN", "TENANT_STAFF"]), async (req, res) => {
+  try {
+    const parsed = createJobSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: "Invalid inbound job", details: parsed.error.flatten() });
+    const tenantId = getActiveTenantId();
+    const receivedByUserId = req.user?.userId || req.user?.sub;
+    const suffix = `${Date.now().toString().slice(-8)}${Math.floor(Math.random() * 90 + 10)}`;
+    const jobNumber = `INB-${suffix}`;
+    const grnNumber = `GRN-${suffix}`;
+    const job = await prismaRaw.$transaction(async (tx) => {
+      const created = await tx.inboundJob.create({
+        data: {
+          tenantId,
+          jobNumber,
+          jobType: parsed.data.jobType,
+          priority: parsed.data.priority,
+          purchaseOrderRef: parsed.data.purchaseOrderRef,
+          supplierName: parsed.data.supplierName,
+          warehouseId: parsed.data.warehouseId,
+          supplierInvoiceNumber: parsed.data.supplierInvoiceNumber,
+          deliveryDocketNumber: parsed.data.deliveryDocketNumber,
+          carrier: parsed.data.carrier,
+          trackingNumber: parsed.data.trackingNumber,
+          notes: parsed.data.notes || "",
+          receivedByUserId
+        }
+      });
+      for (let index = 0; index < parsed.data.items.length; index += 1) {
+        const item = parsed.data.items[index];
+        const assetNumber = item.manufacturerSerial ? `AST-${suffix}-${index + 1}` : void 0;
+        await tx.inboundJobItem.create({
+          data: {
+            tenantId,
+            inboundJobId: created.id,
+            ...item,
+            manufacturerSerial: item.manufacturerSerial || null,
+            serviceTag: item.serviceTag || null,
+            imei: item.imei || null,
+            internalAssetNumber: assetNumber,
+            landedCost: item.purchaseCost,
+            steps: { create: workflowForItemType(item.itemType).map((step) => ({ tenantId, ...step })) }
+          }
+        });
+      }
+      await tx.goodsReceipt.create({
+        data: {
+          tenantId,
+          inboundJobId: created.id,
+          grnNumber,
+          purchaseOrderRef: parsed.data.purchaseOrderRef,
+          supplierInvoiceNumber: parsed.data.supplierInvoiceNumber,
+          deliveryDocketNumber: parsed.data.deliveryDocketNumber,
+          receivedByUserId,
+          quantitiesJson: JSON.stringify(parsed.data.items.map((item) => ({ productId: item.productId, productName: item.productName, delivered: item.deliveredQuantity, accepted: item.acceptedQuantity, rejected: item.rejectedQuantity })))
+        }
+      });
+      return tx.inboundJob.findUniqueOrThrow({ where: { id: created.id }, include: includeJob });
+    });
+    res.status(201).json({ job });
+  } catch (error) {
+    const duplicate = error?.code === "P2002";
+    res.status(duplicate ? 409 : 500).json({ error: duplicate ? "Duplicate serial or asset number." : error.message });
+  }
+});
+router6.patch("/:jobId/items/:itemId/steps/:stepId", async (req, res) => {
+  try {
+    const tenantId = getActiveTenantId();
+    const input = z3.object({ result: z3.enum(["PASSED", "FAILED", "COMPLETED"]), notes: z3.string().optional(), data: z3.record(z3.string(), z3.unknown()).optional() }).parse(req.body);
+    const item = await prismaRaw.inboundJobItem.findFirst({
+      where: { id: req.params.itemId, inboundJobId: req.params.jobId, tenantId },
+      include: { steps: true }
+    });
+    if (!item) return res.status(404).json({ error: "Inbound item not found." });
+    const step = item.steps.find((candidate) => candidate.id === req.params.stepId);
+    if (!step) return res.status(404).json({ error: "Workflow step not found." });
+    if (!canCompleteStep(item.steps, step.id)) return res.status(409).json({ error: "Complete the preceding required steps first." });
+    if (step.stepKey === "QC_APPROVAL" && input.result !== "PASSED") return res.status(400).json({ error: "QC approval must pass before put-away." });
+    if (["PUT_AWAY", "INVENTORY_RELEASE"].includes(step.stepKey)) return res.status(400).json({ error: "Use the controlled put-away endpoint for this step." });
+    const updated = await prismaRaw.$transaction(async (tx) => {
+      await tx.inboundJobStep.update({ where: { id: step.id }, data: {
+        status: input.result === "FAILED" ? "FAILED" : "COMPLETED",
+        result: input.result,
+        notes: input.notes || "",
+        dataJson: JSON.stringify(input.data || {}),
+        completedByUserId: req.user?.userId || req.user?.sub,
+        completedAt: /* @__PURE__ */ new Date()
+      } });
+      const steps = await tx.inboundJobStep.findMany({ where: { inboundJobItemId: item.id }, orderBy: { sequence: "asc" } });
+      const next = firstIncompleteStep(steps);
+      return tx.inboundJobItem.update({ where: { id: item.id }, data: {
+        currentStep: next?.stepKey || step.stepKey,
+        status: input.result === "FAILED" ? "ON_HOLD" : `AWAITING_${next?.stepKey || "PUT_AWAY"}`,
+        holdReason: input.result === "FAILED" ? input.notes || `${step.stepKey} failed` : null
+      }, include: { steps: { orderBy: { sequence: "asc" } } } });
+    });
+    res.json({ item: updated });
+  } catch (error) {
+    res.status(error instanceof z3.ZodError ? 400 : 500).json({ error: error.message });
+  }
+});
+router6.post("/:jobId/items/:itemId/put-away", async (req, res) => {
+  try {
+    const tenantId = getActiveTenantId();
+    const input = z3.object({ warehouseId: z3.string().min(1), bin: z3.string().min(1) }).parse(req.body);
+    const actor = req.user?.userId || req.user?.sub;
+    const result = await prismaRaw.$transaction(async (tx) => {
+      const item = await tx.inboundJobItem.findFirst({ where: { id: req.params.itemId, inboundJobId: req.params.jobId, tenantId }, include: { steps: true, inboundJob: true } });
+      if (!item) throw new Error("Inbound item not found.");
+      if (item.sellable) throw new Error("Item has already been released to inventory.");
+      const qc = item.steps.find((step) => step.stepKey === "QC_APPROVAL");
+      if (!qc || qc.status !== "COMPLETED" || qc.result !== "PASSED") throw new Error("QC approval is required before put-away.");
+      const unfinished = item.steps.filter((step) => step.required && step.sequence < qc.sequence && step.status !== "COMPLETED");
+      if (unfinished.length) throw new Error("Required processing steps are incomplete.");
+      if (item.productId && item.acceptedQuantity > 0) {
+        const product = await tx.product.findFirst({ where: { id: item.productId, tenantId } });
+        if (!product) throw new Error("Linked inventory product no longer exists.");
+        await tx.product.update({ where: { id: product.id }, data: { stock: { increment: item.acceptedQuantity }, costPrice: item.landedCost || item.purchaseCost } });
+      }
+      await tx.inboundJobStep.updateMany({ where: { inboundJobItemId: item.id, stepKey: { in: ["PUT_AWAY", "INVENTORY_RELEASE"] } }, data: { status: "COMPLETED", result: "PASSED", completedByUserId: actor, completedAt: /* @__PURE__ */ new Date() } });
+      await tx.inventoryMovement.create({ data: {
+        tenantId,
+        inboundJobId: item.inboundJobId,
+        inboundJobItemId: item.id,
+        productId: item.productId,
+        movementType: "INBOUND_RELEASE",
+        quantity: item.acceptedQuantity,
+        fromStockType: "INSPECTION",
+        toStockType: "SELLABLE",
+        fromLocation: item.currentLocation,
+        toLocation: `${input.warehouseId}/${input.bin}`,
+        reference: item.inboundJob.jobNumber,
+        performedByUserId: actor
+      } });
+      const updatedItem = await tx.inboundJobItem.update({ where: { id: item.id }, data: {
+        sellable: true,
+        status: "COMPLETED",
+        currentStep: "COMPLETED",
+        finalDisposition: "SELLABLE_INVENTORY",
+        destinationWarehouseId: input.warehouseId,
+        destinationBin: input.bin,
+        currentLocation: `${input.warehouseId}/${input.bin}`,
+        completedAt: /* @__PURE__ */ new Date()
+      }, include: { steps: { orderBy: { sequence: "asc" } } } });
+      const remaining = await tx.inboundJobItem.count({ where: { inboundJobId: item.inboundJobId, status: { not: "COMPLETED" } } });
+      await tx.inboundJob.update({ where: { id: item.inboundJobId }, data: { status: remaining === 0 ? "COMPLETED" : "IN_PROGRESS", completedAt: remaining === 0 ? /* @__PURE__ */ new Date() : null } });
+      return updatedItem;
+    });
+    res.json({ item: result });
+  } catch (error) {
+    res.status(error instanceof z3.ZodError ? 400 : 409).json({ error: error.message });
+  }
+});
+var inboundJobs_default = router6;
+
+// src/server/routes/pos.ts
+init_prismaClient();
+init_tenantContext();
+import { Router as Router6 } from "express";
+import { Prisma } from "@prisma/client";
+
+// src/server/posCheckout.ts
+import { z as z4 } from "zod";
+var posTenderSchema = z4.object({
+  method: z4.enum(["CASH", "EFTPOS", "CARD", "TAP", "WALLET", "STORE_CREDIT", "TRADE_CREDIT"]),
+  amount: z4.number().positive(),
+  reference: z4.string().trim().max(120).optional(),
+  status: z4.enum(["APPROVED", "CAPTURED"]).default("CAPTURED")
+});
+var posCheckoutSchema = z4.object({
+  idempotencyKey: z4.string().trim().min(8).max(120),
+  registerId: z4.string().trim().min(1).max(60).default("REGISTER-01"),
+  customerId: z4.string().trim().optional(),
+  taxInclusive: z4.boolean().default(true),
+  discount: z4.number().nonnegative().default(0),
+  shipping: z4.number().nonnegative().default(0),
+  notes: z4.string().max(1e3).default(""),
+  items: z4.array(z4.object({
+    productId: z4.string().trim().min(1),
+    quantity: z4.number().int().positive(),
+    serialNumbers: z4.array(z4.string().trim().min(1)).default([])
+  })).min(1),
+  tenders: z4.array(posTenderSchema).min(1)
+});
+function money(value) {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+function inclusiveTax(totalBeforeTax, ratePercent) {
+  if (ratePercent <= 0) return 0;
+  return money(totalBeforeTax - totalBeforeTax / (1 + ratePercent / 100));
+}
+function calculatePosTotals(lines, discount, shipping, taxRatePercent, taxInclusive) {
+  const rawSubtotal = money(lines.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0));
+  const appliedDiscount = money(Math.min(rawSubtotal, Math.max(0, discount)));
+  const taxableAmount = money(rawSubtotal - appliedDiscount);
+  const tax = taxInclusive ? inclusiveTax(taxableAmount, taxRatePercent) : money(taxableAmount * (taxRatePercent / 100));
+  const total = money(taxableAmount + shipping + (taxInclusive ? 0 : tax));
+  return { rawSubtotal, subtotal: taxableAmount, discount: appliedDiscount, shipping: money(shipping), tax, total };
+}
+function assertTenderCoverage(tenders, total) {
+  const tendered = money(tenders.reduce((sum, tender) => sum + tender.amount, 0));
+  if (tendered < total) throw new Error(`Insufficient tender: ${tendered.toFixed(2)} supplied for ${total.toFixed(2)} due`);
+  return money(tendered - total);
+}
+function parseSerialInventory(value) {
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch {
+    return [];
+  }
+}
+
+// src/server/routes/pos.ts
+var router7 = Router6();
+router7.use(authMiddleware, requirePlanFeature("pos"));
+router7.post("/checkout", requireTenantRole(["TENANT_OWNER", "TENANT_ADMIN", "TENANT_STAFF"]), async (req, res) => {
+  const parsed = posCheckoutSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "Invalid POS checkout", details: parsed.error.flatten() });
+  const tenantId = getActiveTenantId();
+  const cashierId = req.user?.userId || req.user?.sub || "unknown";
+  const input = parsed.data;
+  try {
+    const result = await prismaRaw.$transaction(async (tx) => {
+      const duplicate = await tx.activityLog.findFirst({
+        where: { tenantId, action: "POS_SALE_COMPLETED", details: { contains: `"idempotencyKey":"${input.idempotencyKey}"` } }
+      });
+      if (duplicate) {
+        const details = JSON.parse(duplicate.details);
+        const existing = await tx.order.findFirst({ where: { tenantId, id: details.orderId }, include: { items: true } });
+        if (existing) return { order: existing, changeDue: details.changeDue || 0, duplicate: true };
+      }
+      const requested = /* @__PURE__ */ new Map();
+      for (const line of input.items) {
+        const current = requested.get(line.productId) || { quantity: 0, serialNumbers: [] };
+        current.quantity += line.quantity;
+        current.serialNumbers.push(...line.serialNumbers);
+        requested.set(line.productId, current);
+      }
+      const products = await tx.product.findMany({ where: { tenantId, id: { in: [...requested.keys()] } } });
+      if (products.length !== requested.size) throw new Error("One or more products do not exist for this tenant");
+      const orderLines = [];
+      for (const product of products) {
+        const line = requested.get(product.id);
+        if (product.stock < line.quantity) throw new Error(`Insufficient stock for ${product.name}: ${product.stock} available`);
+        if (new Set(line.serialNumbers).size !== line.serialNumbers.length) throw new Error(`Duplicate serial number supplied for ${product.name}`);
+        if (line.serialNumbers.length > line.quantity) throw new Error(`Too many serial numbers supplied for ${product.name}`);
+        const availableSerials = parseSerialInventory(product.serialNumbers);
+        for (const serial of line.serialNumbers) {
+          if (!availableSerials.includes(serial)) throw new Error(`Serial ${serial} is not available for ${product.name}`);
+        }
+        orderLines.push({ product, quantity: line.quantity, serialNumbers: line.serialNumbers, unitPrice: product.discountPrice ?? product.price });
+      }
+      const settings = await tx.storeSettings.findUnique({ where: { tenantId } });
+      const totals = calculatePosTotals(orderLines, input.discount, input.shipping, settings?.taxRatePercent ?? 10, input.taxInclusive);
+      const changeDue = assertTenderCoverage(input.tenders, totals.total);
+      const receiptSuffix = `${Date.now().toString().slice(-10)}${Math.floor(Math.random() * 90 + 10)}`;
+      const orderNumber = `POS-${input.registerId}-${receiptSuffix}`;
+      for (const line of orderLines) {
+        const updated = await tx.product.updateMany({
+          where: { id: line.product.id, tenantId, stock: { gte: line.quantity } },
+          data: { stock: { decrement: line.quantity }, sales: { increment: line.quantity } }
+        });
+        if (updated.count !== 1) throw new Error(`Stock changed during checkout for ${line.product.name}; retry the sale`);
+        if (line.serialNumbers.length) {
+          const remaining = parseSerialInventory(line.product.serialNumbers).filter((serial) => !line.serialNumbers.includes(serial));
+          await tx.product.update({ where: { id: line.product.id }, data: { serialNumbers: JSON.stringify(remaining) } });
+        }
+      }
+      const order = await tx.order.create({
+        data: {
+          tenantId,
+          customerId: input.customerId,
+          orderNumber,
+          status: "Delivered",
+          subtotal: totals.subtotal,
+          tax: totals.tax,
+          shipping: totals.shipping,
+          discount: totals.discount,
+          total: totals.total,
+          paymentMethod: input.tenders.map((t) => t.method).join(" + "),
+          paymentStatus: "Paid",
+          notes: [input.notes, `Register: ${input.registerId}`, `Cashier: ${cashierId}`].filter(Boolean).join("\n"),
+          items: {
+            create: orderLines.flatMap((line) => {
+              const serialized = line.serialNumbers.map((serialNumber) => ({
+                tenantId,
+                productId: line.product.id,
+                name: line.product.name,
+                price: line.unitPrice,
+                quantity: 1,
+                serialNumber,
+                image: line.product.image
+              }));
+              const unallocated = line.quantity - line.serialNumbers.length;
+              return unallocated > 0 ? [...serialized, {
+                tenantId,
+                productId: line.product.id,
+                name: line.product.name,
+                price: line.unitPrice,
+                quantity: unallocated,
+                image: line.product.image
+              }] : serialized;
+            })
+          }
+        },
+        include: { items: true }
+      });
+      await tx.activityLog.createMany({ data: [
+        {
+          tenantId,
+          action: "POS_SALE_COMPLETED",
+          entity: "Order",
+          details: JSON.stringify({ idempotencyKey: input.idempotencyKey, orderId: order.id, orderNumber, registerId: input.registerId, cashierId, totals, changeDue })
+        },
+        ...input.tenders.map((tender) => ({
+          tenantId,
+          action: "POS_PAYMENT_CAPTURED",
+          entity: "Order",
+          details: JSON.stringify({ orderId: order.id, method: tender.method, amount: tender.amount, reference: tender.reference, status: tender.status })
+        }))
+      ] });
+      return { order, changeDue, duplicate: false };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 5e3, timeout: 1e4 });
+    return res.status(result.duplicate ? 200 : 201).json(result);
+  } catch (error) {
+    const message = error?.message || "POS checkout failed";
+    const conflict = /stock|serial|retry/i.test(message);
+    return res.status(conflict ? 409 : 400).json({ error: message });
+  }
+});
+var pos_default = router7;
+
+// src/server/routes/tenantStaff.ts
+init_prismaClient();
+init_tenantContext();
+import { Router as Router7 } from "express";
+init_auth();
+var router8 = Router7();
+router8.use(authMiddleware, requireTenantRole(["TENANT_OWNER", "TENANT_ADMIN"]));
+var staffRoles = /* @__PURE__ */ new Set(["Admin", "Sales Executive", "Warehouse Manager", "Procurement Officer", "Accountant", "Custom Staff"]);
+function parseFeatures(value) {
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((feature) => typeof feature === "string") : [];
+  } catch {
+    return [];
+  }
+}
+function serializeStaff(member) {
+  return {
+    id: member.user.id,
+    membershipId: member.id,
+    name: member.user.name,
+    email: member.user.email,
+    role: member.staffRole,
+    active: member.isActive,
+    allowedFeatures: parseFeatures(member.allowedFeaturesJson),
+    createdAt: member.createdAt.toISOString().split("T")[0],
+    lastLogin: "Not recorded"
+  };
+}
+router8.get("/", async (_req, res) => {
+  try {
+    const tenantId = getActiveTenantId();
+    const staff = await prismaRaw.tenantUser.findMany({
+      where: { tenantId },
+      include: { user: { select: { id: true, name: true, email: true } } },
+      orderBy: { createdAt: "asc" }
+    });
+    res.json({ staff: staff.map(serializeStaff) });
+  } catch (error) {
+    res.status(500).json({ error: error.message || "Unable to load tenant staff." });
+  }
+});
+router8.post("/", async (_req, res) => {
+  try {
+    const tenantId = getActiveTenantId();
+    const { name, email, password, role = "Custom Staff", allowedFeatures = [] } = _req.body;
+    if (!name?.trim() || !email?.trim() || typeof password !== "string") {
+      return res.status(400).json({ error: "Name, email, and password are required." });
+    }
+    if (password.length < 8) return res.status(400).json({ error: "Password must contain at least 8 characters." });
+    if (!staffRoles.has(role)) return res.status(400).json({ error: "Invalid staff role." });
+    if (!Array.isArray(allowedFeatures) || allowedFeatures.some((feature) => typeof feature !== "string")) {
+      return res.status(400).json({ error: "Feature permissions must be a list of feature identifiers." });
+    }
+    const cleanEmail = email.trim().toLowerCase();
+    const existing = await prismaRaw.user.findUnique({ where: { email: cleanEmail } });
+    if (existing) return res.status(409).json({ error: "An account already exists for this email address." });
+    const staff = await prismaRaw.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: { name: name.trim(), email: cleanEmail, password: await hashPassword(password), isSuperAdmin: false }
+      });
+      return tx.tenantUser.create({
+        data: { tenantId, userId: user.id, role: "TENANT_STAFF", staffRole: role, allowedFeaturesJson: JSON.stringify([...new Set(allowedFeatures)]) },
+        include: { user: { select: { id: true, name: true, email: true } } }
+      });
+    });
+    res.status(201).json({ staff: serializeStaff(staff) });
+  } catch (error) {
+    res.status(500).json({ error: error.message || "Unable to create staff account." });
+  }
+});
+router8.patch("/:userId", async (req, res) => {
+  try {
+    const tenantId = getActiveTenantId();
+    const { active, role, allowedFeatures } = req.body;
+    if (role !== void 0 && !staffRoles.has(role)) return res.status(400).json({ error: "Invalid staff role." });
+    if (allowedFeatures !== void 0 && (!Array.isArray(allowedFeatures) || allowedFeatures.some((feature) => typeof feature !== "string"))) {
+      return res.status(400).json({ error: "Feature permissions must be a list of feature identifiers." });
+    }
+    const existing = await prismaRaw.tenantUser.findUnique({ where: { tenantId_userId: { tenantId, userId: req.params.userId } } });
+    if (!existing) return res.status(404).json({ error: "Staff account not found for this tenant." });
+    const staff = await prismaRaw.tenantUser.update({
+      where: { id: existing.id },
+      data: {
+        isActive: typeof active === "boolean" ? active : void 0,
+        staffRole: role ?? void 0,
+        allowedFeaturesJson: allowedFeatures === void 0 ? void 0 : JSON.stringify([...new Set(allowedFeatures)])
+      },
+      include: { user: { select: { id: true, name: true, email: true } } }
+    });
+    res.json({ staff: serializeStaff(staff) });
+  } catch (error) {
+    res.status(500).json({ error: error.message || "Unable to update staff account." });
+  }
+});
+var tenantStaff_default = router8;
 
 // src/server/middleware/tenantResolver.ts
 init_prismaClient();
@@ -3385,6 +4114,9 @@ app.use("/api/onboarding", onboarding_default);
 app.use("/onboarding", onboarding_default);
 app.use("/api/billing", tenantBilling_default);
 app.use("/billing", tenantBilling_default);
+app.use("/api/inbound-jobs", inboundJobs_default);
+app.use("/api/pos", pos_default);
+app.use("/api/tenant-staff", tenantStaff_default);
 app.use("/api/superadmin", superadmin_default);
 app.use("/superadmin", superadmin_default);
 var doubleCsrfProtection = (_req, _res, next) => next();

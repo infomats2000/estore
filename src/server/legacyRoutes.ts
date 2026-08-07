@@ -141,10 +141,14 @@ router.put('/api/products/:id', async (req, res) => {
       serialNumbers: parsed.data.serialNumbers ?? []
     });
 
+    const existingProduct = serializeProductForResponse(existing);
     const product = await prisma.product.update({
       where: { id: req.params.id },
       data: normalizedData
     });
+    const retainedImages = new Set([parsed.data.image, ...(parsed.data.additionalImages ?? [])].filter(Boolean));
+    const replacedImages = [existingProduct.image, ...(existingProduct.additionalImages ?? [])].filter((imagePath): imagePath is string => !!imagePath && !retainedImages.has(imagePath));
+    await Promise.all(replacedImages.map((imagePath) => deleteImageIfExists(imagePath)));
     res.json(serializeProductForResponse(product));
   } catch (err) {
     handleError(err, res);
@@ -153,7 +157,13 @@ router.put('/api/products/:id', async (req, res) => {
 
 router.delete('/api/products', async (_req, res) => {
   try {
+    const existingProducts = await prisma.product.findMany();
     await prisma.product.deleteMany({});
+    const imagePaths = existingProducts.flatMap((product) => {
+      const serialized = serializeProductForResponse(product);
+      return [serialized.image, ...(serialized.additionalImages ?? [])];
+    });
+    await Promise.all(imagePaths.map((imagePath) => deleteImageIfExists(imagePath)));
     res.json({ ok: true });
   } catch (err) {
     handleError(err, res);
@@ -166,6 +176,8 @@ router.delete('/api/products/:id', async (req, res) => {
     if (!existing) throw new AppError('Product not found', 404);
 
     await prisma.product.delete({ where: { id: req.params.id } });
+    const serialized = serializeProductForResponse(existing);
+    await Promise.all([serialized.image, ...(serialized.additionalImages ?? [])].map((imagePath) => deleteImageIfExists(imagePath)));
     res.json({ ok: true });
   } catch (err) {
     handleError(err, res);

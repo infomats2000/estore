@@ -7,12 +7,18 @@ interface ShopByCategoryGridProps {
   products: Product[];
   onSelectCategory: (categoryName: string) => void;
   activeCategory: string;
+  eyebrow?: string;
+  title?: string;
+  description?: string;
 }
 
 export const ShopByCategoryGrid: React.FC<ShopByCategoryGridProps> = ({
   products,
   onSelectCategory,
   activeCategory,
+  eyebrow = 'Quick Navigation',
+  title = 'Shop by Category',
+  description = 'Real-time dynamic category catalog mapped to store inventory',
 }) => {
   // Dynamically compute category counts from active tenant's inventory
   const categoryCounts = React.useMemo(() => {
@@ -54,13 +60,13 @@ export const ShopByCategoryGrid: React.FC<ShopByCategoryGridProps> = ({
       <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-neutral-200 dark:border-neutral-800 pb-4">
         <div>
           <span className="font-mono text-[10px] uppercase tracking-widest text-blue-600 font-extrabold mb-1 block">
-            QUICK NAVIGATION
+            {eyebrow}
           </span>
           <h2 className="font-sans text-2xl sm:text-3xl font-black uppercase tracking-tight text-neutral-900 dark:text-white flex items-center gap-2">
-            SHOP BY CATEGORY
+            {title}
           </h2>
           <p className="text-xs text-neutral-500 font-medium mt-1">
-            Real-time dynamic category catalog mapped to store inventory
+            {description}
           </p>
         </div>
 

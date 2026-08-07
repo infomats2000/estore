@@ -11,45 +11,6 @@ import MasterDataManager from './masterdata/MasterDataManager';
 import { CustomDomainSettings } from './CustomDomainSettings';
 import { TenantBillingSettings } from './TenantBillingSettings';
 
-const DASHBOARD_MODULE_OPTIONS = [
-  { id: 'products', label: 'Products' },
-  { id: 'orders', label: 'Orders' },
-  { id: 'customers', label: 'Customers' },
-  { id: 'invoices', label: 'Invoicing' },
-  { id: 'inventory', label: 'Inventory' },
-  { id: 'purchase-orders', label: 'Purchase Orders' },
-  { id: 'suppliers', label: 'Suppliers' },
-  { id: 'warehouses', label: 'Warehouses' },
-  { id: 'shipping', label: 'Shipments' },
-  { id: 'finance', label: 'Finance & Accounting' },
-  { id: 'reports', label: 'ERP Reports' },
-  { id: 'bi', label: 'Business Intelligence' },
-  { id: 'payroll', label: 'Staff & Payroll' },
-  { id: 'master-data', label: 'Master Data Setup' },
-  { id: 'users', label: 'Staff Accounts' },
-  { id: 'repairs', label: 'Repairs' },
-  { id: 'returns', label: 'Returns' },
-  { id: 'analytics', label: 'Analytics' },
-  { id: 'stock-units', label: 'Stock Units' },
-  { id: 'ebay', label: 'Marketplace & Stores' },
-  { id: 'trade-accounts', label: 'Trade Accounts' },
-  { id: 'commercial-sales', label: 'Commercial Sales' },
-  { id: 'distribution', label: 'Distribution' },
-  { id: 'pricing-matrix', label: 'Pricing Matrix' },
-  { id: 'massive-inventory', label: 'Full Product Catalog' },
-  { id: 'procurement', label: 'Procurement' },
-  { id: 'wms', label: 'WMS' },
-  { id: 'logistics-dispatch', label: 'Logistics Dispatch' },
-  { id: 'coupons', label: 'Coupons' },
-  { id: 'segments', label: 'Customer Segments' },
-  { id: 'upsells', label: 'Upsells' },
-  { id: 'categories', label: 'Categories' },
-  { id: 'collections', label: 'Collections' },
-  { id: 'reviews', label: 'Reviews' },
-  { id: 'stores', label: 'Branch Locations' },
-  { id: 'refurb', label: 'Refurb Testing' },
-] as const;
-
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -157,15 +118,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         }
       };
     }
-  };
-
-  const hiddenDashboardTabs = Array.isArray(formData.hiddenDashboardTabs) ? formData.hiddenDashboardTabs : [];
-
-  const toggleDashboardModuleVisibility = (moduleId: string, visible: boolean) => {
-    const nextHidden = visible
-      ? hiddenDashboardTabs.filter((id) => id !== moduleId)
-      : Array.from(new Set([...hiddenDashboardTabs, moduleId]));
-    handleChange('hiddenDashboardTabs', nextHidden);
   };
 
   return (
@@ -692,10 +644,131 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                 <div className="border-t border-slate-200 pt-4 space-y-4">
                   <div>
-                    <h4 className="text-sm font-bold text-slate-900">Why Shop Section Content</h4>
+                    <h4 className="text-sm font-bold text-slate-900">Storefront Section Order</h4>
+                    <p className="mt-0.5 text-[11px] text-slate-500">Move homepage sections up or down. Hidden sections retain their position for when they are enabled again.</p>
+                  </div>
+                  <div className="space-y-2">
+                    {(formData.storefrontSectionOrder || ['hero', 'flashSale', 'categories', 'catalog', 'brands', 'recentlyViewed', 'whyShop', 'newsletter']).map((sectionId, index, order) => {
+                      const labels: Record<string, string> = {
+                        hero: 'Hero Banner', flashSale: 'Flash Sale Banner', categories: 'Shop by Category', catalog: 'Product Catalogue',
+                        brands: 'Brand Strip', recentlyViewed: 'Recently Viewed', whyShop: 'Why Shop', newsletter: 'Newsletter'
+                      };
+                      const moveSection = (direction: -1 | 1) => {
+                        const targetIndex = index + direction;
+                        if (targetIndex < 0 || targetIndex >= order.length) return;
+                        const nextOrder = [...order];
+                        [nextOrder[index], nextOrder[targetIndex]] = [nextOrder[targetIndex], nextOrder[index]];
+                        handleChange('storefrontSectionOrder', nextOrder);
+                      };
+                      return (
+                        <div key={sectionId} className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-slate-100 font-mono text-[10px] font-bold text-slate-500">{index + 1}</span>
+                            <span className="truncate text-xs font-bold text-slate-800">{labels[sectionId] || sectionId}</span>
+                          </div>
+                          <div className="flex gap-1">
+                            <button type="button" disabled={index === 0} onClick={() => moveSection(-1)} className="rounded border border-slate-200 px-2 py-1 text-[10px] font-bold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30">Up</button>
+                            <button type="button" disabled={index === order.length - 1} onClick={() => moveSection(1)} className="rounded border border-slate-200 px-2 py-1 text-[10px] font-bold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30">Down</button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-200 pt-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div><h4 className="text-sm font-bold text-slate-900">Hero Banner</h4><p className="text-[11px] text-slate-500">Main promotional banner shown on the public storefront.</p></div>
+                    <input type="checkbox" checked={formData.showHeroBanner} onChange={(e) => handleChange('showHeroBanner', e.target.checked)} className="h-5 w-5" />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div><label className="block text-xs font-bold text-slate-700 mb-1">Eyebrow</label><input value={formData.heroEyebrow} onChange={(e) => handleChange('heroEyebrow', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
+                    <div><label className="block text-xs font-bold text-slate-700 mb-1">Highlighted Text</label><input value={formData.heroHighlight} onChange={(e) => handleChange('heroHighlight', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
+                    <div className="md:col-span-2"><label className="block text-xs font-bold text-slate-700 mb-1">Main Heading</label><input value={formData.heroTitle} onChange={(e) => handleChange('heroTitle', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
+                    <div className="md:col-span-2"><label className="block text-xs font-bold text-slate-700 mb-1">Description</label><textarea value={formData.heroDescription} onChange={(e) => handleChange('heroDescription', e.target.value)} rows={3} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
+                    <div className="md:col-span-2"><label className="block text-xs font-bold text-slate-700 mb-1">Hero Image URL</label><input value={formData.heroImageUrl} onChange={(e) => handleChange('heroImageUrl', e.target.value)} placeholder="/images/banner.png or https://..." className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
+                    <div><label className="block text-xs font-bold text-slate-700 mb-1">Primary Link Text</label><input value={formData.heroPrimaryButtonText} onChange={(e) => handleChange('heroPrimaryButtonText', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
+                    <div><label className="block text-xs font-bold text-slate-700 mb-1">Primary Link URL</label><input value={formData.heroPrimaryButtonUrl} onChange={(e) => handleChange('heroPrimaryButtonUrl', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
+                    <div><label className="block text-xs font-bold text-slate-700 mb-1">Secondary Link Text</label><input value={formData.heroSecondaryButtonText} onChange={(e) => handleChange('heroSecondaryButtonText', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
+                    <div><label className="block text-xs font-bold text-slate-700 mb-1">Secondary Link URL</label><input value={formData.heroSecondaryButtonUrl} onChange={(e) => handleChange('heroSecondaryButtonUrl', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-200 pt-4 space-y-4">
+                  <div className="flex items-center justify-between"><div><h4 className="text-sm font-bold text-slate-900">Flash Sale Banner</h4><p className="text-[11px] text-slate-500">Promotion displayed above the product catalogue.</p></div><input type="checkbox" checked={formData.showFlashSaleBanner} onChange={(e) => handleChange('showFlashSaleBanner', e.target.checked)} className="h-5 w-5" /></div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div><label className="block text-xs font-bold text-slate-700 mb-1">Label</label><input value={formData.flashSaleTitle} onChange={(e) => handleChange('flashSaleTitle', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
+                    <div><label className="block text-xs font-bold text-slate-700 mb-1">Offer Text</label><input value={formData.flashSaleText} onChange={(e) => handleChange('flashSaleText', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
+                    <div><label className="block text-xs font-bold text-slate-700 mb-1">Coupon Code</label><input value={formData.flashSaleCouponCode} onChange={(e) => handleChange('flashSaleCouponCode', e.target.value.toUpperCase())} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono" /></div>
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-200 pt-4 space-y-4">
+                  <div className="flex items-center justify-between"><div><h4 className="text-sm font-bold text-slate-900">Category Navigation</h4><p className="text-[11px] text-slate-500">Heading above the visual category cards.</p></div><input type="checkbox" checked={formData.showCategorySection} onChange={(e) => handleChange('showCategorySection', e.target.checked)} className="h-5 w-5" /></div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div><label className="block text-xs font-bold text-slate-700 mb-1">Eyebrow</label><input value={formData.categorySectionEyebrow} onChange={(e) => handleChange('categorySectionEyebrow', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
+                    <div><label className="block text-xs font-bold text-slate-700 mb-1">Heading</label><input value={formData.categorySectionTitle} onChange={(e) => handleChange('categorySectionTitle', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
+                    <div className="md:col-span-2"><label className="block text-xs font-bold text-slate-700 mb-1">Description</label><input value={formData.categorySectionDescription} onChange={(e) => handleChange('categorySectionDescription', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
+                    <div><label className="block text-xs font-bold text-slate-700 mb-1">Catalogue Eyebrow</label><input value={formData.catalogSectionEyebrow} onChange={(e) => handleChange('catalogSectionEyebrow', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
+                    <div><label className="block text-xs font-bold text-slate-700 mb-1">Catalogue Heading</label><input value={formData.catalogSectionTitle} onChange={(e) => handleChange('catalogSectionTitle', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-bold text-slate-700 mb-2">Catalogue Style</label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2">
+                        {([
+                          { id: 'classic', label: 'Classic Grid', description: 'Balanced retail cards' },
+                          { id: 'compact', label: 'Compact Inventory', description: 'More products per row' },
+                          { id: 'minimal', label: 'Minimal Showcase', description: 'Clean and spacious' },
+                          { id: 'list', label: 'Horizontal List', description: 'Wide product rows' }
+                        ] as const).map((style) => (
+                          <button
+                            key={style.id}
+                            type="button"
+                            onClick={() => handleChange('catalogStyle', style.id)}
+                            className={`rounded-lg border p-3 text-left transition-colors ${
+                              formData.catalogStyle === style.id
+                                ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-600'
+                                : 'border-slate-200 bg-white hover:border-slate-400'
+                            }`}
+                          >
+                            <span className="block text-xs font-bold text-slate-900">{style.label}</span>
+                            <span className="mt-1 block text-[10px] text-slate-500">{style.description}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-bold text-slate-700 mb-2">Quick Specs &amp; Attribute Filters Position</label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {([
+                          { id: 'top', label: 'Above Catalogue', description: 'Display filters as a horizontal row above products' },
+                          { id: 'left', label: 'Left Sidebar', description: 'Display filters vertically beside the product catalogue' }
+                        ] as const).map((position) => (
+                          <button
+                            key={position.id}
+                            type="button"
+                            onClick={() => handleChange('catalogFilterPosition', position.id)}
+                            className={`rounded-lg border p-3 text-left transition-colors ${
+                              formData.catalogFilterPosition === position.id
+                                ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-600'
+                                : 'border-slate-200 bg-white hover:border-slate-400'
+                            }`}
+                          >
+                            <span className="block text-xs font-bold text-slate-900">{position.label}</span>
+                            <span className="mt-1 block text-[10px] text-slate-500">{position.description}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-200 pt-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div><h4 className="text-sm font-bold text-slate-900">Why Shop Section Content</h4>
                     <p className="text-[11px] text-slate-500 mt-0.5">
                       Edit heading, paragraph, and bullet points shown in the storefront "Why Shop" section.
-                    </p>
+                    </p></div>
+                    <input type="checkbox" checked={formData.showWhyShopSection} onChange={(e) => handleChange('showWhyShopSection', e.target.checked)} className="h-5 w-5" />
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -760,41 +833,65 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">Primary Theme Color Hex</label>
-                    <div className="flex gap-2">
-                      <input 
-                        type="color"
-                        value={formData.themePrimaryColor}
-                        onChange={(e) => handleChange('themePrimaryColor', e.target.value)}
-                        className="h-10 w-12 rounded border border-slate-300 cursor-pointer p-0.5"
-                      />
-                      <input 
-                        type="text"
-                        value={formData.themePrimaryColor}
-                        onChange={(e) => handleChange('themePrimaryColor', e.target.value)}
-                        className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                      />
-                    </div>
+                <div className="border-t border-slate-200 pt-4 space-y-4">
+                  <div className="flex items-center justify-between"><div><h4 className="text-sm font-bold text-slate-900">Newsletter Section</h4><p className="text-[11px] text-slate-500">Subscription call-to-action above the footer.</p></div><input type="checkbox" checked={formData.showNewsletterSection} onChange={(e) => handleChange('showNewsletterSection', e.target.checked)} className="h-5 w-5" /></div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div><label className="block text-xs font-bold text-slate-700 mb-1">Eyebrow</label><input value={formData.newsletterEyebrow} onChange={(e) => handleChange('newsletterEyebrow', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
+                    <div><label className="block text-xs font-bold text-slate-700 mb-1">Heading</label><input value={formData.newsletterTitle} onChange={(e) => handleChange('newsletterTitle', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
+                    <div className="md:col-span-2"><label className="block text-xs font-bold text-slate-700 mb-1">Description</label><textarea value={formData.newsletterDescription} onChange={(e) => handleChange('newsletterDescription', e.target.value)} rows={2} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
+                    <div><label className="block text-xs font-bold text-slate-700 mb-1">Button Text</label><input value={formData.newsletterButtonText} onChange={(e) => handleChange('newsletterButtonText', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
                   </div>
+                </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">Accent Badge Color Hex</label>
-                    <div className="flex gap-2">
-                      <input 
-                        type="color"
-                        value={formData.themeAccentColor}
-                        onChange={(e) => handleChange('themeAccentColor', e.target.value)}
-                        className="h-10 w-12 rounded border border-slate-300 cursor-pointer p-0.5"
-                      />
-                      <input 
-                        type="text"
-                        value={formData.themeAccentColor}
-                        onChange={(e) => handleChange('themeAccentColor', e.target.value)}
-                        className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                      />
-                    </div>
+                <div className="border-t border-slate-200 pt-4 space-y-4">
+                  <div className="flex items-center justify-between"><div><h4 className="text-sm font-bold text-slate-900">Navigation Service Highlights</h4><p className="text-[11px] text-slate-500">Shipping and support messages beside the category navigation.</p></div><input type="checkbox" checked={formData.showServiceHighlights} onChange={(e) => handleChange('showServiceHighlights', e.target.checked)} className="h-5 w-5" /></div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div><label className="block text-xs font-bold text-slate-700 mb-1">Shipping Title</label><input value={formData.shippingHighlightTitle} onChange={(e) => handleChange('shippingHighlightTitle', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
+                    <div><label className="block text-xs font-bold text-slate-700 mb-1">Shipping Description</label><input value={formData.shippingHighlightText} onChange={(e) => handleChange('shippingHighlightText', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
+                    <div><label className="block text-xs font-bold text-slate-700 mb-1">Support Title</label><input value={formData.supportHighlightTitle} onChange={(e) => handleChange('supportHighlightTitle', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
+                    <div><label className="block text-xs font-bold text-slate-700 mb-1">Support Description</label><input value={formData.supportHighlightText} onChange={(e) => handleChange('supportHighlightText', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-200 pt-4 space-y-4">
+                  <div className="flex items-center justify-between"><div><h4 className="text-sm font-bold text-slate-900">Storefront Footer</h4><p className="text-[11px] text-slate-500">Footer headings, service statements and legal/payment labels.</p></div><input type="checkbox" checked={formData.showStorefrontFooter} onChange={(e) => handleChange('showStorefrontFooter', e.target.checked)} className="h-5 w-5" /></div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div><label className="block text-xs font-bold text-slate-700 mb-1">Categories Heading</label><input value={formData.footerCategoriesHeading} onChange={(e) => handleChange('footerCategoriesHeading', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
+                    <div><label className="block text-xs font-bold text-slate-700 mb-1">Customer Care Heading</label><input value={formData.footerCustomerCareHeading} onChange={(e) => handleChange('footerCustomerCareHeading', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
+                    <div><label className="block text-xs font-bold text-slate-700 mb-1">Warranty Text</label><input value={formData.footerWarrantyText} onChange={(e) => handleChange('footerWarrantyText', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
+                    <div><label className="block text-xs font-bold text-slate-700 mb-1">Returns Text</label><input value={formData.footerReturnsText} onChange={(e) => handleChange('footerReturnsText', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
+                    <div className="md:col-span-2"><label className="block text-xs font-bold text-slate-700 mb-1">Shipping Text</label><input value={formData.footerShippingText} onChange={(e) => handleChange('footerShippingText', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
+                    <div className="md:col-span-2"><label className="block text-xs font-bold text-slate-700 mb-1">Copyright Text</label><input value={formData.footerCopyrightText} onChange={(e) => handleChange('footerCopyrightText', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
+                    <div><label className="block text-xs font-bold text-slate-700 mb-1">Ownership Text</label><input value={formData.footerOwnershipText} onChange={(e) => handleChange('footerOwnershipText', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
+                    <div><label className="block text-xs font-bold text-slate-700 mb-1">Payments Text</label><input value={formData.footerPaymentsText} onChange={(e) => handleChange('footerPaymentsText', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-200 pt-4 space-y-4">
+                  <div><h4 className="text-sm font-bold text-slate-900">Storefront-Only Design Theme</h4><p className="mt-0.5 text-[11px] text-slate-500">These colours, fonts and corners apply only to the public storefront. They never alter the tenant admin dashboard.</p></div>
+                  <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+                    {([
+                      { name: 'Professional', colors: { themePrimaryColor: '#0f172a', themeAccentColor: '#2563eb', storefrontBackgroundColor: '#f8fafc', storefrontSurfaceColor: '#ffffff', storefrontTextColor: '#0f172a', storefrontMutedTextColor: '#64748b', storefrontHeaderColor: '#111827', storefrontHeaderTextColor: '#ffffff', storefrontFooterColor: '#111827', storefrontFooterTextColor: '#ffffff', storefrontBorderColor: '#cbd5e1', storefrontButtonTextColor: '#ffffff' } },
+                      { name: 'Warm Retail', colors: { themePrimaryColor: '#7c2d12', themeAccentColor: '#ea580c', storefrontBackgroundColor: '#fff7ed', storefrontSurfaceColor: '#ffffff', storefrontTextColor: '#431407', storefrontMutedTextColor: '#9a3412', storefrontHeaderColor: '#431407', storefrontHeaderTextColor: '#fff7ed', storefrontFooterColor: '#431407', storefrontFooterTextColor: '#fff7ed', storefrontBorderColor: '#fed7aa', storefrontButtonTextColor: '#ffffff' } },
+                      { name: 'Eco Green', colors: { themePrimaryColor: '#14532d', themeAccentColor: '#16a34a', storefrontBackgroundColor: '#f0fdf4', storefrontSurfaceColor: '#ffffff', storefrontTextColor: '#052e16', storefrontMutedTextColor: '#3f6212', storefrontHeaderColor: '#14532d', storefrontHeaderTextColor: '#ffffff', storefrontFooterColor: '#052e16', storefrontFooterTextColor: '#dcfce7', storefrontBorderColor: '#bbf7d0', storefrontButtonTextColor: '#ffffff' } },
+                      { name: 'Premium Dark', colors: { themePrimaryColor: '#18181b', themeAccentColor: '#d97706', storefrontBackgroundColor: '#09090b', storefrontSurfaceColor: '#18181b', storefrontTextColor: '#fafafa', storefrontMutedTextColor: '#a1a1aa', storefrontHeaderColor: '#09090b', storefrontHeaderTextColor: '#fafafa', storefrontFooterColor: '#09090b', storefrontFooterTextColor: '#fafafa', storefrontBorderColor: '#3f3f46', storefrontButtonTextColor: '#ffffff' } }
+                    ] as const).map((preset) => (
+                      <button key={preset.name} type="button" onClick={() => Object.entries(preset.colors).forEach(([field, value]) => handleChange(field as keyof StoreSettings, value))} className="rounded-lg border border-slate-200 bg-white p-2 text-left hover:border-slate-400">
+                        <span className="mb-2 flex gap-1">{[preset.colors.themePrimaryColor, preset.colors.themeAccentColor, preset.colors.storefrontBackgroundColor].map((color) => <span key={color} className="h-5 flex-1 rounded-sm border border-black/10" style={{ backgroundColor: color }} />)}</span>
+                        <span className="text-[10px] font-bold text-slate-700">{preset.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    {([
+                      ['themePrimaryColor', 'Primary Colour'], ['themeAccentColor', 'Accent Colour'], ['storefrontBackgroundColor', 'Page Background'], ['storefrontSurfaceColor', 'Card/Surface'],
+                      ['storefrontTextColor', 'Main Text'], ['storefrontMutedTextColor', 'Muted Text'], ['storefrontHeaderColor', 'Header Background'], ['storefrontHeaderTextColor', 'Header Text'],
+                      ['storefrontFooterColor', 'Footer Background'], ['storefrontFooterTextColor', 'Footer Text'], ['storefrontBorderColor', 'Borders'], ['storefrontButtonTextColor', 'Button Text']
+                    ] as const).map(([field, label]) => (
+                      <div key={field}><label className="mb-1 block text-xs font-bold text-slate-700">{label}</label><div className="flex gap-2"><input type="color" value={formData[field]} onChange={(e) => handleChange(field, e.target.value)} className="h-10 w-12 cursor-pointer rounded border border-slate-300 p-0.5" /><input value={formData[field]} onChange={(e) => handleChange(field, e.target.value)} className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 font-mono text-sm" /></div></div>
+                    ))}
+                    <div><label className="mb-1 block text-xs font-bold text-slate-700">Typography</label><select value={formData.storefrontFontStyle} onChange={(e) => handleChange('storefrontFontStyle', e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"><option value="modern">Modern Sans</option><option value="classic">Classic Serif</option><option value="rounded">Rounded Contemporary</option></select></div>
+                    <div><label className="mb-1 block text-xs font-bold text-slate-700">Corner Style</label><select value={formData.storefrontCornerStyle} onChange={(e) => handleChange('storefrontCornerStyle', e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"><option value="square">Square</option><option value="soft">Soft</option><option value="rounded">Rounded</option></select></div>
                   </div>
                 </div>
               </div>
@@ -842,43 +939,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
               </div>
 
-              <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h5 className="font-bold text-sm text-slate-900">Dashboard Module Visibility</h5>
-                    <p className="text-xs text-slate-600 mt-1">
-                      Hide selected modules from the tenant admin dashboard navigation and shortcut cards.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleChange('hiddenDashboardTabs', [])}
-                    className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors"
-                  >
-                    Show All Modules
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {DASHBOARD_MODULE_OPTIONS.map((module) => {
-                    const isVisible = !hiddenDashboardTabs.includes(module.id);
-                    return (
-                      <label
-                        key={module.id}
-                        className="flex items-center justify-between gap-3 p-2.5 rounded-lg border border-slate-200 bg-slate-50/60 hover:bg-slate-100 cursor-pointer"
-                      >
-                        <span className="text-xs font-semibold text-slate-800">{module.label}</span>
-                        <input
-                          type="checkbox"
-                          checked={isVisible}
-                          onChange={(e) => toggleDashboardModuleVisibility(module.id, e.target.checked)}
-                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
-                        />
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="p-4 border border-slate-200 rounded-xl bg-slate-50 space-y-3">

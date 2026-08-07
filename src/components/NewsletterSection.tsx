@@ -3,9 +3,13 @@ import { Mail, ArrowRight, Check, Loader2 } from 'lucide-react';
 
 interface NewsletterSectionProps {
   onSubscribeSuccess: (message: string, type: 'success' | 'info' | 'error') => void;
+  eyebrow?: string;
+  title?: string;
+  description?: string;
+  buttonText?: string;
 }
 
-export default function NewsletterSection({ onSubscribeSuccess }: NewsletterSectionProps) {
+export default function NewsletterSection({ onSubscribeSuccess, eyebrow = 'Exclusive Insights & Priority Access', title = 'Subscribe to TECH SELLER News', description = 'Get the latest tech news, high-end hardware drops, and exclusive tech deals delivered to your inbox.', buttonText = 'Subscribe' }: NewsletterSectionProps) {
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'submitting' | 'subscribed'>('idle');
 
@@ -38,13 +42,13 @@ export default function NewsletterSection({ onSubscribeSuccess }: NewsletterSect
           {/* Text/Header info */}
           <div className="lg:col-span-6 text-left space-y-2">
             <span className="font-mono text-[9px] uppercase tracking-widest text-neutral-400 font-bold block">
-              Exclusive Insights &amp; Priority Access
+              {eyebrow}
             </span>
             <h3 className="font-sans text-xl font-extrabold uppercase tracking-widest text-neutral-900 sm:text-2xl">
-              Subscribe to TECH SELLER News
+              {title}
             </h3>
             <p className="font-sans text-xs text-neutral-500 uppercase tracking-wider max-w-md">
-              Get the latest tech news, high-end hardware drops, and exclusive tech deals delivered to your inbox.
+              {description}
             </p>
           </div>
 
@@ -85,7 +89,7 @@ export default function NewsletterSection({ onSubscribeSuccess }: NewsletterSect
                   </>
                 ) : (
                   <>
-                    <span>Subscribe</span>
+                    <span>{buttonText}</span>
                     <ArrowRight className="ml-2 h-3.5 w-3.5" />
                   </>
                 )}

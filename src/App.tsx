@@ -24,6 +24,7 @@ import ProductDetailModal from './components/ProductDetailModal';
 import CartDrawer from './components/CartDrawer';
 import NewsletterSection from './components/NewsletterSection';
 import FlashSaleBanner from './components/FlashSaleBanner';
+import StorefrontHero from './components/StorefrontHero';
 import DashboardView from './components/DashboardView';
 import OfflineStatusBanner from './components/OfflineStatusBanner';
 import { saveOfflineAppState, getOfflineCachedState, enqueueOfflineTransaction } from './utils/offlineSyncEngine';
@@ -936,6 +937,11 @@ export default function App() {
   
   const [isAdminMode, setIsAdminMode] = useState<boolean>(() => {
     try {
+      const searchParams = new URLSearchParams(window.location.search);
+      if (searchParams.get('mode') === 'store' || searchParams.get('view') === 'public') {
+        return false;
+      }
+
       const savedUser = localStorage.getItem('currentUser');
       if (savedUser) return true;
 
@@ -959,7 +965,11 @@ export default function App() {
 
   useEffect(() => {
     try {
-      localStorage.setItem('techseller_admin_mode_v4', isAdminMode ? 'true' : 'false');
+      const searchParams = new URLSearchParams(window.location.search);
+      const isForcedPublicView = searchParams.get('mode') === 'store' || searchParams.get('view') === 'public';
+      if (!isForcedPublicView) {
+        localStorage.setItem('techseller_admin_mode_v4', isAdminMode ? 'true' : 'false');
+      }
     } catch (e) {
       console.error('Error saving admin mode state:', e);
     }
@@ -2215,6 +2225,18 @@ export default function App() {
     );
   }
 
+  const defaultStorefrontSectionOrder = ['hero', 'flashSale', 'categories', 'catalog', 'brands', 'recentlyViewed', 'whyShop', 'newsletter'];
+  const savedStorefrontSectionOrder = [
+    ...new Set([
+      ...(storeSettings.storefrontSectionOrder || []),
+      ...defaultStorefrontSectionOrder
+    ].filter((sectionId) => defaultStorefrontSectionOrder.includes(sectionId)))
+  ];
+  const getStorefrontSectionOrder = (sectionId: string) => {
+    const savedIndex = savedStorefrontSectionOrder.indexOf(sectionId as typeof savedStorefrontSectionOrder[number]);
+    return savedIndex >= 0 ? savedIndex : defaultStorefrontSectionOrder.indexOf(sectionId) + savedStorefrontSectionOrder.length;
+  };
+
 
   return (
     <TenantProvider>
@@ -2230,6 +2252,22 @@ export default function App() {
           isAdminMode ? 'admin-theme' : 'storefront-theme'
         } ${isAdminMode && isDarkMode ? 'dark' : ''}`}
         id="store-app-root"
+        style={!isAdminMode ? ({
+          '--storefront-primary': storeSettings.themePrimaryColor,
+          '--storefront-accent': storeSettings.themeAccentColor,
+          '--storefront-bg': storeSettings.storefrontBackgroundColor,
+          '--storefront-surface': storeSettings.storefrontSurfaceColor,
+          '--storefront-text': storeSettings.storefrontTextColor,
+          '--storefront-muted': storeSettings.storefrontMutedTextColor,
+          '--storefront-header': storeSettings.storefrontHeaderColor,
+          '--storefront-header-text': storeSettings.storefrontHeaderTextColor,
+          '--storefront-footer': storeSettings.storefrontFooterColor,
+          '--storefront-footer-text': storeSettings.storefrontFooterTextColor,
+          '--storefront-border': storeSettings.storefrontBorderColor,
+          '--storefront-button-text': storeSettings.storefrontButtonTextColor,
+          '--storefront-radius': storeSettings.storefrontCornerStyle === 'square' ? '0px' : storeSettings.storefrontCornerStyle === 'rounded' ? '20px' : '8px',
+          '--storefront-font-sans': storeSettings.storefrontFontStyle === 'classic' ? 'Georgia, Cambria, Times New Roman, serif' : storeSettings.storefrontFontStyle === 'rounded' ? 'Plus Jakarta Sans, Inter, system-ui, sans-serif' : 'Inter, Plus Jakarta Sans, system-ui, sans-serif'
+        } as React.CSSProperties) : undefined}
       >
 
         {/* IMPERSONATION CONTROL BANNER */}
@@ -2377,14 +2415,22 @@ export default function App() {
       <main className="flex-1">
         {!isAdminMode ? (
           /* ================= CUSTOMER STOREFRONT ================= */
-          <div id="customer-storefront-view" className="storefront-scope">
-            {!searchQuery && activeCategory === 'All' && (
-              <div className="w-full pt-3 pr-0 pl-0 flex justify-end">
-                <FlashSaleBanner onApplyCoupon={handleApplyCoupon} couponCode="FLASH10" />
+          <div id="customer-storefront-view" className="storefront-scope flex flex-col">
+            {!searchQuery && activeCategory === 'All' && storeSettings.showHeroBanner && (
+              <div style={{ order: getStorefrontSectionOrder('hero') }}><StorefrontHero settings={storeSettings} /></div>
+            )}
+            {!searchQuery && activeCategory === 'All' && storeSettings.showFlashSaleBanner && (
+              <div className="w-full pt-3 pr-0 pl-0 flex justify-end" style={{ order: getStorefrontSectionOrder('flashSale') }}>
+                <FlashSaleBanner
+                  onApplyCoupon={handleApplyCoupon}
+                  couponCode={storeSettings.flashSaleCouponCode}
+                  title={storeSettings.flashSaleTitle}
+                  text={storeSettings.flashSaleText}
+                />
               </div>
             )}
 
-            <div className="mx-auto max-w-7xl px-4 pt-3 sm:px-6 lg:px-8 flex justify-end">
+            <div className="mx-auto w-full max-w-7xl px-4 pt-3 sm:px-6 lg:px-8 flex justify-end" style={{ order: getStorefrontSectionOrder('catalog') }}>
               <div className="flex flex-wrap items-center gap-6">
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-[9px] uppercase tracking-widest text-neutral-400 font-bold">Sort</span>
@@ -2407,17 +2453,22 @@ export default function App() {
             </div>
 
             {/* DYNAMIC REAL-PHOTO SHOP BY CATEGORY SECTION */}
-            {!searchQuery && activeCategory === 'All' && (
-              <ShopByCategoryGrid
-                products={products}
-                activeCategory={activeCategory}
-                onSelectCategory={(catName) => setActiveCategory(catName)}
-              />
+            {!searchQuery && activeCategory === 'All' && storeSettings.showCategorySection && (
+              <div style={{ order: getStorefrontSectionOrder('categories') }}>
+                <ShopByCategoryGrid
+                  products={products}
+                  activeCategory={activeCategory}
+                  onSelectCategory={(catName) => setActiveCategory(catName)}
+                  eyebrow={storeSettings.categorySectionEyebrow}
+                  title={storeSettings.categorySectionTitle}
+                  description={storeSettings.categorySectionDescription}
+                />
+              </div>
             )}
 
             
             {/* PRODUCT CATALOG GRID SECTION */}
-            <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8" id="product-catalog-grid">
+            <section className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8" id="product-catalog-grid" style={{ order: getStorefrontSectionOrder('catalog') }}>
               
               {/* PUBLIC BACK BUTTON */}
               {(activeCategory !== 'All' || searchQuery || activeTagFilter) && (
@@ -2440,16 +2491,17 @@ export default function App() {
               {/* Category indicator / heading */}
               <div className="mb-8 flex flex-wrap items-end gap-4 border-b border-neutral-400 pb-6">
                 <div className="text-left">
-                  <span className="font-mono text-[9px] uppercase tracking-widest text-neutral-400 font-bold mb-1 block">Collection</span>
+                  <span className="font-mono text-[9px] uppercase tracking-widest text-neutral-400 font-bold mb-1 block">{storeSettings.catalogSectionEyebrow}</span>
                   <h2 className="font-sans text-xl font-extrabold uppercase tracking-widest text-neutral-900 dark:text-white">
-                    {searchQuery ? `Search Results for "${searchQuery}"` : `${activeCategory} Collection`}
+                    {searchQuery ? `Search Results for "${searchQuery}"` : activeCategory === 'All' ? storeSettings.catalogSectionTitle : `${activeCategory} ${storeSettings.catalogSectionTitle}`}
                   </h2>
                 </div>
               </div>
 
-              {/* HORIZONTAL INTERACTIVE FILTER PILLS ROW */}
-              <div className="mb-8 flex flex-col space-y-2.5 bg-slate-50/70 dark:bg-slate-900/60 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800" id="interactive-filter-pills-row">
-                <div className="flex items-center justify-between gap-2">
+              <div className={storeSettings.catalogFilterPosition === 'left' ? 'grid items-start gap-6 lg:grid-cols-[240px_minmax(0,1fr)]' : ''}>
+              {/* TENANT-CONFIGURABLE INTERACTIVE FILTER PILLS */}
+              <div className={`${storeSettings.catalogFilterPosition === 'left' ? 'mb-6 lg:mb-0 lg:sticky lg:top-24' : 'mb-8'} flex flex-col space-y-2.5 bg-slate-50/70 dark:bg-slate-900/60 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800`} id="interactive-filter-pills-row">
+                <div className={`flex gap-2 ${storeSettings.catalogFilterPosition === 'left' ? 'flex-col items-start' : 'items-center justify-between'}`}>
                   <div className="flex items-center gap-2 font-mono text-[10px] uppercase font-bold tracking-widest text-slate-500 dark:text-slate-400">
                     <SlidersHorizontal className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
                     <span>Quick Specs & Attribute Filters</span>
@@ -2470,10 +2522,10 @@ export default function App() {
                   )}
                 </div>
 
-                <div className="flex items-center gap-2 overflow-x-auto pb-1.5 pt-0.5 scrollbar-none">
+                <div className={`flex gap-2 pb-1.5 pt-0.5 scrollbar-none ${storeSettings.catalogFilterPosition === 'left' ? 'flex-col items-stretch' : 'items-center overflow-x-auto'}`}>
                   <button
                     onClick={() => setActiveTagFilter(null)}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-mono uppercase font-black transition-all flex items-center gap-1.5 shrink-0 cursor-pointer shadow-sm ${
+                    className={`px-3.5 py-2 rounded-xl text-xs font-mono uppercase font-black transition-all flex items-center gap-1.5 shrink-0 cursor-pointer shadow-sm ${storeSettings.catalogFilterPosition === 'left' ? 'w-full' : ''} ${
                       activeTagFilter === null
                         ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 scale-105 ring-2 ring-slate-900/20'
                         : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
@@ -2492,7 +2544,7 @@ export default function App() {
                       <button
                         key={pill.id}
                         onClick={() => setActiveTagFilter(isActive ? null : pill.id)}
-                        className={`px-3.5 py-2 rounded-xl text-xs font-mono uppercase font-bold transition-all flex items-center gap-2 shrink-0 cursor-pointer border shadow-sm ${
+                        className={`px-3.5 py-2 rounded-xl text-xs font-mono uppercase font-bold transition-all flex items-center gap-2 shrink-0 cursor-pointer border shadow-sm ${storeSettings.catalogFilterPosition === 'left' ? 'w-full' : ''} ${
                           isActive
                             ? 'bg-blue-600 text-white border-blue-500 shadow-blue-500/25 font-black scale-105 ring-2 ring-blue-500/30'
                             : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-800 hover:border-blue-400 hover:bg-blue-50/60 dark:hover:bg-slate-800'
@@ -2537,7 +2589,21 @@ export default function App() {
               ) : (
                 <motion.div 
                   layout
-                  className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-4"
+                  className={`grid ${
+                    storeSettings.catalogStyle === 'list'
+                      ? 'grid-cols-1 gap-4'
+                      : storeSettings.catalogStyle === 'compact'
+                        ? storeSettings.catalogFilterPosition === 'left'
+                          ? 'grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3'
+                          : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-3'
+                        : storeSettings.catalogStyle === 'minimal'
+                          ? storeSettings.catalogFilterPosition === 'left'
+                            ? 'grid-cols-1 md:grid-cols-2 gap-8'
+                            : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8'
+                          : storeSettings.catalogFilterPosition === 'left'
+                            ? 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-8'
+                            : 'grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-4'
+                  }`}
                 >
                   <AnimatePresence mode="popLayout">
                     {filteredProducts.map((prod) => (
@@ -2557,6 +2623,7 @@ export default function App() {
                       >
                         <ProductCard
                           product={prod}
+                          variant={storeSettings.catalogStyle}
                           onQuickAdd={(p) => handleAddToCart(p)}
                           onOpenDetails={handleViewProduct}
                           isWishlisted={customerProfile.wishlist.includes(prod.id)}
@@ -2579,11 +2646,12 @@ export default function App() {
                   </AnimatePresence>
                 </motion.div>
               )}
+              </div>
             </section>
 
             {/* BRAND STRIP SECTION */}
-            {!searchQuery && activeCategory === 'All' && (
-              <section className="bg-neutral-50 dark:bg-neutral-950/50 py-12 border-y border-neutral-100 dark:border-neutral-900" id="brand-strip">
+            {!searchQuery && activeCategory === 'All' && storeSettings.showWhyShopSection && (
+              <section className="bg-neutral-50 dark:bg-neutral-950/50 py-12 border-y border-neutral-100 dark:border-neutral-900" id="brand-strip" style={{ order: getStorefrontSectionOrder('brands') }}>
                 <div className="mx-auto max-w-7xl px-4 text-center">
                   <span className="font-mono text-[9px] uppercase tracking-widest text-neutral-400 font-black mb-6 block">Major Brands We Carry</span>
                   <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16 opacity-50 grayscale hover:grayscale-0 transition-all">
@@ -2599,7 +2667,7 @@ export default function App() {
 
             {/* RECENTLY VIEWED SECTION */}
             {recentlyViewedProducts.length > 0 && !searchQuery && activeCategory === 'All' && (
-              <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 border-t border-neutral-400" id="recently-viewed-section">
+              <section className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8 border-t border-neutral-400" id="recently-viewed-section" style={{ order: getStorefrontSectionOrder('recentlyViewed') }}>
                 <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
                   <div className="text-left">
                     <span className="font-mono text-[9px] uppercase tracking-widest text-neutral-400 font-bold">History</span>
@@ -2640,8 +2708,8 @@ export default function App() {
             )}
 
             {/* SEO / WHY SHOP SECTION */}
-            {!searchQuery && activeCategory === 'All' && (
-              <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8" id="why-shop-content">
+            {!searchQuery && activeCategory === 'All' && storeSettings.showWhyShopSection && (
+              <section className="mx-auto w-full max-w-7xl px-4 py-20 sm:px-6 lg:px-8" id="why-shop-content" style={{ order: getStorefrontSectionOrder('whyShop') }}>
                 <div className="grid grid-cols-1 gap-16 items-center">
                   <div className="space-y-6">
                     <h2 className="font-sans text-3xl font-black uppercase tracking-tight text-neutral-900 dark:text-white leading-tight">
@@ -2664,19 +2732,16 @@ export default function App() {
               </section>
             )}
 
-            {/* HERO BANNER SECTION (moved to bottom) */}
-            {!searchQuery && activeCategory === 'All' && (
-              <section className="relative overflow-hidden bg-slate-50 dark:bg-neutral-950" id="storefront-hero">
-                <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-20 flex flex-col md:flex-row items-center gap-12">
-                  
-                  {/* Hero Right Media panel */}
-                  <div className="w-full md:w-1/2 relative">
-                    {/* Decorative elements */}
-                    <div className="absolute -top-6 -right-6 h-32 w-32 bg-blue-400 rounded-full blur-3xl opacity-20 animate-pulse" />
-                    <div className="absolute -bottom-10 -left-10 h-48 w-48 bg-blue-600 rounded-full blur-3xl opacity-20 animate-pulse delay-700" />
-                  </div>
-                </div>
-              </section>
+            {storeSettings.showNewsletterSection && (
+              <div style={{ order: getStorefrontSectionOrder('newsletter') }}>
+                <NewsletterSection
+                  onSubscribeSuccess={triggerAlert}
+                  eyebrow={storeSettings.newsletterEyebrow}
+                  title={storeSettings.newsletterTitle}
+                  description={storeSettings.newsletterDescription}
+                  buttonText={storeSettings.newsletterButtonText}
+                />
+              </div>
             )}
 
             {/* VALUE PROPOSITION BAR (moved to bottom) */}
@@ -2702,7 +2767,7 @@ export default function App() {
                 </div>
               )}
               <DashboardView
-                onOpenStorefront={() => setIsAdminMode(false)}
+                currentUser={currentUser}
                 products={products}
                 onUpdateProduct={handleUpdateProduct}
 
@@ -2783,11 +2848,8 @@ export default function App() {
         )}
       </main>
 
-      {/* NEWSLETTER SUBSCRIPTION FOOTER (public storefront only) */}
-      {!isAdminMode && <NewsletterSection onSubscribeSuccess={triggerAlert} />}
-
       {/* FOOTER SECTION - Australian Computer Traders */}
-      <footer className="border-t border-black/10 bg-[#2f2f2f] dark:bg-[#2f2f2f] text-white py-12" id="store-footer">
+      {!isAdminMode && storeSettings.showStorefrontFooter && <footer className="border-t border-black/10 bg-[#2f2f2f] dark:bg-[#2f2f2f] text-white py-12" id="store-footer">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-10">
           
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-neutral-300 text-xs text-left">
@@ -2795,7 +2857,7 @@ export default function App() {
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <div className="flex h-12 w-12 items-center justify-center bg-white border border-neutral-700 rounded-lg overflow-hidden p-1 shadow-sm shadow-blue-500/10">
-                  <img src="/images/app_logo.jpg" alt="Logo" className="h-full w-full object-contain" />
+                  <img src={storeSettings.logoUrl || '/images/app_logo.jpg'} alt={`${storeSettings.storeName} logo`} className="h-full w-full object-contain" />
                 </div>
                 <div>
                   <span className="font-extrabold text-white tracking-tight text-sm uppercase block">{storeSettings.storeName || 'INFOMAT'}</span>
@@ -2813,25 +2875,21 @@ export default function App() {
 
             {/* Column 2: Categories */}
             <div className="space-y-2">
-              <h4 className="font-mono text-xs font-black uppercase text-blue-400 tracking-wider">Hardware Categories</h4>
+              <h4 className="font-mono text-xs font-black uppercase text-blue-400 tracking-wider">{storeSettings.footerCategoriesHeading}</h4>
               <ul className="space-y-1.5 font-sans text-xs">
-                <li><button onClick={() => { setIsAdminMode(false); setActiveCategory('Laptops'); }} className="hover:text-blue-400">Laptops</button></li>
-                <li><button onClick={() => { setIsAdminMode(false); setActiveCategory('Desktops'); }} className="hover:text-blue-400">Enterprise Desktops</button></li>
-                <li><button onClick={() => { setIsAdminMode(false); setActiveCategory('Monitors'); }} className="hover:text-blue-400">Monitors & Displays</button></li>
-                <li><button onClick={() => { setIsAdminMode(false); setActiveCategory('Apple Mac'); }} className="hover:text-blue-400">MacBook & iMacs</button></li>
-                <li><button onClick={() => { setIsAdminMode(false); setActiveCategory('Workstations'); }} className="hover:text-blue-400">Heavy Duty Workstations</button></li>
+                {categories.slice(0, 5).map(category => <li key={category}><button onClick={() => { setIsAdminMode(false); setActiveCategory(category); }} className="hover:text-blue-400">{category}</button></li>)}
               </ul>
             </div>
 
             {/* Column 3: Customer Care */}
             <div className="space-y-2">
-              <h4 className="font-mono text-xs font-black uppercase text-blue-400 tracking-wider">Customer Care</h4>
+              <h4 className="font-mono text-xs font-black uppercase text-blue-400 tracking-wider">{storeSettings.footerCustomerCareHeading}</h4>
               <ul className="space-y-1.5 font-sans text-xs">
                 <li><button onClick={() => setIsAccountOpen(true)} className="hover:text-blue-400">My Account & Orders</button></li>
                 <li><button onClick={() => setIsCartOpen(true)} className="hover:text-blue-400">Shopping Cart</button></li>
-                <li><span className="text-neutral-400">12 Month Express Warranty</span></li>
-                <li><span className="text-neutral-400">30 Day Returns Policy</span></li>
-                <li><span className="text-neutral-400">Free Express Shipping Over $100</span></li>
+                <li><span className="text-neutral-400">{storeSettings.footerWarrantyText}</span></li>
+                <li><span className="text-neutral-400">{storeSettings.footerReturnsText}</span></li>
+                <li><span className="text-neutral-400">{storeSettings.footerShippingText}</span></li>
               </ul>
             </div>
 
@@ -2859,16 +2917,16 @@ export default function App() {
 
           <div className="border-t border-[#003C66] pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 font-mono text-[10px] text-neutral-400 uppercase tracking-wider">
             <div>
-              © 2026 INFOMAT. ALL RIGHTS RESERVED.
+              {storeSettings.footerCopyrightText}
             </div>
             <div className="flex items-center gap-4 text-neutral-300 font-bold">
-              <span>🇦🇺 100% AUSTRALIAN OWNED</span>
+              <span>{storeSettings.footerOwnershipText}</span>
               <span>•</span>
-              <span>PAYMENTS: VISA / MC / AMEX / PAYPAL</span>
+              <span>{storeSettings.footerPaymentsText}</span>
             </div>
           </div>
         </div>
-      </footer>
+      </footer>}
 
       {/* RENDER DYNAMIC DRAWERS & MODALS BACKED BY ANIMATION PRESENCE */}
       
@@ -3037,32 +3095,69 @@ export default function App() {
             products={products}
             categories={categories}
             storeSettings={storeSettings}
-            onCompleteSale={(items, total, method, notes) => {
+            customers={customers}
+            onUpdateCustomerProfile={handleUpdateCustomer}
+            onCompleteSale={async (sale) => {
+              const token = localStorage.getItem('authToken') || '';
+              const methodMap: Record<string, string> = {
+                Cash: 'CASH',
+                'EFTPOS Card': 'EFTPOS',
+                'Store Credit / Wallet': 'STORE_CREDIT',
+                'Trade Credit': 'TRADE_CREDIT',
+                'Gift Card': 'STORE_CREDIT',
+              };
+              const checkoutPayload: any = {
+                  idempotencyKey: `pos-${Date.now()}-${crypto.randomUUID()}`,
+                  registerId: 'REGISTER-01',
+                  shiftId: sale.shiftId,
+                  taxInclusive: true,
+                  customerId: sale.customerId,
+                  discount: sale.discount,
+                  notes: [sale.notes, sale.purchaseOrder ? `PO: ${sale.purchaseOrder}` : ''].filter(Boolean).join('\n'),
+                  items: sale.items.map((item: any) => ({
+                    productId: item.product.id,
+                    quantity: item.quantity,
+                    serialNumbers: item.selectedSerialNumbers || [],
+                  })),
+                  tenders: sale.tenders.map((tender) => ({
+                    method: methodMap[tender.method] || 'CARD',
+                    amount: tender.amount,
+                    reference: tender.reference,
+                    status: 'CAPTURED',
+                  })),
+              };
+              const checkoutHeaders = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+              let response = await fetch('/api/pos/checkout', { method: 'POST', headers: checkoutHeaders, body: JSON.stringify(checkoutPayload) });
+              let completed = await response.json();
+              if (!response.ok && /Manager approval is required for discounts/.test(completed.error || '')) {
+                const amount = Number(String(completed.error).match(/\$([0-9.]+)/)?.[1] || sale.discount);
+                const managerEmail = window.prompt('Manager email for discount approval:');
+                const managerPassword = managerEmail && window.prompt('Manager password:');
+                const reason = managerPassword && window.prompt('Discount reason:', 'Customer pricing / negotiated discount');
+                if (!managerEmail || !managerPassword || !reason) throw new Error('Manager approval cancelled.');
+                const approvalResponse = await fetch('/api/pos/approvals', { method: 'POST', headers: checkoutHeaders, body: JSON.stringify({ managerEmail, managerPassword, action: 'DISCOUNT', amount, reason }) });
+                const approval = await approvalResponse.json();
+                if (!approvalResponse.ok) throw new Error(approval.error || 'Discount approval failed.');
+                checkoutPayload.approvalId = approval.approval.id;
+                response = await fetch('/api/pos/checkout', { method: 'POST', headers: checkoutHeaders, body: JSON.stringify(checkoutPayload) });
+                completed = await response.json();
+              }
+              if (!response.ok) throw new Error(completed.error || 'POS checkout could not be completed.');
+
+              const persisted = completed.order;
               handleAddPOSOrder({
-                id: 'POS-' + Date.now(),
-                customerName: 'Walk-in Customer',
-                customerEmail: '',
-                customerAddress: 'Counter POS Purchase',
-                customerCity: 'Sydney NSW',
-                date: new Date().toISOString().split('T')[0],
-                status: 'Delivered',
-                paymentMethod: method,
-                items: items.map(i => ({
-                  productId: i.product.id,
-                  name: i.product.name,
-                  quantity: i.quantity,
-                  price: i.product.discountPrice || i.product.price,
-                  color: i.selectedColor,
-                  size: i.selectedSize,
-                  image: i.product.image || ''
+                id: persisted.id,
+                customerName: customers.find(customer => customer.id === sale.customerId)?.name || 'Walk-in Customer', customerEmail: customers.find(customer => customer.id === sale.customerId)?.email || '', customerAddress: customers.find(customer => customer.id === sale.customerId)?.address || 'Counter POS Purchase',
+                customerCity: customers.find(customer => customer.id === sale.customerId)?.city || storeSettings.cityStateZip || 'Sydney NSW', date: String(persisted.createdAt || new Date().toISOString()).split('T')[0],
+                status: persisted.status, paymentMethod: persisted.paymentMethod,
+                items: persisted.items.map((item: any) => ({
+                  productId: item.productId, name: item.name, quantity: item.quantity, price: item.price,
+                  color: item.color, size: item.size, image: item.image || '', serialNumber: item.serialNumber,
                 })),
-                subtotal: total,
-                tax: total * 0.08,
-                shipping: 0,
-                discount: 0,
-                total: total,
-                notes
+                subtotal: persisted.subtotal, tax: persisted.tax, shipping: persisted.shipping,
+                discount: persisted.discount, total: persisted.total, notes: persisted.notes,
               });
+              return { orderNumber: persisted.orderNumber, changeDue: completed.changeDue };
             }}
           />
         </div>
@@ -3110,5 +3205,3 @@ export default function App() {
   </TenantProvider>
   );
 }
-
-

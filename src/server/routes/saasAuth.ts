@@ -5,6 +5,15 @@ import { validateEnvironment } from '../envValidator';
 
 const router = Router();
 
+const parseAllowedFeatures = (value: string): string[] => {
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((feature): feature is string => typeof feature === 'string') : [];
+  } catch {
+    return [];
+  }
+};
+
 // POST /api/auth/saas-login - Standard Universal Login (Auto-recognizes Super Admin vs Store User)
 router.post('/saas-login', async (req, res) => {
   try {
@@ -87,6 +96,11 @@ router.post('/saas-login', async (req, res) => {
     const role = selectedTenantUser ? selectedTenantUser.role : 'TENANT_OWNER';
     const tenant = selectedTenantUser ? selectedTenantUser.tenant : null;
 
+    if (selectedTenantUser && !selectedTenantUser.isActive) {
+      return res.status(403).json({ error: 'This staff account has been deactivated. Contact your tenant administrator.' });
+    }
+    const allowedFeatures = selectedTenantUser ? parseAllowedFeatures(selectedTenantUser.allowedFeaturesJson) : [];
+
     const token = createAuthToken({
       userId: user.id,
       email: user.email,
@@ -112,6 +126,7 @@ router.post('/saas-login', async (req, res) => {
         email: user.email,
         isSuperAdmin: false,
         role,
+        allowedFeatures,
       },
       tenant: tenant ? {
         id: tenant.id,
@@ -175,6 +190,11 @@ router.get('/me', async (req, res) => {
       return res.status(401).json({ authenticated: false });
     }
 
+    const membership = user.tenantUsers.find((tenantUser) => tenantUser.tenantId === decoded.tenantId);
+    if (membership && !membership.isActive) {
+      return res.status(403).json({ authenticated: false });
+    }
+
     res.json({
       authenticated: true,
       user: {
@@ -184,6 +204,7 @@ router.get('/me', async (req, res) => {
         isSuperAdmin: user.isSuperAdmin,
         role: decoded.role,
         tenantId: decoded.tenantId,
+        allowedFeatures: membership ? parseAllowedFeatures(membership.allowedFeaturesJson) : [],
       },
       stores: user.tenantUsers.map((tu) => tu.tenant),
     });

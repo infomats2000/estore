@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, Calendar, DollarSign, Clock, CheckCircle2, User, Printer, Layers } from 'lucide-react';
 import { LaybyOrder, StoreSettings } from '../../types';
 
@@ -9,6 +9,7 @@ interface LaybyManagerModalProps {
   onAddInstallment: (laybyNumber: string, amount: number, paymentMethod: string) => void;
   onShowAlert?: (title: string, message: string, type?: 'success' | 'warning' | 'error' | 'info') => void;
   storeSettings?: StoreSettings;
+  shiftId?: string;
 }
 
 export default function LaybyManagerModal({
@@ -17,18 +18,31 @@ export default function LaybyManagerModal({
   laybyOrders,
   onAddInstallment,
   onShowAlert,
-  storeSettings
+  storeSettings,
+  shiftId
 }: LaybyManagerModalProps) {
   const [selectedLayby, setSelectedLayby] = useState<LaybyOrder | null>(null);
   const [installmentAmount, setInstallmentAmount] = useState('');
   const [installmentMethod, setInstallmentMethod] = useState<'Cash' | 'EFTPOS Card' | 'EFT Bank Deposit'>('Cash');
+  const [persistedLaybys, setPersistedLaybys] = useState<any[]>([]);
+  const [error, setError] = useState('');
+  const authHeaders = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('authToken') || ''}` });
+  const loadLaybys = async () => {
+    const response = await fetch('/api/pos/laybys', { headers: authHeaders() });
+    const result = await response.json();
+    if (response.ok) setPersistedLaybys(result.laybys || []); else setError(result.error || 'Unable to load lay-bys.');
+  };
+  useEffect(() => { if (isOpen) void loadLaybys(); }, [isOpen]);
 
   if (!isOpen) return null;
 
-  const activeOrders = laybyOrders.filter(l => l.status === 'Active');
-  const completedOrders = laybyOrders.filter(l => l.status === 'Completed');
+  const source = persistedLaybys.length ? persistedLaybys.map(layby => ({
+    ...layby, status: layby.status === 'ACTIVE' ? 'Active' : layby.status === 'COMPLETED' ? 'Completed' : layby.status,
+    depositPaid: layby.paidAmount, expiryDate: String(layby.expiryDate).split('T')[0],
+  })) : laybyOrders;
+  const activeOrders = source.filter(l => l.status === 'Active');
 
-  const handleProcessInstallment = (e: React.FormEvent) => {
+  const handleProcessInstallment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedLayby) return;
 
@@ -43,8 +57,15 @@ export default function LaybyManagerModal({
       return;
     }
 
+    const method = installmentMethod === 'Cash' ? 'CASH' : installmentMethod === 'EFTPOS Card' ? 'EFTPOS' : 'BANK_TRANSFER';
+    const reference = method === 'CASH' ? undefined : window.prompt('Enter the approved terminal/bank reference:') || undefined;
+    if (method !== 'CASH' && !reference) { setError('A provider reference is required for non-cash installments.'); return; }
+    const response = await fetch(`/api/pos/laybys/${selectedLayby.id}/payments`, { method: 'POST', headers: authHeaders(), body: JSON.stringify({ amount: amt, method, shiftId, reference }) });
+    const result = await response.json();
+    if (!response.ok) { setError(result.error || 'Unable to record installment.'); return; }
     onAddInstallment(selectedLayby.laybyNumber, amt, installmentMethod);
     onShowAlert?.('Installment Received', `Received $${amt.toFixed(2)} payment for Lay-by #${selectedLayby.laybyNumber}.`, 'success');
+    await loadLaybys();
     setInstallmentAmount('');
     setSelectedLayby(null);
   };
@@ -69,6 +90,7 @@ export default function LaybyManagerModal({
         {/* Content Body */}
         <div className="p-5 flex-1 overflow-y-auto space-y-4">
           {/* Active Lay-bys List */}
+          {error && <div className="rounded border border-rose-300 bg-rose-50 p-3 text-xs font-bold text-rose-700">{error}</div>}
           <div className="space-y-2">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Active Customer Lay-by Tickets ({activeOrders.length})</span>
             

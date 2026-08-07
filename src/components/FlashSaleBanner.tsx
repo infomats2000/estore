@@ -5,9 +5,11 @@ import { Timer, Zap, ArrowRight, Percent } from 'lucide-react';
 interface FlashSaleBannerProps {
   onApplyCoupon: (code: string) => string | null;
   couponCode: string;
+  title?: string;
+  text?: string;
 }
 
-export default function FlashSaleBanner({ onApplyCoupon, couponCode }: FlashSaleBannerProps) {
+export default function FlashSaleBanner({ onApplyCoupon, couponCode, title = 'Flash Sale', text = 'Extra 10% Off Everything!' }: FlashSaleBannerProps) {
   const [timeLeft, setTimeLeft] = useState({
     hours: 2,
     minutes: 0,
@@ -68,10 +70,10 @@ export default function FlashSaleBanner({ onApplyCoupon, couponCode }: FlashSale
             </div>
             <div>
               <h4 className="font-mono text-[9px] uppercase font-black tracking-widest text-blue-600 dark:text-blue-400">
-                Flash Sale
+                {title}
               </h4>
               <p className="font-sans text-xs font-bold text-neutral-900 dark:text-white leading-tight">
-                Extra 10% Off Everything!
+                {text}
               </p>
             </div>
           </div>

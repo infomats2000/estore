@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, Store, Users, DollarSign, Package, ShoppingCart, Globe, AlertTriangle, ArrowLeft, RefreshCw, CheckCircle2, XCircle, Plus, X, Loader2, Layers, Edit2, UserPlus, FileText, CreditCard, LayoutDashboard } from 'lucide-react';
+import { ShieldCheck, Store, Users, DollarSign, Package, ShoppingCart, Globe, AlertTriangle, ArrowLeft, RefreshCw, CheckCircle2, XCircle, Plus, X, Loader2, Layers, Edit2, UserPlus, FileText, CreditCard, LayoutDashboard, Eye, EyeOff } from 'lucide-react';
 import { PlanManagerModal } from './PlanManagerModal';
 import { UserAccountDropdown } from './UserAccountDropdown';
 import { ChangePasswordModal } from './ChangePasswordModal';
@@ -38,6 +38,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onBack
   const [ownerName, setOwnerName] = useState('');
   const [ownerEmail, setOwnerEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showProvisionPassword, setShowProvisionPassword] = useState(false);
   const [planCode, setPlanCode] = useState('GROWTH');
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState('');
@@ -100,8 +101,12 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onBack
     setModalError('');
     setModalSuccess('');
 
-    if (!storeName || !slug || !ownerEmail) {
-      setModalError('Store Name, Subdomain Slug, and Owner Email are required.');
+    if (!storeName || !slug || !ownerEmail || !password) {
+      setModalError('Store Name, Subdomain Slug, Owner Email, and Initial Password are required.');
+      return;
+    }
+    if (password.length < 8) {
+      setModalError('The initial owner password must contain at least 8 characters.');
       return;
     }
 
@@ -120,7 +125,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onBack
           customDomain: customDomain ? customDomain.trim() : undefined,
           ownerName,
           ownerEmail,
-          password: password || 'Owner123!',
+          password,
           planCode,
         }),
       });
@@ -139,6 +144,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onBack
         setOwnerName('');
         setOwnerEmail('');
         setPassword('');
+        setShowProvisionPassword(false);
         setModalSuccess('');
         fetchSuperAdminData();
       }, 1000);
@@ -507,6 +513,32 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onBack
                   onChange={(e) => setOwnerEmail(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 font-medium focus:outline-none focus:border-blue-600"
                 />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 uppercase mb-1">Initial Login Password *</label>
+                <div className="relative">
+                  <input
+                    type={showProvisionPassword ? 'text' : 'password'}
+                    required
+                    minLength={8}
+                    autoComplete="new-password"
+                    placeholder="Minimum 8 characters"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 pr-11 font-mono font-bold text-slate-900 focus:border-blue-600 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowProvisionPassword((visible) => !visible)}
+                    className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400 hover:text-slate-700"
+                    aria-label={showProvisionPassword ? 'Hide password' : 'Show password'}
+                    title={showProvisionPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showProvisionPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                <p className="mt-1 text-[10px] font-medium normal-case text-slate-500">The store owner will use this password with the email above to sign in.</p>
               </div>
 
               <div>

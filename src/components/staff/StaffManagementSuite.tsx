@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Users, 
   ShieldCheck, 
@@ -19,90 +19,121 @@ import {
 import { StaffUserProfile, StaffUserRole } from '../../types';
 import { 
   ALL_ERP_FEATURE_PERMISSIONS, 
-  DEFAULT_STAFF_PROFILES, 
   getRoleTemplatePermissions 
 } from '../../utils/staffPermissionEngine';
 
 interface StaffManagementSuiteProps {
-  currentSimulatedUser: StaffUserProfile;
-  onSelectSimulatedUser: (user: StaffUserProfile) => void;
   onShowAlert?: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
 
 export default function StaffManagementSuite({
-  currentSimulatedUser,
-  onSelectSimulatedUser,
   onShowAlert
 }: StaffManagementSuiteProps) {
-  const [staffUsers, setStaffUsers] = useState<StaffUserProfile[]>(DEFAULT_STAFF_PROFILES);
+  const [staffUsers, setStaffUsers] = useState<StaffUserProfile[]>([]);
   const [activeTab, setActiveTab] = useState<'users' | 'permission_matrix' | 'simulator'>('users');
-  const [selectedStaff, setSelectedStaff] = useState<StaffUserProfile>(DEFAULT_STAFF_PROFILES[0]);
+  const [selectedStaff, setSelectedStaff] = useState<StaffUserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
 
   // Modal State for New Staff User
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [newName, setNewName] = useState('');
   const [newEmail, setNewEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
   const [newRole, setNewRole] = useState<StaffUserRole>('Sales Executive');
+  const [newAllowedFeatures, setNewAllowedFeatures] = useState<string[]>(getRoleTemplatePermissions('Sales Executive'));
 
-  const handleToggleStaffStatus = (staffId: string) => {
-    setStaffUsers(prev => prev.map(u => u.id === staffId ? { ...u, active: !u.active } : u));
-    onShowAlert?.(`Staff user status updated!`, 'info');
+  const request = async (path: string, options?: RequestInit) => {
+    const token = localStorage.getItem('authToken') || '';
+    const response = await fetch(`/api/tenant-staff${path}`, {
+      ...options,
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...options?.headers },
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Staff management request failed.');
+    return data;
   };
 
-  const handleToggleFeaturePermission = (staffId: string, featureKey: string) => {
-    setStaffUsers(prev => prev.map(u => {
-      if (u.id === staffId) {
-        const hasPerm = u.allowedFeatures.includes(featureKey);
-        const newPerms = hasPerm 
-          ? u.allowedFeatures.filter(k => k !== featureKey)
-          : [...u.allowedFeatures, featureKey];
-
-        const updated = { ...u, allowedFeatures: newPerms };
-        if (selectedStaff.id === staffId) setSelectedStaff(updated);
-        return updated;
-      }
-      return u;
-    }));
-    onShowAlert?.(`Feature permission updated for ${selectedStaff.name}!`, 'success');
+  const loadStaff = async () => {
+    try {
+      setLoading(true);
+      const data = await request('/');
+      const users = data.staff || [];
+      setStaffUsers(users);
+      setSelectedStaff(current => users.find((user: StaffUserProfile) => user.id === current?.id) || users[0] || null);
+    } catch (error: any) {
+      onShowAlert?.(error.message, 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleApplyRoleTemplate = (staffId: string, role: StaffUserRole) => {
+  useEffect(() => {
+    void loadStaff();
+  }, []);
+
+  const saveStaff = async (staffId: string, update: Partial<Pick<StaffUserProfile, 'active' | 'role' | 'allowedFeatures'>>) => {
+    const data = await request(`/${staffId}`, { method: 'PATCH', body: JSON.stringify(update) });
+    const updated = data.staff as StaffUserProfile;
+    setStaffUsers(current => current.map(user => user.id === staffId ? updated : user));
+    setSelectedStaff(current => current?.id === staffId ? updated : current);
+    return updated;
+  };
+
+  const handleToggleStaffStatus = async (staffId: string) => {
+    const staff = staffUsers.find(user => user.id === staffId);
+    if (!staff) return;
+    try {
+      await saveStaff(staffId, { active: !staff.active });
+      onShowAlert?.('Staff user status updated.', 'info');
+    } catch (error: any) {
+      onShowAlert?.(error.message, 'error');
+    }
+  };
+
+  const handleToggleFeaturePermission = async (staffId: string, featureKey: string) => {
+    const staff = staffUsers.find(user => user.id === staffId);
+    if (!staff || staff.role === 'Admin') return;
+    const allowedFeatures = staff.allowedFeatures.includes(featureKey)
+      ? staff.allowedFeatures.filter(key => key !== featureKey)
+      : [...staff.allowedFeatures, featureKey];
+    try {
+      await saveStaff(staffId, { allowedFeatures });
+      onShowAlert?.(`Feature permission updated for ${staff.name}.`, 'success');
+    } catch (error: any) {
+      onShowAlert?.(error.message, 'error');
+    }
+  };
+
+  const handleApplyRoleTemplate = async (staffId: string, role: StaffUserRole) => {
     const defaultPerms = getRoleTemplatePermissions(role);
-    setStaffUsers(prev => prev.map(u => {
-      if (u.id === staffId) {
-        const updated = { ...u, role, allowedFeatures: defaultPerms };
-        if (selectedStaff.id === staffId) setSelectedStaff(updated);
-        return updated;
-      }
-      return u;
-    }));
-    onShowAlert?.(`Role template "${role}" permissions applied to ${selectedStaff.name}!`, 'success');
+    try {
+      await saveStaff(staffId, { role, allowedFeatures: defaultPerms });
+      onShowAlert?.(`Role template "${role}" permissions applied.`, 'success');
+    } catch (error: any) {
+      onShowAlert?.(error.message, 'error');
+    }
   };
 
-  const handleCreateStaffUser = () => {
-    if (!newName.trim() || !newEmail.trim()) {
-      onShowAlert?.('Please enter staff name and email.', 'error');
+  const handleCreateStaffUser = async () => {
+    if (!newName.trim() || !newEmail.trim() || newPassword.length < 8) {
+      onShowAlert?.('Enter a name, email, and password of at least 8 characters.', 'error');
       return;
     }
-
-    const defaultPerms = getRoleTemplatePermissions(newRole);
-    const newUser: StaffUserProfile = {
-      id: 'STAFF-' + Math.floor(Math.random() * 9000 + 1000),
-      name: newName,
-      email: newEmail,
-      role: newRole,
-      active: true,
-      allowedFeatures: defaultPerms,
-      createdAt: new Date().toISOString().split('T')[0],
-      lastLogin: 'Never'
-    };
-
-    setStaffUsers(prev => [...prev, newUser]);
-    setSelectedStaff(newUser);
-    setShowAddUserModal(false);
-    setNewName('');
-    setNewEmail('');
-    onShowAlert?.(`New staff user "${newName}" created successfully with ${newRole} permissions!`, 'success');
+    try {
+      const data = await request('/', {
+        method: 'POST',
+        body: JSON.stringify({ name: newName, email: newEmail, password: newPassword, role: newRole, allowedFeatures: newAllowedFeatures }),
+      });
+      setStaffUsers(current => [...current, data.staff]);
+      setSelectedStaff(data.staff);
+      setShowAddUserModal(false);
+      setNewName('');
+      setNewEmail('');
+      setNewPassword('');
+      onShowAlert?.(`Staff account for ${data.staff.name} created successfully.`, 'success');
+    } catch (error: any) {
+      onShowAlert?.(error.message, 'error');
+    }
   };
 
   return (
@@ -128,30 +159,6 @@ export default function StaffManagementSuite({
         >
           <Plus className="w-4 h-4" /> Create New Staff User
         </button>
-      </div>
-
-      {/* Simulator Active Banner */}
-      <div className="bg-purple-50 dark:bg-purple-950/40 p-4 rounded-2xl border border-purple-200 dark:border-purple-800/60 flex flex-wrap items-center justify-between gap-3 text-purple-800 dark:text-purple-300">
-        <div className="flex items-center gap-2">
-          <Eye className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-          <span>Active Simulated Logged-In User: <strong className="text-slate-900 dark:text-white">{currentSimulatedUser.name} ({currentSimulatedUser.role})</strong></span>
-        </div>
-
-        <div className="flex gap-2">
-          {staffUsers.map(u => (
-            <button
-              key={u.id}
-              onClick={() => onSelectSimulatedUser(u)}
-              className={`px-3 py-1 rounded-lg text-[11px] font-bold border transition-all ${
-                currentSimulatedUser.id === u.id 
-                  ? 'bg-purple-600 text-white border-purple-400' 
-                  : 'bg-white dark:bg-slate-900 text-purple-700 dark:text-purple-300 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
-              }`}
-            >
-              Simulate {u.role}
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* Workspace Tabs */}
@@ -182,6 +189,7 @@ export default function StaffManagementSuite({
           <div className="space-y-3">
             <h3 className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 font-sans font-bold">Staff Accounts</h3>
             <div className="space-y-3">
+              {loading && <p className="p-4 text-slate-500">Loading staff accounts...</p>}
               {staffUsers.map(u => (
                 <div
                   key={u.id}
@@ -357,10 +365,26 @@ export default function StaffManagementSuite({
               </div>
 
               <div>
+                <label className="text-slate-500 dark:text-slate-400 uppercase text-[10px] font-bold block mb-1">Temporary Password</label>
+                <input
+                  type="password"
+                  minLength={8}
+                  placeholder="At least 8 characters"
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-3 py-2 rounded-xl text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div>
                 <label className="text-slate-500 dark:text-slate-400 uppercase text-[10px] font-bold block mb-1">Role Permission Template</label>
                 <select
                   value={newRole}
-                  onChange={e => setNewRole(e.target.value as any)}
+                  onChange={e => {
+                    const role = e.target.value as StaffUserRole;
+                    setNewRole(role);
+                    setNewAllowedFeatures(getRoleTemplatePermissions(role));
+                  }}
                   className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-3 py-2 rounded-xl text-slate-900 dark:text-slate-200"
                 >
                   <option value="Sales Executive">Sales Executive</option>
@@ -369,6 +393,27 @@ export default function StaffManagementSuite({
                   <option value="Accountant">Accountant</option>
                   <option value="Admin">Admin (Super-User)</option>
                 </select>
+              </div>
+
+              <div className="space-y-2">
+                <span className="text-slate-500 dark:text-slate-400 uppercase text-[10px] font-bold block">Feature Access</span>
+                <div className="grid grid-cols-1 gap-1.5 max-h-52 overflow-y-auto pr-1">
+                  {ALL_ERP_FEATURE_PERMISSIONS.map(feature => {
+                    const granted = newRole === 'Admin' || newAllowedFeatures.includes(feature.featureKey);
+                    return (
+                      <label key={feature.featureKey} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 dark:border-slate-800 p-2 cursor-pointer">
+                        <span className="text-[10px] font-bold">{feature.label}</span>
+                        <input
+                          type="checkbox"
+                          checked={granted}
+                          disabled={newRole === 'Admin'}
+                          onChange={() => setNewAllowedFeatures(current => granted ? current.filter(key => key !== feature.featureKey) : [...current, feature.featureKey])}
+                          className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        />
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 

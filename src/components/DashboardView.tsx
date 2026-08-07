@@ -19,6 +19,7 @@ import { buildCustomInvoiceSyncPayload } from '../utils/customInvoice';
 import { Product, Order, Coupon, ReturnRequest, Review, CustomerSegment, UpsellRule, Supplier, SupplierOrder, Shipment, FinanceTransaction, User, Invoice, StoreSettings, CustomerProfile, PurchaseOrder, RepairJob, StockUnit, WarehouseLocation, StockTransfer, StocktakeSession, ShrinkageRecord } from '../types';
 import RepairJobsManager from './repairs/RepairJobsManager';
 import PurchaseOrdersManager from './purchases/PurchaseOrdersManager';
+import InboundJobsManager from './inbound/InboundJobsManager';
 import StockUnitsManager from './stock/StockUnitsManager';
 import WarehousesManager from './warehouse/WarehousesManager';
 import B2BTradeManager from './b2b/B2BTradeManager';
@@ -40,7 +41,6 @@ import LogisticsDispatchManager from './logistics/LogisticsDispatchManager';
 import EnterpriseSupplierManager from './suppliers/EnterpriseSupplierManager';
 import StaffManagementSuite from './staff/StaffManagementSuite';
 import MasterDataManager from './masterdata/MasterDataManager';
-import { DEFAULT_STAFF_PROFILES, hasFeaturePermission } from '../utils/staffPermissionEngine';
 import { useTenantFeatures } from '../context/TenantFeatureContext';
 import { DASHBOARD_TAB_FEATURE_MAP } from '../constants/features';
 
@@ -140,6 +140,7 @@ interface DashboardViewProps {
   onUpdateStoreSettings?: (settings: StoreSettings) => void;
   onShowAlert?: (message: string, type?: 'success' | 'info' | 'error') => void;
   storeSettings?: StoreSettings;
+  currentUser?: { isSuperAdmin?: boolean; role?: string; allowedFeatures?: string[] } | null;
   // ERP Phase 1
   purchaseOrders?: PurchaseOrder[];
   onAddPurchaseOrder?: (po: PurchaseOrder) => void;
@@ -170,13 +171,11 @@ interface DashboardViewProps {
   onUpdateStocktake?: (session: StocktakeSession) => void;
   onAddShrinkageRecord?: (record: ShrinkageRecord) => void;
   onUpdateProductStock?: (productId: string, newStock: number, reason: string, notes?: string) => void;
-  onOpenStorefront?: () => void;
 }
 
 const COLORS = ['#0d6efd', '#198754', '#0dcaf0', '#ffc107', '#dc3545', '#6610f2', '#fd7e14', '#20c997', '#6f42c1'];
 
 export default function DashboardView({
-  onOpenStorefront,
   products,
   onUpdateProduct,
 
@@ -221,6 +220,7 @@ export default function DashboardView({
   onUpdateStoreSettings,
   onShowAlert,
   storeSettings,
+  currentUser,
   purchaseOrders = [],
   onAddPurchaseOrder,
   onUpdatePurchaseOrder,
@@ -250,7 +250,7 @@ export default function DashboardView({
   onUpdateProductStock,
 }: DashboardViewProps) {
   
-  const [activeTab, setActiveTab] = useState<'metrics' | 'analytics' | 'reports' | 'inventory' | 'products' | 'categories' | 'collections' | 'orders' | 'invoices' | 'customers' | 'returns' | 'coupons' | 'segments' | 'upsells' | 'reviews' | 'suppliers' | 'shipping' | 'pos' | 'finance' | 'users' | 'repairs' | 'purchase-orders' | 'stock-units' | 'warehouses' | 'trade-accounts' | 'refurb' | 'ebay' | 'payroll' | 'stores' | 'automation' | 'bi' | 'distribution' | 'commercial-sales' | 'pricing-matrix' | 'massive-inventory' | 'procurement' | 'wms' | 'logistics-dispatch' | 'master-data'>(() => {
+  const [activeTab, setActiveTab] = useState<'metrics' | 'analytics' | 'reports' | 'inventory' | 'products' | 'categories' | 'collections' | 'orders' | 'invoices' | 'customers' | 'returns' | 'coupons' | 'segments' | 'upsells' | 'reviews' | 'suppliers' | 'shipping' | 'pos' | 'finance' | 'users' | 'repairs' | 'purchase-orders' | 'inbound-jobs' | 'stock-units' | 'warehouses' | 'trade-accounts' | 'refurb' | 'ebay' | 'payroll' | 'stores' | 'automation' | 'bi' | 'distribution' | 'commercial-sales' | 'pricing-matrix' | 'massive-inventory' | 'procurement' | 'wms' | 'logistics-dispatch' | 'master-data'>(() => {
     try {
       const hash = window.location.hash.replace('#', '');
       const validTabs = [
@@ -271,7 +271,6 @@ export default function DashboardView({
     }
     return 'metrics';
   });
-  const [currentSimulatedUser, setCurrentSimulatedUser] = useState(DEFAULT_STAFF_PROFILES[0]);
   const [tabHistory, setTabHistory] = useState<string[]>(['metrics']);
   const [hoverMenu, setHoverMenu] = useState<'sales' | 'inventory' | 'procurement' | 'intelligence' | null>(null);
   const [showCustomizePanel, setShowCustomizePanel] = useState(false);
@@ -285,6 +284,7 @@ export default function DashboardView({
     { id: 'invoices',          label: 'Invoicing',           icon: FileText,       group: 'Core' },
     { id: 'inventory',         label: 'Inventory',           icon: Boxes,          group: 'Core' },
     { id: 'purchase-orders',   label: 'Purchase Orders',     icon: ClipboardList,  group: 'Procurement' },
+    { id: 'inbound-jobs',      label: 'Inbound Processing Jobs', icon: ClipboardList, group: 'Procurement' },
     { id: 'suppliers',         label: 'Suppliers',           icon: Award,          group: 'Procurement' },
     { id: 'warehouses',        label: 'Warehouses',          icon: Building2,      group: 'Operations' },
     { id: 'bi',                label: 'Sales Analytics & Insights',icon: Activity, group: 'Intelligence' },
@@ -333,13 +333,24 @@ export default function DashboardView({
     return !!requiredFeature && !hasFeature(requiredFeature);
   };
 
+  const isStaffAllowed = (id: string): boolean => {
+    if (!currentUser || currentUser.isSuperAdmin || currentUser.role !== 'TENANT_STAFF') return true;
+    if (id === 'metrics') return true;
+    const requiredFeature = TAB_FEATURE_MAP[id as TabId] || id;
+    return (currentUser.allowedFeatures || []).includes(requiredFeature);
+  };
+
   const isTabHidden = (id: string): boolean => id !== 'metrics' && hiddenTabSet.has(id);
 
-  const isTabVisible = (id: string): boolean => !isTabLocked(id) && !isTabHidden(id);
+  const isTabVisible = (id: string): boolean => !isTabLocked(id) && !isTabHidden(id) && isStaffAllowed(id);
 
   // Single gatekeeper for tab navigation: blocks locked modules and opens the upgrade prompt instead
   const requestTab = (id: string) => {
     if (isTabHidden(id)) {
+      return;
+    }
+    if (!isStaffAllowed(id)) {
+      onShowAlert?.('You do not have permission to access this module.', 'error');
       return;
     }
     const requiredFeature = TAB_FEATURE_MAP[id as TabId];
@@ -352,7 +363,7 @@ export default function DashboardView({
 
   const DEFAULT_PINNED: TabId[] = [
     'metrics','products','orders','customers','invoices','inventory',
-    'purchase-orders','suppliers','warehouses','bi','reports',
+    'purchase-orders','inbound-jobs','suppliers','warehouses','bi','reports',
     'payroll','shipping','finance','ebay',
   ];
 
@@ -439,7 +450,7 @@ export default function DashboardView({
         'metrics', 'analytics', 'inventory', 'products', 'categories', 'collections', 'orders', 'invoices',
         'customers', 'returns', 'coupons', 'segments', 'upsells', 'reviews',
         'suppliers', 'shipping', 'pos', 'finance', 'users',
-        'repairs', 'purchase-orders', 'stock-units', 'warehouses', 'trade-accounts'
+        'repairs', 'purchase-orders', 'inbound-jobs', 'stock-units', 'warehouses', 'trade-accounts'
       ];
       if (hash && validTabs.includes(hash)) {
         requestTab(hash);
@@ -1975,46 +1986,21 @@ export default function DashboardView({
     setInvoiceBuilderOpen(true);
   };
 
+  const activePage = ALL_TABS.find((tab) => tab.id === activeTab) || ALL_TABS[0];
+  const ActivePageIcon = activePage.icon;
+  const hasSalesMenuLinks = ['commercial-sales', 'pricing-matrix', 'distribution', 'orders', 'invoices', 'customers', 'trade-accounts', 'coupons', 'segments', 'upsells'].some(isTabVisible);
+  const hasInventoryMenuLinks = ['massive-inventory', 'wms', 'logistics-dispatch', 'warehouses', 'stock-units', 'inventory', 'refurb', 'products', 'categories', 'collections'].some(isTabVisible);
+  const hasProcurementMenuLinks = ['procurement', 'suppliers', 'purchase-orders', 'inbound-jobs'].some(isTabVisible);
+  const hasIntelligenceMenuLinks = ['bi', 'reports', 'finance', 'payroll', 'automation', 'repairs', 'ebay', 'stores', 'reviews', 'users'].some(isTabVisible);
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 text-left" id="dashboard-view-main">
-      {/* STOREFRONT PUBLIC QUICK LINK BANNER */}
-      <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white shadow-md flex flex-wrap items-center justify-between gap-4 border border-blue-500/20">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-white/10 text-blue-300 backdrop-blur-xs">
-            <Globe className="w-5 h-5 text-blue-400" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="font-extrabold text-white text-sm sm:text-base">Storefront Public Page</h3>
-              <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold font-mono uppercase">
-                LIVE STORE
-              </span>
-            </div>
-            <p className="text-xs text-blue-200/80 font-medium">
-              Preview your public e-commerce store, product catalog, custom PC builder & customer checkout
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {onOpenStorefront && (
-            <button
-              type="button"
-              onClick={onOpenStorefront}
-              className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-sm transition flex items-center gap-1.5 cursor-pointer"
-            >
-              <Globe className="w-4 h-4" /> Open Public Storefront
-            </button>
-          )}
-        </div>
-      </div>
-
       {/* HORIZONTAL TOP NAVIGATION */}
-      <div className="mb-8 space-y-4">
+      <div className="mb-5 space-y-4">
 
         {/* Store Operations Group */}
         <div className="space-y-2">
-          <div className="flex flex-wrap items-center justify-start gap-2 px-1 pb-1">
+          <div className="flex w-full flex-wrap items-center justify-center gap-2 px-1 pb-1" id="tenant-admin-primary-menu">
             <button
               type="button"
               onClick={(e) => {
@@ -2031,6 +2017,7 @@ export default function DashboardView({
             </button>
 
             {/* CATEGORY 1: Sales, B2B & Pricing Dropdown */}
+            {hasSalesMenuLinks && (
             <div
               className="relative group"
               onMouseEnter={() => setHoverMenu('sales')}
@@ -2050,9 +2037,9 @@ export default function DashboardView({
                     {isTabVisible('commercial-sales') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('commercial-sales'); setHoverMenu(null); }} onClick={() => { requestTab('commercial-sales'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Commercial B2B Sales &amp; Quotes</button>}
                     {isTabVisible('pricing-matrix') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('pricing-matrix'); setHoverMenu(null); }} onClick={() => { requestTab('pricing-matrix'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">14-Dimension Pricing Matrix</button>}
                     {isTabVisible('distribution') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('distribution'); setHoverMenu(null); }} onClick={() => { requestTab('distribution'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Wholesale &amp; Reseller Ops</button>}
-                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('orders'); setHoverMenu(null); }} onClick={() => { setActiveTab('orders'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Orders Directory</button>
-                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('invoices'); setHoverMenu(null); }} onClick={() => { setActiveTab('invoices'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Invoices &amp; Billing</button>
-                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('customers'); setHoverMenu(null); }} onClick={() => { setActiveTab('customers'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Customer CRM</button>
+                    {isTabVisible('orders') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('orders'); setHoverMenu(null); }} onClick={() => { requestTab('orders'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Orders Directory</button>}
+                    {isTabVisible('invoices') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('invoices'); setHoverMenu(null); }} onClick={() => { requestTab('invoices'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Invoices &amp; Billing</button>}
+                    {isTabVisible('customers') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('customers'); setHoverMenu(null); }} onClick={() => { requestTab('customers'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Customer CRM</button>}
                     {isTabVisible('trade-accounts') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('trade-accounts'); setHoverMenu(null); }} onClick={() => { requestTab('trade-accounts'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">B2B Trade Accounts</button>}
                     {isTabVisible('coupons') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('coupons'); setHoverMenu(null); }} onClick={() => { requestTab('coupons'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Coupons &amp; Promo Codes</button>}
                     {isTabVisible('segments') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('segments'); setHoverMenu(null); }} onClick={() => { requestTab('segments'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Customer Segments</button>}
@@ -2061,8 +2048,10 @@ export default function DashboardView({
                 </div>
               )}
             </div>
+            )}
 
             {/* CATEGORY 2: Inventory, WMS & Logistics Dropdown */}
+            {hasInventoryMenuLinks && (
             <div
               className="relative group"
               onMouseEnter={() => setHoverMenu('inventory')}
@@ -2084,17 +2073,19 @@ export default function DashboardView({
                     {isTabVisible('logistics-dispatch') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('logistics-dispatch'); setHoverMenu(null); }} onClick={() => { requestTab('logistics-dispatch'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Logistics &amp; Courier Dispatch</button>}
                     {isTabVisible('warehouses') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('warehouses'); setHoverMenu(null); }} onClick={() => { requestTab('warehouses'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Multi-Warehouse Locations</button>}
                     {isTabVisible('stock-units') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('stock-units'); setHoverMenu(null); }} onClick={() => { requestTab('stock-units'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Stock Units &amp; Serials</button>}
-                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('inventory'); setHoverMenu(null); }} onClick={() => { setActiveTab('inventory'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Inventory Stockpools</button>
+                    {isTabVisible('inventory') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('inventory'); setHoverMenu(null); }} onClick={() => { requestTab('inventory'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Inventory Stockpools</button>}
                     {isTabVisible('refurb') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('refurb'); setHoverMenu(null); }} onClick={() => { requestTab('refurb'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Refurb &amp; Grading</button>}
-                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('products'); setHoverMenu(null); }} onClick={() => { setActiveTab('products'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Product Catalog</button>
-                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('categories'); setHoverMenu(null); }} onClick={() => { setActiveTab('categories'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Categories Manager</button>
-                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('collections'); setHoverMenu(null); }} onClick={() => { setActiveTab('collections'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Collections Manager</button>
+                    {isTabVisible('products') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('products'); setHoverMenu(null); }} onClick={() => { requestTab('products'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Product Catalog</button>}
+                    {isTabVisible('categories') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('categories'); setHoverMenu(null); }} onClick={() => { requestTab('categories'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Categories Manager</button>}
+                    {isTabVisible('collections') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('collections'); setHoverMenu(null); }} onClick={() => { requestTab('collections'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Collections Manager</button>}
                   </div>
                 </div>
               )}
             </div>
+            )}
 
             {/* CATEGORY 3: Purchasing & Vendors Dropdown */}
+            {hasProcurementMenuLinks && (
             <div
               className="relative group"
               onMouseEnter={() => setHoverMenu('procurement')}
@@ -2114,13 +2105,15 @@ export default function DashboardView({
                     {isTabVisible('procurement') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('procurement'); setHoverMenu(null); }} onClick={() => { requestTab('procurement'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Global Procurement &amp; RFQs</button>}
                     {isTabVisible('suppliers') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('suppliers'); setHoverMenu(null); }} onClick={() => { requestTab('suppliers'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Supplier Scorecards</button>}
                     {isTabVisible('purchase-orders') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('purchase-orders'); setHoverMenu(null); }} onClick={() => { requestTab('purchase-orders'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Purchase Orders</button>}
-                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('shipping'); setHoverMenu(null); }} onClick={() => { setActiveTab('shipping'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Inbound Goods Receiving (GRN)</button>
+                    {isTabVisible('inbound-jobs') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('inbound-jobs'); setHoverMenu(null); }} onClick={() => { requestTab('inbound-jobs'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Inbound Processing Jobs &amp; GRN</button>}
                   </div>
                 </div>
               )}
             </div>
+            )}
 
             {/* CATEGORY 4: Financials, HR & Intelligence Dropdown */}
+            {hasIntelligenceMenuLinks && (
             <div
               className="relative group"
               onMouseEnter={() => setHoverMenu('intelligence')}
@@ -2137,20 +2130,21 @@ export default function DashboardView({
               {hoverMenu === 'intelligence' && (
                 <div className="absolute left-0 top-full z-50 pt-0.5 min-w-[230px]">
                   <div className="rounded-xl border border-slate-300 bg-white py-1 shadow-2xl space-y-0.5 font-sans">
-                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('bi'); setHoverMenu(null); }} onClick={() => { setActiveTab('bi'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Executive Business Intelligence</button>
-                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('reports'); setHoverMenu(null); }} onClick={() => { setActiveTab('reports'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">300+ ERP Reports</button>
+                    {isTabVisible('bi') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('bi'); setHoverMenu(null); }} onClick={() => { requestTab('bi'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Executive Business Intelligence</button>}
+                    {isTabVisible('reports') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('reports'); setHoverMenu(null); }} onClick={() => { requestTab('reports'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">300+ ERP Reports</button>}
                     {isTabVisible('finance') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('finance'); setHoverMenu(null); }} onClick={() => { requestTab('finance'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Finance &amp; GL Accounting</button>}
-                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('payroll'); setHoverMenu(null); }} onClick={() => { setActiveTab('payroll'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">HR Staff &amp; Payroll</button>
-                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('automation'); setHoverMenu(null); }} onClick={() => { setActiveTab('automation'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Visual Workflow Automation</button>
+                    {isTabVisible('payroll') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('payroll'); setHoverMenu(null); }} onClick={() => { requestTab('payroll'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">HR Staff &amp; Payroll</button>}
+                    {isTabVisible('automation') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('automation'); setHoverMenu(null); }} onClick={() => { requestTab('automation'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Visual Workflow Automation</button>}
                     {isTabVisible('repairs') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('repairs'); setHoverMenu(null); }} onClick={() => { requestTab('repairs'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Repairs &amp; Warranty Jobs</button>}
                     {isTabVisible('ebay') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('ebay'); setHoverMenu(null); }} onClick={() => { requestTab('ebay'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Marketplace (eBay Integration)</button>}
-                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('stores'); setHoverMenu(null); }} onClick={() => { setActiveTab('stores'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Multi-Store Branch Locations</button>
-                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('reviews'); setHoverMenu(null); }} onClick={() => { setActiveTab('reviews'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Product Reviews</button>
-                    <button type="button" onMouseDown={(e) => { e.preventDefault(); setActiveTab('users'); setHoverMenu(null); }} onClick={() => { setActiveTab('users'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Staff Accounts &amp; Admin RBAC</button>
+                    {isTabVisible('stores') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('stores'); setHoverMenu(null); }} onClick={() => { requestTab('stores'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Multi-Store Branch Locations</button>}
+                    {isTabVisible('reviews') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('reviews'); setHoverMenu(null); }} onClick={() => { requestTab('reviews'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Product Reviews</button>}
+                    {isTabVisible('users') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('users'); setHoverMenu(null); }} onClick={() => { requestTab('users'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Staff Accounts &amp; Admin RBAC</button>}
                   </div>
                 </div>
               )}
             </div>
+            )}
 
             <button
               type="button"
@@ -2301,6 +2295,17 @@ export default function DashboardView({
           </div>
         </div>
 
+      </div>
+
+      {/* CONTEXTUAL PAGE TITLE */}
+      <div className="mb-6 flex items-center gap-3 border-b border-slate-200 pb-4 dark:border-slate-800" id="admin-page-title">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+          <ActivePageIcon className="h-5 w-5" />
+        </div>
+        <div className="min-w-0">
+          <h1 className="truncate text-xl font-black tracking-tight text-slate-950 dark:text-white sm:text-2xl">{activePage.label}</h1>
+          <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-slate-400">{activePage.group}</p>
+        </div>
       </div>
 
       <div className="space-y-6" id="dashboard-main-content">
@@ -6171,6 +6176,17 @@ export default function DashboardView({
         </div>
       )}
 
+      {activeTab === 'inbound-jobs' && (
+        <div className="space-y-6" id="dashboard-tab-inbound-jobs">
+          <InboundJobsManager
+            purchaseOrders={purchaseOrders}
+            warehouses={warehouses}
+            onUpdatePurchaseOrder={onUpdatePurchaseOrder}
+            onShowAlert={onShowAlert}
+          />
+        </div>
+      )}
+
       {/* STOCK UNITS TAB */}
       {activeTab === 'stock-units' && (
         <div className="space-y-6" id="dashboard-tab-stock-units">
@@ -7490,8 +7506,6 @@ export default function DashboardView({
         {/* GRANULAR RBAC STAFF MANAGEMENT & FEATURE ACCESS CONTROL SUITE */}
         {activeTab === 'users' && (
           <StaffManagementSuite
-            currentSimulatedUser={currentSimulatedUser}
-            onSelectSimulatedUser={setCurrentSimulatedUser}
             onShowAlert={onShowAlert}
           />
         )}

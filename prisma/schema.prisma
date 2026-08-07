@@ -4,8 +4,6 @@ generator client {
   binaryTargets   = ["native", "rhel-openssl-1.0.x", "rhel-openssl-3.0.x"]
 }
 
-
-
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -16,50 +14,64 @@ datasource db {
 // ==========================================
 
 model Tenant {
-  id                   String      @id @default(cuid())
+  id                   String    @id @default(cuid())
   name                 String
-  slug                 String      @unique
-  customDomain         String?     @unique
-  customDomainVerified Boolean     @default(false)
-  status               String      @default("ACTIVE") // ACTIVE, SUSPENDED, CANCELED
-  logoUrl              String      @default("")
+  slug                 String    @unique
+  customDomain         String?   @unique
+  customDomainVerified Boolean   @default(false)
+  status               String    @default("ACTIVE") // ACTIVE, SUSPENDED, CANCELED
+  logoUrl              String    @default("")
   stripeCustomerId     String?
   stripeSubscriptionId String?
-  subscriptionStatus   String      @default("active") // active, trialing, past_due, canceled
+  subscriptionStatus   String    @default("active") // active, trialing, past_due, canceled
   currentPeriodEnd     DateTime?
   planId               String?
-  plan                 Plan?       @relation(fields: [planId], references: [id])
-  createdAt            DateTime    @default(now())
-  updatedAt            DateTime    @updatedAt
+  plan                 Plan?     @relation(fields: [planId], references: [id])
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   // Relations to Tenant-Scoped Data
-  tenantUsers          TenantUser[]
-  categories           Category[]
-  brands               Brand[]
-  unitsOfMeasure       UnitOfMeasure[]
-  productStatuses      ProductStatus[]
-  warehouseLocations   WarehouseLocation[]
-  taxRates             TaxRate[]
-  paymentTerms         PaymentTerm[]
-  shippingMethods      ShippingMethod[]
-  warrantyTypes        WarrantyType[]
-  productAttributes    ProductAttribute[]
-  attributeValues      AttributeValue[]
-  productConditions    ProductCondition[]
-  products             Product[]
-  productImages        ProductImage[]
-  customers            Customer[]
-  addresses            Address[]
-  orders               Order[]
-  orderItems           OrderItem[]
-  coupons              Coupon[]
-  storeSettings        StoreSettings?
-  paymentMethods       PaymentMethod[]
-  activityLogs         ActivityLog[]
-  invoices             TenantInvoice[]
+  tenantUsers        TenantUser[]
+  categories         Category[]
+  brands             Brand[]
+  unitsOfMeasure     UnitOfMeasure[]
+  productStatuses    ProductStatus[]
+  warehouseLocations WarehouseLocation[]
+  taxRates           TaxRate[]
+  paymentTerms       PaymentTerm[]
+  shippingMethods    ShippingMethod[]
+  warrantyTypes      WarrantyType[]
+  productAttributes  ProductAttribute[]
+  attributeValues    AttributeValue[]
+  productConditions  ProductCondition[]
+  products           Product[]
+  productImages      ProductImage[]
+  customers          Customer[]
+  addresses          Address[]
+  orders             Order[]
+  orderItems         OrderItem[]
+  coupons            Coupon[]
+  storeSettings      StoreSettings?
+  paymentMethods     PaymentMethod[]
+  activityLogs       ActivityLog[]
+  invoices           TenantInvoice[]
+  inboundJobs        InboundJob[]
+  inboundJobItems    InboundJobItem[]
+  inboundJobSteps    InboundJobStep[]
+  goodsReceipts      GoodsReceipt[]
+  inventoryMovements InventoryMovement[]
+  posRegisterShifts  PosRegisterShift[]
+  posCashMovements   PosCashMovement[]
+  posPayments        PosPayment[]
+  posReturns         PosReturn[]
+  posReturnItems     PosReturnItem[]
+  posLaybys          PosLayby[]
+  posLaybyItems      PosLaybyItem[]
+  posLaybyPayments   PosLaybyPayment[]
+  posApprovals       PosManagerApproval[]
+  posAuthorizations  PosPaymentAuthorization[]
 
   @@index([slug])
-
   @@index([customDomain])
   @@map("tenants")
 }
@@ -83,22 +95,22 @@ model Plan {
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
-  tenants              Tenant[]
+  tenants Tenant[]
 
   @@map("plans")
 }
 
 model User {
-  id           String       @id @default(cuid())
-  email        String       @unique
+  id           String   @id @default(cuid())
+  email        String   @unique
   password     String
   name         String
-  isSuperAdmin Boolean      @default(false)
-  avatarUrl    String       @default("")
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  isSuperAdmin Boolean  @default(false)
+  avatarUrl    String   @default("")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  tenantUsers  TenantUser[]
+  tenantUsers TenantUser[]
 
   @@index([email])
   @@map("users")
@@ -111,6 +123,9 @@ model TenantUser {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   role      String   @default("TENANT_STAFF") // TENANT_OWNER, TENANT_ADMIN, TENANT_STAFF
+  staffRole String   @default("Custom Staff")
+  isActive  Boolean  @default(true)
+  allowedFeaturesJson String @default("[]")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -452,24 +467,24 @@ model ProductImage {
 }
 
 model Customer {
-  id               String     @id @default(cuid())
-  tenantId         String     @default("default-tenant")
-  tenant           Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  id               String    @id @default(cuid())
+  tenantId         String    @default("default-tenant")
+  tenant           Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name             String
   email            String
-  phone            String     @default("")
-  address          String     @default("")
-  city             String     @default("")
-  type             String     @default("Retail")
-  company          String     @default("")
-  abn              String     @default("")
-  walletBalance    Float      @default(0)
-  points           Int        @default(0)
-  wishlist         String     @default("[]")
-  notes            String     @default("")
-  registrationDate DateTime   @default(now())
-  createdAt        DateTime   @default(now())
-  updatedAt        DateTime   @updatedAt
+  phone            String    @default("")
+  address          String    @default("")
+  city             String    @default("")
+  type             String    @default("Retail")
+  company          String    @default("")
+  abn              String    @default("")
+  walletBalance    Float     @default(0)
+  points           Int       @default(0)
+  wishlist         String    @default("[]")
+  notes            String    @default("")
+  registrationDate DateTime  @default(now())
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
   addresses        Address[]
   orders           Order[]
 
@@ -626,6 +641,214 @@ model ActivityLog {
   @@map("activity_logs")
 }
 
+model PosRegisterShift {
+  id                 String   @id @default(cuid())
+  tenantId           String
+  tenant             Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  registerId         String
+  openedByUserId     String
+  closedByUserId     String?
+  status             String   @default("OPEN")
+  openingFloat       Float    @default(0)
+  expectedCash       Float    @default(0)
+  countedCash        Float?
+  variance           Float?
+  varianceReason     String   @default("")
+  openedAt           DateTime @default(now())
+  closedAt           DateTime?
+  cashMovements      PosCashMovement[]
+  payments           PosPayment[]
+  returns            PosReturn[]
+
+  @@index([tenantId, registerId, status])
+  @@index([tenantId, openedAt])
+  @@map("pos_register_shifts")
+}
+
+model PosCashMovement {
+  id          String           @id @default(cuid())
+  tenantId    String
+  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  shiftId     String
+  shift       PosRegisterShift @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  type        String
+  amount      Float
+  reason      String
+  userId      String
+  createdAt   DateTime         @default(now())
+
+  @@index([tenantId, shiftId, createdAt])
+  @@map("pos_cash_movements")
+}
+
+model PosPayment {
+  id                String           @id @default(cuid())
+  tenantId          String
+  tenant            Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  shiftId           String?
+  shift             PosRegisterShift? @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+  orderId           String
+  method            String
+  amount            Float
+  reference         String?
+  status            String
+  idempotencyKey    String
+  createdAt         DateTime         @default(now())
+
+  @@unique([tenantId, idempotencyKey, method])
+  @@index([tenantId, orderId])
+  @@index([tenantId, shiftId])
+  @@map("pos_payments")
+}
+
+model PosReturn {
+  id                String           @id @default(cuid())
+  tenantId          String
+  tenant            Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  returnNumber      String
+  orderId           String
+  shiftId           String?
+  shift             PosRegisterShift? @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+  status            String           @default("COMPLETED")
+  refundMethod      String
+  refundAmount      Float
+  reason            String
+  processedByUserId String
+  createdAt         DateTime         @default(now())
+  items             PosReturnItem[]
+
+  @@unique([tenantId, returnNumber])
+  @@index([tenantId, orderId])
+  @@index([tenantId, createdAt])
+  @@map("pos_returns")
+}
+
+model PosReturnItem {
+  id             String    @id @default(cuid())
+  tenantId       String
+  tenant         Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  returnId       String
+  posReturn      PosReturn @relation(fields: [returnId], references: [id], onDelete: Cascade)
+  orderItemId    String
+  productId      String
+  quantity       Int
+  serialNumber   String?
+  unitRefund     Float
+  disposition    String
+  restocked      Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+
+  @@index([tenantId, returnId])
+  @@index([tenantId, orderItemId])
+  @@index([tenantId, serialNumber])
+  @@map("pos_return_items")
+}
+
+model PosLayby {
+  id                 String             @id @default(cuid())
+  tenantId           String
+  tenant             Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  laybyNumber        String
+  customerId         String
+  customerName       String
+  shiftId            String?
+  status             String             @default("ACTIVE")
+  subtotal           Float
+  tax                Float
+  totalAmount        Float
+  paidAmount         Float              @default(0)
+  remainingBalance   Float
+  expiryDate         DateTime
+  notes              String             @default("")
+  createdByUserId    String
+  completedOrderId   String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  items              PosLaybyItem[]
+  payments           PosLaybyPayment[]
+
+  @@unique([tenantId, laybyNumber])
+  @@index([tenantId, status, expiryDate])
+  @@index([tenantId, customerId])
+  @@map("pos_laybys")
+}
+
+model PosLaybyItem {
+  id             String   @id @default(cuid())
+  tenantId       String
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  laybyId        String
+  layby          PosLayby @relation(fields: [laybyId], references: [id], onDelete: Cascade)
+  productId      String
+  productName    String
+  quantity       Int
+  unitPrice      Float
+  serialNumbers  String   @default("[]")
+  createdAt      DateTime @default(now())
+
+  @@index([tenantId, laybyId])
+  @@index([tenantId, productId])
+  @@map("pos_layby_items")
+}
+
+model PosLaybyPayment {
+  id             String   @id @default(cuid())
+  tenantId       String
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  laybyId        String
+  layby          PosLayby @relation(fields: [laybyId], references: [id], onDelete: Cascade)
+  shiftId        String?
+  amount         Float
+  method         String
+  reference      String?
+  receiptNumber  String
+  receivedByUserId String
+  createdAt      DateTime @default(now())
+
+  @@unique([tenantId, receiptNumber])
+  @@index([tenantId, laybyId, createdAt])
+  @@map("pos_layby_payments")
+}
+
+model PosManagerApproval {
+  id               String   @id @default(cuid())
+  tenantId         String
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  action           String
+  entityId         String?
+  amount           Float?
+  reason           String
+  requestedByUserId String
+  approvedByUserId String
+  usedAt           DateTime?
+  expiresAt        DateTime
+  createdAt        DateTime @default(now())
+
+  @@index([tenantId, action, expiresAt])
+  @@map("pos_manager_approvals")
+}
+
+model PosPaymentAuthorization {
+  id               String   @id @default(cuid())
+  tenantId         String
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  shiftId          String
+  amount           Float
+  method           String
+  provider         String
+  status           String   @default("PENDING")
+  providerReference String?
+  requestedByUserId String
+  confirmedByUserId String?
+  expiresAt        DateTime
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([tenantId, shiftId, status])
+  @@index([tenantId, providerReference])
+  @@map("pos_payment_authorizations")
+}
+
 model TenantInvoice {
   id              String    @id @default(cuid())
   invoiceNumber   String    @unique
@@ -652,3 +875,151 @@ model TenantInvoice {
   @@map("tenant_invoices")
 }
 
+// ==========================================
+// INBOUND RECEIVING, PROCESSING & PUT-AWAY
+// ==========================================
+
+model InboundJob {
+  id                    String              @id @default(cuid())
+  tenantId              String
+  tenant                Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  jobNumber             String
+  jobType               String              @default("SUPPLIER_RECEIPT")
+  status                String              @default("RECEIVING")
+  priority              String              @default("NORMAL")
+  purchaseOrderRef      String?
+  supplierName          String
+  warehouseId           String?
+  receivingLocation     String              @default("RECEIVING-QUARANTINE")
+  supplierInvoiceNumber String?
+  deliveryDocketNumber  String?
+  carrier               String?
+  trackingNumber        String?
+  receivedAt            DateTime            @default(now())
+  receivedByUserId      String?
+  assignedToUserId      String?
+  notes                 String              @default("")
+  holdReason            String?
+  completedAt           DateTime?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  items                 InboundJobItem[]
+  receipts              GoodsReceipt[]
+  movements             InventoryMovement[]
+
+  @@unique([tenantId, jobNumber])
+  @@index([tenantId, status])
+  @@index([tenantId, purchaseOrderRef])
+  @@map("inbound_jobs")
+}
+
+model InboundJobItem {
+  id                     String              @id @default(cuid())
+  tenantId               String
+  tenant                 Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  inboundJobId           String
+  inboundJob             InboundJob          @relation(fields: [inboundJobId], references: [id], onDelete: Cascade)
+  purchaseOrderLineRef   String?
+  productId              String?
+  productName            String
+  itemType               String              @default("NEW_STOCK")
+  internalAssetNumber    String?
+  manufacturerSerial     String?
+  serviceTag             String?
+  imei                   String?
+  batchNumber            String?
+  expectedQuantity       Int                 @default(1)
+  deliveredQuantity      Int                 @default(1)
+  acceptedQuantity       Int                 @default(1)
+  rejectedQuantity       Int                 @default(0)
+  status                 String              @default("AWAITING_IDENTIFICATION")
+  currentStep            String              @default("IDENTIFICATION")
+  currentLocation        String              @default("RECEIVING-QUARANTINE")
+  destinationWarehouseId String?
+  destinationBin         String?
+  purchaseCost           Float               @default(0)
+  landedCost             Float               @default(0)
+  grade                  String?
+  sellable               Boolean             @default(false)
+  finalDisposition       String?
+  holdReason             String?
+  completedAt            DateTime?
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+  steps                  InboundJobStep[]
+  movements              InventoryMovement[]
+
+  @@unique([tenantId, manufacturerSerial])
+  @@unique([tenantId, internalAssetNumber])
+  @@index([tenantId, inboundJobId])
+  @@index([tenantId, status])
+  @@map("inbound_job_items")
+}
+
+model InboundJobStep {
+  id                String         @id @default(cuid())
+  tenantId          String
+  tenant            Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  inboundJobItemId  String
+  inboundJobItem    InboundJobItem @relation(fields: [inboundJobItemId], references: [id], onDelete: Cascade)
+  stepKey           String
+  sequence          Int
+  status            String         @default("PENDING")
+  required          Boolean        @default(true)
+  result            String?
+  dataJson          String         @default("{}")
+  notes             String         @default("")
+  completedByUserId String?
+  completedAt       DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@unique([inboundJobItemId, stepKey])
+  @@index([tenantId, status])
+  @@map("inbound_job_steps")
+}
+
+model GoodsReceipt {
+  id                    String     @id @default(cuid())
+  tenantId              String
+  tenant                Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  inboundJobId          String
+  inboundJob            InboundJob @relation(fields: [inboundJobId], references: [id], onDelete: Cascade)
+  grnNumber             String
+  purchaseOrderRef      String?
+  supplierInvoiceNumber String?
+  deliveryDocketNumber  String?
+  status                String     @default("POSTED_TO_QUARANTINE")
+  quantitiesJson        String     @default("[]")
+  receivedByUserId      String?
+  receivedAt            DateTime   @default(now())
+  notes                 String     @default("")
+
+  @@unique([tenantId, grnNumber])
+  @@index([tenantId, inboundJobId])
+  @@map("goods_receipts")
+}
+
+model InventoryMovement {
+  id                String          @id @default(cuid())
+  tenantId          String
+  tenant            Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  inboundJobId      String?
+  inboundJob        InboundJob?     @relation(fields: [inboundJobId], references: [id], onDelete: SetNull)
+  inboundJobItemId  String?
+  inboundJobItem    InboundJobItem? @relation(fields: [inboundJobItemId], references: [id], onDelete: SetNull)
+  productId         String?
+  movementType      String
+  quantity          Int
+  fromStockType     String?
+  toStockType       String
+  fromLocation      String?
+  toLocation        String?
+  reference         String?
+  performedByUserId String?
+  createdAt         DateTime        @default(now())
+
+  @@index([tenantId, productId])
+  @@index([tenantId, inboundJobId])
+  @@map("inventory_movements")
+}

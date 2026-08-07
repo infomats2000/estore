@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShoppingBag, ShieldCheck, Search, Phone, Mail, Truck, Shield, Laptop, LogIn, Headphones, Cpu, User, Lock, Globe } from 'lucide-react';
+import { ShoppingCart, ShieldCheck, Search, Phone, Mail, Truck, Shield, Laptop, LogIn, Headphones, Cpu, User, Lock, Globe } from 'lucide-react';
 
 import { Product, StoreSettings } from '../types';
 import { UserAccountDropdown } from './UserAccountDropdown';
@@ -91,8 +91,8 @@ export default function Navbar({
   return (
     <header className="sticky top-0 z-40 w-full shadow-md" id="app-header">
       {/* Top Announcement Bar */}
-      {storeSettings?.showAnnouncementBar !== false && (
-        <div className="bg-blue-900 text-white text-[10px] py-1.5 px-4 font-sans border-b border-black/10">
+      {!isAdminMode && storeSettings?.showAnnouncementBar !== false && (
+        <div className="bg-blue-900 text-white text-[10px] py-1.5 px-4 font-sans border-b border-black/10" id="storefront-announcement-bar">
           <div className="mx-auto max-w-7xl flex flex-col sm:flex-row items-center justify-between gap-1">
             <div className="flex items-center gap-3 text-white/90">
               <span className="flex items-center gap-1 font-bold text-white">
@@ -121,7 +121,7 @@ export default function Navbar({
       )}
 
       {/* Main Branding & Action Header */}
-      <div className="bg-[#2f2f2f] border-b border-black/10 text-white transition-colors">
+      <div className="bg-[#2f2f2f] border-b border-black/10 text-white transition-colors" id="storefront-main-header">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8 gap-4">
           
           {/* Logo and Brand */}
@@ -260,7 +260,7 @@ export default function Navbar({
           )}
 
           {/* Right Nav Options */}
-          <div className="flex items-center gap-2.5" id="nav-actions">
+          <div className="flex min-w-0 items-center gap-2 lg:gap-3" id="nav-actions">
             
             {/* Mobile search toggle */}
             {!isAdminMode && (
@@ -290,41 +290,43 @@ export default function Navbar({
 
             {/* Customer Portal Button */}
             {!isAdminMode && onOpenCustomerPortal && (
-              <button
-                onClick={onOpenCustomerPortal}
-                className="hidden md:flex items-center gap-1.5 border border-purple-900 bg-purple-950 text-purple-200 px-2.5 py-1.5 transition-all hover:bg-purple-900 shadow-sm"
+              <a
+                href="#customer-portal"
+                onClick={(event) => { event.preventDefault(); onOpenCustomerPortal(); }}
+                className="hidden xl:inline-flex shrink-0 items-center gap-1 text-purple-200 hover:text-white font-mono text-[10px] font-bold uppercase tracking-wide whitespace-nowrap transition-colors"
                 title="View your orders, track shipments & manage account"
                 id="customer-portal-btn"
               >
                 <User className="h-3.5 w-3.5 text-purple-300" />
-                <span className="font-mono text-[10px] font-bold tracking-wider">MY ACCOUNT &amp; ORDERS</span>
-              </button>
+                <span>MY ACCOUNT &amp; ORDERS</span>
+              </a>
             )}
             {!isAdminMode && (
-              <button
-                onClick={onOpenCart}
+              <a
+                href="#cart"
+                onClick={(event) => { event.preventDefault(); onOpenCart(); }}
                 onMouseEnter={onPrefetchCheckout}
                 onFocus={onPrefetchCheckout}
-                className="relative flex items-center gap-2 border border-neutral-900 dark:border-neutral-700 dark:border-blue-400 bg-neutral-900 dark:bg-neutral-900 dark:bg-neutral-900 text-white dark:text-blue-400 px-2.5 py-1.5 transition-all hover:bg-[#001D33] shadow-sm"
+                className="relative flex h-9 w-10 shrink-0 items-center justify-center text-white/80 transition-colors hover:text-white"
                 title="View Cart"
+                aria-label={`View cart${cartCount > 0 ? `, ${cartCount} item${cartCount === 1 ? '' : 's'}` : ''}`}
                 id="cart-drawer-btn"
               >
-                <ShoppingBag className="h-3.5 w-3.5 text-blue-400" />
-                <span className="hidden sm:inline font-mono text-[10px] font-bold tracking-wider">CART</span>
+                <ShoppingCart className="h-5 w-5" />
                 {cartCount > 0 && (
-                  <span className="flex h-4 min-w-[16px] items-center justify-center px-1 bg-blue-500 text-white dark:text-neutral-900 font-mono text-[9px] font-black">
+                  <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-[16px] items-center justify-center px-1 bg-blue-500 text-white dark:text-neutral-900 font-mono text-[9px] font-black">
                     {cartCount}
                   </span>
                 )}
-              </button>
+              </a>
             )}
 
             {/* Compare Button */}
             {!isAdminMode && onOpenCompare && (
-              <button
-                type="button"
-                onClick={onOpenCompare}
-                className="relative flex items-center gap-1.5 border border-neutral-400 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 px-2.5 py-1.5 font-mono text-[10px] font-bold uppercase transition-all hover:bg-neutral-100 dark:hover:bg-neutral-800"
+              <a
+                href="#compare"
+                onClick={(event) => { event.preventDefault(); onOpenCompare(); }}
+                className="relative hidden lg:inline-flex shrink-0 items-center gap-1 text-neutral-200 hover:text-white font-mono text-[9px] xl:text-[10px] font-bold uppercase tracking-wide whitespace-nowrap transition-colors"
                 title="Compare product specifications side-by-side"
               >
                 <span>COMPARE SPECS</span>
@@ -333,47 +335,48 @@ export default function Navbar({
                     {compareCount}
                   </span>
                 )}
-              </button>
+              </a>
             )}
 
             {/* Custom PC Builder Button */}
             {!isAdminMode && onOpenPCBuilder && (
-              <button
-                type="button"
-                onClick={onOpenPCBuilder}
-                className="relative flex items-center gap-1.5 border border-blue-500 bg-blue-600 hover:bg-blue-500 text-white px-2.5 py-1.5 font-mono text-[10px] font-black uppercase tracking-wider transition-all shadow-sm cursor-pointer"
+              <a
+                href="#pc-builder"
+                onClick={(event) => { event.preventDefault(); onOpenPCBuilder(); }}
+                className="relative hidden lg:inline-flex shrink-0 items-center gap-1 text-blue-200 hover:text-white font-mono text-[9px] xl:text-[10px] font-black uppercase tracking-wide whitespace-nowrap transition-colors cursor-pointer"
                 title="Interactively select compatible PC parts & build your computer"
               >
                 <Cpu className="h-3.5 w-3.5 text-blue-200" />
                 <span>CUSTOM PC BUILDER</span>
-              </button>
+              </a>
             )}
 
             {/* Track Order Button */}
             {!isAdminMode && onOpenTrackOrder && (
-              <button
-                type="button"
-                onClick={onOpenTrackOrder}
-                className="hidden md:flex items-center gap-1.5 border border-neutral-400 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 px-2.5 py-1.5 font-mono text-[10px] font-bold uppercase transition-all hover:bg-neutral-100 dark:hover:bg-neutral-800"
+              <a
+                href="#track-order"
+                onClick={(event) => { event.preventDefault(); onOpenTrackOrder(); }}
+                className="hidden xl:inline-flex shrink-0 items-center gap-1 text-neutral-200 hover:text-white font-mono text-[10px] font-bold uppercase tracking-wide whitespace-nowrap transition-colors"
                 title="Track live courier delivery status"
               >
                 <Truck className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
                 <span>TRACK SHIPMENT</span>
-              </button>
+              </a>
             )}
 
             {/* View Public Storefront Button in Store Admin Navbar */}
             {isAdminMode && (
-              <button
-                type="button"
-                onClick={() => setIsAdminMode(false)}
+              <a
+                href="/?mode=store&view=public"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-[10px] font-black uppercase tracking-wider shadow-xs transition-all cursor-pointer"
-                title="Open Live Customer Public Storefront Page"
+                title="Open the public storefront in a new tab"
                 id="view-public-storefront-btn"
               >
                 <Globe className="w-3.5 h-3.5" />
                 <span>View Storefront</span>
-              </button>
+              </a>
             )}
 
             {/* Store Settings Button */}
@@ -429,7 +432,7 @@ export default function Navbar({
                 }}
                 onMouseEnter={onPrefetchAdmin}
                 onFocus={onPrefetchAdmin}
-                className="bg-neutral-900 text-white hover:bg-neutral-800 border border-neutral-700 flex items-center gap-2 px-3 py-2 text-[9px] font-black tracking-widest uppercase transition-all"
+                className="inline-flex shrink-0 items-center gap-1 text-neutral-200 hover:text-white font-mono text-[9px] lg:text-[10px] font-black uppercase tracking-wide whitespace-nowrap transition-colors"
                 id="login-btn"
               >
                 <LogIn className="h-3 w-3" />
@@ -465,14 +468,14 @@ export default function Navbar({
               })}
             </nav>
 
-            <div className="hidden xl:flex items-center gap-4 py-1" id="nav-service-highlights">
+            {storeSettings?.showServiceHighlights && <div className="hidden xl:flex items-center gap-4 py-1" id="nav-service-highlights">
               <div className="flex items-center gap-2 group">
                 <div className="h-8 w-8 rounded-lg bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
                   <Truck className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                 </div>
                 <div>
-                  <h4 className="font-mono text-[9px] font-black uppercase text-neutral-900 dark:text-white leading-tight">Fast Shipping</h4>
-                  <p className="font-sans text-[8px] text-neutral-500 uppercase font-bold tracking-tight leading-tight">Australia Wide Delivery</p>
+                  <h4 className="font-mono text-[9px] font-black uppercase text-neutral-900 dark:text-white leading-tight">{storeSettings.shippingHighlightTitle}</h4>
+                  <p className="font-sans text-[8px] text-neutral-500 uppercase font-bold tracking-tight leading-tight">{storeSettings.shippingHighlightText}</p>
                 </div>
               </div>
 
@@ -483,11 +486,11 @@ export default function Navbar({
                   <Headphones className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                 </div>
                 <div>
-                  <h4 className="font-mono text-[9px] font-black uppercase text-neutral-900 dark:text-white leading-tight">Expert Support</h4>
-                  <p className="font-sans text-[8px] text-neutral-500 uppercase font-bold tracking-tight leading-tight">100% Local Tech Team</p>
+                  <h4 className="font-mono text-[9px] font-black uppercase text-neutral-900 dark:text-white leading-tight">{storeSettings.supportHighlightTitle}</h4>
+                  <p className="font-sans text-[8px] text-neutral-500 uppercase font-bold tracking-tight leading-tight">{storeSettings.supportHighlightText}</p>
                 </div>
               </div>
-            </div>
+            </div>}
           </div>
         </div>
       )}
@@ -580,6 +583,3 @@ export default function Navbar({
     </header>
   );
 }
-
-
-

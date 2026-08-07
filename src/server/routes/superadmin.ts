@@ -735,8 +735,11 @@ router.post('/tenants', async (req, res) => {
   try {
     const { storeName, slug, customDomain, ownerName, ownerEmail, password, planCode = 'GROWTH' } = req.body;
 
-    if (!storeName || !slug || !ownerEmail) {
-      return res.status(400).json({ error: 'Store Name, Subdomain Slug, and Owner Email are required.' });
+    if (!storeName || !slug || !ownerEmail || !password) {
+      return res.status(400).json({ error: 'Store Name, Subdomain Slug, Owner Email, and Initial Password are required.' });
+    }
+    if (typeof password !== 'string' || password.length < 8) {
+      return res.status(400).json({ error: 'The initial owner password must contain at least 8 characters.' });
     }
 
     const cleanSlug = slug.toLowerCase().replace(/[^a-z0-9-]/g, '');
@@ -772,7 +775,7 @@ router.post('/tenants', async (req, res) => {
     let user = await prismaRaw.user.findUnique({ where: { email: cleanEmail } });
     if (!user) {
       const { hashPassword } = await import('../auth');
-      const hashedPassword = await hashPassword(password || 'Owner123!');
+      const hashedPassword = await hashPassword(password);
       user = await prismaRaw.user.create({
         data: {
           name: ownerName || 'Store Owner',
@@ -780,6 +783,12 @@ router.post('/tenants', async (req, res) => {
           password: hashedPassword,
         },
       });
+    } else {
+      const { verifyPassword } = await import('../auth');
+      const passwordMatches = await verifyPassword(password, user.password);
+      if (!passwordMatches) {
+        return res.status(409).json({ error: 'This owner email already has an account. Enter that account’s current password or use a different owner email.' });
+      }
     }
 
     // Provision new Tenant
