@@ -134,6 +134,8 @@ var init_prismaClient = __esm({
 // src/server/auth.ts
 var auth_exports = {};
 __export(auth_exports, {
+  SESSION_DURATION: () => SESSION_DURATION,
+  SESSION_MAX_AGE_MS: () => SESSION_MAX_AGE_MS,
   createAuthToken: () => createAuthToken,
   findAdminUserByEmail: () => findAdminUserByEmail,
   findUserByEmail: () => findUserByEmail,
@@ -143,11 +145,13 @@ __export(auth_exports, {
 });
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-var SALT_ROUNDS, hashPassword, verifyPassword, getJwtSecret, createAuthToken, verifyAuthToken, findUserByEmail, findAdminUserByEmail;
+var SALT_ROUNDS, SESSION_DURATION, SESSION_MAX_AGE_MS, hashPassword, verifyPassword, getJwtSecret, createAuthToken, verifyAuthToken, findUserByEmail, findAdminUserByEmail;
 var init_auth = __esm({
   "src/server/auth.ts"() {
     init_prismaClient();
     SALT_ROUNDS = 10;
+    SESSION_DURATION = "7d";
+    SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1e3;
     hashPassword = async (password) => bcrypt.hash(password, SALT_ROUNDS);
     verifyPassword = async (password, hashedPassword) => bcrypt.compare(password, hashedPassword);
     getJwtSecret = () => {
@@ -160,7 +164,7 @@ var init_auth = __esm({
       }
       return secret;
     };
-    createAuthToken = (payload, expiresIn = "24h") => {
+    createAuthToken = (payload, expiresIn = SESSION_DURATION) => {
       const secret = getJwtSecret();
       return jwt.sign(payload, secret, { expiresIn });
     };
@@ -270,6 +274,7 @@ import dotenv2 from "dotenv";
 import rateLimit from "express-rate-limit";
 import { doubleCsrf } from "csrf-csrf";
 import cookieParser2 from "cookie-parser";
+import compression from "compression";
 
 // src/server/legacyRoutes.ts
 import express from "express";
@@ -314,6 +319,11 @@ var productSchema = z.object({
   specs: z.record(z.string(), z.string()).optional(),
   tags: z.array(z.string()).optional(),
   image: z.string().optional(),
+  imageVariants: z.object({
+    thumbnail: z.string(),
+    catalog: z.string(),
+    detail: z.string()
+  }).optional(),
   additionalImages: z.array(z.string()).optional(),
   collection: z.string().optional(),
   colors: z.array(z.string()).optional(),
@@ -362,7 +372,64 @@ var settingsSchema = z.object({
   whyShopHeadingHighlight: z.string().optional(),
   whyShopHeadingBottom: z.string().optional(),
   whyShopBodyText: z.string().optional(),
-  whyShopBulletPoints: z.array(z.string()).optional()
+  whyShopBulletPoints: z.array(z.string()).optional(),
+  themePrimaryColor: z.string().optional(),
+  themeAccentColor: z.string().optional(),
+  showFlashSaleBanner: z.boolean().optional(),
+  flashSaleTitle: z.string().optional(),
+  flashSaleText: z.string().optional(),
+  flashSaleCouponCode: z.string().optional(),
+  storefrontBackgroundColor: z.string().optional(),
+  storefrontSurfaceColor: z.string().optional(),
+  storefrontTextColor: z.string().optional(),
+  storefrontMutedTextColor: z.string().optional(),
+  storefrontHeaderColor: z.string().optional(),
+  storefrontHeaderTextColor: z.string().optional(),
+  storefrontFooterColor: z.string().optional(),
+  storefrontFooterTextColor: z.string().optional(),
+  storefrontBorderColor: z.string().optional(),
+  storefrontButtonTextColor: z.string().optional(),
+  storefrontFontStyle: z.enum(["modern", "classic", "rounded"]).optional(),
+  storefrontCornerStyle: z.enum(["square", "soft", "rounded"]).optional(),
+  showCategorySection: z.boolean().optional(),
+  categorySectionEyebrow: z.string().optional(),
+  categorySectionTitle: z.string().optional(),
+  categorySectionDescription: z.string().optional(),
+  catalogSectionEyebrow: z.string().optional(),
+  catalogSectionTitle: z.string().optional(),
+  catalogStyle: z.enum(["classic", "compact", "minimal", "list"]).optional(),
+  catalogFilterPosition: z.enum(["top", "left"]).optional(),
+  storefrontSectionOrder: z.array(z.enum(["hero", "flashSale", "categories", "catalog", "brands", "recentlyViewed", "whyShop", "newsletter"])).length(8).refine((items) => new Set(items).size === items.length, "Section order must contain each section once").optional(),
+  showWhyShopSection: z.boolean().optional(),
+  showHeroBanner: z.boolean().optional(),
+  heroEyebrow: z.string().optional(),
+  heroTitle: z.string().optional(),
+  heroHighlight: z.string().optional(),
+  heroDescription: z.string().optional(),
+  heroImageUrl: z.string().optional(),
+  heroPrimaryButtonText: z.string().optional(),
+  heroPrimaryButtonUrl: z.string().optional(),
+  heroSecondaryButtonText: z.string().optional(),
+  heroSecondaryButtonUrl: z.string().optional(),
+  showNewsletterSection: z.boolean().optional(),
+  newsletterEyebrow: z.string().optional(),
+  newsletterTitle: z.string().optional(),
+  newsletterDescription: z.string().optional(),
+  newsletterButtonText: z.string().optional(),
+  showServiceHighlights: z.boolean().optional(),
+  shippingHighlightTitle: z.string().optional(),
+  shippingHighlightText: z.string().optional(),
+  supportHighlightTitle: z.string().optional(),
+  supportHighlightText: z.string().optional(),
+  showStorefrontFooter: z.boolean().optional(),
+  footerCategoriesHeading: z.string().optional(),
+  footerCustomerCareHeading: z.string().optional(),
+  footerWarrantyText: z.string().optional(),
+  footerReturnsText: z.string().optional(),
+  footerShippingText: z.string().optional(),
+  footerCopyrightText: z.string().optional(),
+  footerOwnershipText: z.string().optional(),
+  footerPaymentsText: z.string().optional()
 });
 
 // src/server/legacyRoutes.ts
@@ -372,6 +439,51 @@ init_auth();
 import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
+import sharp from "sharp";
+
+// src/server/objectStorage.ts
+var storageUrl = (process.env.SUPABASE_URL || "").replace(/\/$/, "");
+var storageKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+var storageBucket = process.env.SUPABASE_STORAGE_BUCKET || "store-erp-assets";
+var isObjectStorageConfigured = () => Boolean(storageUrl && storageKey && storageBucket);
+var objectEndpoint = (key) => `${storageUrl}/storage/v1/object/${encodeURIComponent(storageBucket)}/${key.split("/").map(encodeURIComponent).join("/")}`;
+async function putObject(key, body, contentType) {
+  if (!isObjectStorageConfigured()) throw new Error("Object storage is not configured");
+  const response = await fetch(objectEndpoint(key), {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${storageKey}`,
+      apikey: storageKey,
+      "Content-Type": contentType,
+      "x-upsert": "false",
+      "Cache-Control": "31536000"
+    },
+    body
+  });
+  if (!response.ok) {
+    throw new Error(`Object storage upload failed (${response.status})`);
+  }
+  return `${storageUrl}/storage/v1/object/public/${encodeURIComponent(storageBucket)}/${key.split("/").map(encodeURIComponent).join("/")}`;
+}
+async function deleteObjectByPublicUrl(publicUrl) {
+  if (!isObjectStorageConfigured() || !publicUrl.startsWith(storageUrl)) return false;
+  const marker = `/storage/v1/object/public/${encodeURIComponent(storageBucket)}/`;
+  const markerIndex = publicUrl.indexOf(marker);
+  if (markerIndex < 0) return false;
+  const key = publicUrl.slice(markerIndex + marker.length).split("/").map(decodeURIComponent).join("/");
+  if (!key || key.includes("..")) return false;
+  const response = await fetch(objectEndpoint(key), {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${storageKey}`, apikey: storageKey }
+  });
+  if (!response.ok && response.status !== 404) {
+    throw new Error(`Object storage deletion failed (${response.status})`);
+  }
+  return true;
+}
+
+// src/server/uploads.ts
+init_tenantContext();
 var ALLOWED_MIME_TYPES = /* @__PURE__ */ new Set(["image/jpeg", "image/png", "image/webp"]);
 var MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 var saveImageFromBase64 = async (dataUrl, options) => {
@@ -388,38 +500,94 @@ var saveImageFromBase64 = async (dataUrl, options) => {
   if (buffer.length > MAX_FILE_SIZE_BYTES) {
     throw new Error("Image exceeds 10MB limit");
   }
-  const extension = mimeType === "image/jpeg" ? "jpg" : mimeType.split("/")[1];
-  const filename = `${Date.now()}-${crypto.randomBytes(8).toString("hex")}.${extension}`;
+  let variantBuffers;
+  try {
+    const createVariant = (size, quality) => sharp(buffer, { failOn: "error" }).rotate().resize({ width: size, height: size, fit: "inside", withoutEnlargement: true }).webp({ quality, effort: 4, smartSubsample: true }).toBuffer();
+    const [thumbnail, catalog, detail] = await Promise.all([
+      createVariant(320, 72),
+      createVariant(800, 76),
+      createVariant(1600, 80)
+    ]);
+    variantBuffers = { thumbnail, catalog, detail };
+  } catch {
+    throw new Error("Invalid or corrupt image data");
+  }
+  const extension = "webp";
+  const basename = `${Date.now()}-${crypto.randomBytes(8).toString("hex")}`;
+  const filenames = {
+    thumbnail: `${basename}-thumb.${extension}`,
+    catalog: `${basename}-catalog.${extension}`,
+    detail: `${basename}-detail.${extension}`
+  };
+  const filename = filenames.detail;
   const relativeDir = path.posix.join("/uploads", options.folder);
   const outputDir = options.outputDir ? path.resolve(options.outputDir, options.folder) : path.resolve(process.cwd(), "public", "uploads", options.folder);
+  if (!options.outputDir && isObjectStorageConfigured()) {
+    const stored = [];
+    try {
+      for (const variant of Object.keys(filenames)) {
+        const objectKey = path.posix.join("tenants", getActiveTenantId(), options.folder, filenames[variant]);
+        stored.push([variant, await putObject(objectKey, variantBuffers[variant], "image/webp")]);
+      }
+    } catch (error) {
+      await Promise.allSettled(stored.map(([, publicUrl]) => deleteObjectByPublicUrl(publicUrl)));
+      throw error;
+    }
+    const variants2 = Object.fromEntries(stored);
+    const assets2 = Object.keys(variants2).map((variant) => ({ path: variants2[variant], size: variantBuffers[variant].length }));
+    return { path: variants2.detail, filename, extension, size: assets2.reduce((sum, asset) => sum + asset.size, 0), variants: variants2, assets: assets2 };
+  }
   try {
     await fs.mkdir(outputDir, { recursive: true });
-    const fullPath = path.join(outputDir, filename);
-    await fs.writeFile(fullPath, buffer);
+    await Promise.all(Object.keys(filenames).map((variant) => fs.writeFile(path.join(outputDir, filenames[variant]), variantBuffers[variant])));
   } catch (e) {
+    if (process.env.NODE_ENV === "production") throw new Error("Image storage is unavailable");
+    const dataUrl2 = `data:image/webp;base64,${variantBuffers.detail.toString("base64")}`;
     return {
-      path: dataUrl,
+      path: dataUrl2,
       filename,
       extension,
-      size: buffer.length
+      size: variantBuffers.detail.length,
+      variants: { thumbnail: dataUrl2, catalog: dataUrl2, detail: dataUrl2 },
+      assets: []
     };
   }
+  const variants = Object.fromEntries(Object.keys(filenames).map((variant) => [variant, path.posix.join(relativeDir, filenames[variant])]));
+  const assets = Object.keys(variants).map((variant) => ({ path: variants[variant], size: variantBuffers[variant].length }));
   return {
-    path: path.posix.join(relativeDir, filename),
+    path: variants.detail,
     filename,
     extension,
-    size: buffer.length
+    size: assets.reduce((sum, asset) => sum + asset.size, 0),
+    variants,
+    assets
   };
 };
-var deleteImageIfExists = async (imagePath) => {
+var deleteImageIfExists = async (imagePath, publicUploadsDirOverride) => {
   if (!imagePath || imagePath.startsWith("data:")) return;
+  if (/^https:\/\//i.test(imagePath)) {
+    await deleteObjectByPublicUrl(imagePath);
+    return;
+  }
+  if (!imagePath.startsWith("/uploads/")) return;
   try {
-    const publicUploadsDir = path.resolve(process.cwd(), "public", "uploads");
-    const absolutePath = path.resolve(process.cwd(), "public", imagePath.replace(/^\//, ""));
-    if (absolutePath.startsWith(publicUploadsDir)) {
-      await fs.rm(absolutePath, { force: true });
+    const publicUploadsDir = publicUploadsDirOverride ? path.resolve(publicUploadsDirOverride) : path.resolve(process.cwd(), "public", "uploads");
+    const uploadRelativePath = imagePath.replace(/^\/uploads\/?/, "");
+    const absolutePath = path.resolve(publicUploadsDir, uploadRelativePath);
+    const relativePath = path.relative(publicUploadsDir, absolutePath);
+    if (relativePath && !relativePath.startsWith("..") && !path.isAbsolute(relativePath)) {
+      for (let attempt = 0; attempt < 4; attempt += 1) {
+        try {
+          await fs.rm(absolutePath, { force: true });
+          break;
+        } catch (error) {
+          if (!["EBUSY", "EPERM"].includes(error?.code) || attempt === 3) throw error;
+          await new Promise((resolve) => setTimeout(resolve, 100 * (attempt + 1)));
+        }
+      }
     }
   } catch (e) {
+    if (publicUploadsDirOverride) throw e;
   }
 };
 
@@ -462,6 +630,18 @@ var DEFAULT_STORE_SETTINGS = {
   showAnnouncementBar: true,
   themePrimaryColor: "#0f172a",
   themeAccentColor: "#3b82f6",
+  storefrontBackgroundColor: "#f8f8f8",
+  storefrontSurfaceColor: "#ffffff",
+  storefrontTextColor: "#1a1a1a",
+  storefrontMutedTextColor: "#64748b",
+  storefrontHeaderColor: "#2f2f2f",
+  storefrontHeaderTextColor: "#ffffff",
+  storefrontFooterColor: "#2f2f2f",
+  storefrontFooterTextColor: "#ffffff",
+  storefrontBorderColor: "#d4d4d4",
+  storefrontButtonTextColor: "#ffffff",
+  storefrontFontStyle: "modern",
+  storefrontCornerStyle: "soft",
   freeShippingThreshold: 0,
   whyShopHeadingTop: "Australia's Leader in",
   whyShopHeadingHighlight: "Premium Refurbished",
@@ -475,6 +655,49 @@ var DEFAULT_STORE_SETTINGS = {
     "Certified Refurbished Grade A",
     "Genuine Windows Licenses"
   ],
+  showFlashSaleBanner: true,
+  flashSaleTitle: "Flash Sale",
+  flashSaleText: "Extra 10% Off Everything!",
+  flashSaleCouponCode: "FLASH10",
+  showCategorySection: true,
+  categorySectionEyebrow: "Quick Navigation",
+  categorySectionTitle: "Shop by Category",
+  categorySectionDescription: "Real-time dynamic category catalog mapped to store inventory",
+  catalogSectionEyebrow: "Collection",
+  catalogSectionTitle: "Products",
+  catalogStyle: "classic",
+  catalogFilterPosition: "top",
+  storefrontSectionOrder: ["hero", "flashSale", "categories", "catalog", "brands", "recentlyViewed", "whyShop", "newsletter"],
+  showWhyShopSection: true,
+  showHeroBanner: true,
+  heroEyebrow: "Business Technology, Ready to Perform",
+  heroTitle: "Reliable Hardware for Every Workspace",
+  heroHighlight: "Certified & Warranty Backed",
+  heroDescription: "Shop professionally tested computers, components and accessories with local support.",
+  heroImageUrl: "/images/app_logo.jpg",
+  heroPrimaryButtonText: "Shop All Products",
+  heroPrimaryButtonUrl: "#product-catalog-grid",
+  heroSecondaryButtonText: "Contact Us",
+  heroSecondaryButtonUrl: "#store-footer",
+  showNewsletterSection: true,
+  newsletterEyebrow: "Exclusive Insights & Priority Access",
+  newsletterTitle: "Subscribe to INFOMAT News",
+  newsletterDescription: "Get the latest tech news, hardware arrivals and exclusive deals delivered to your inbox.",
+  newsletterButtonText: "Subscribe",
+  showServiceHighlights: true,
+  shippingHighlightTitle: "Fast Shipping",
+  shippingHighlightText: "Australia Wide Delivery",
+  supportHighlightTitle: "Expert Support",
+  supportHighlightText: "100% Local Tech Team",
+  showStorefrontFooter: true,
+  footerCategoriesHeading: "Hardware Categories",
+  footerCustomerCareHeading: "Customer Care",
+  footerWarrantyText: "12 Month Express Warranty",
+  footerReturnsText: "30 Day Returns Policy",
+  footerShippingText: "Free Express Shipping Over $100",
+  footerCopyrightText: "\xA9 2026 INFOMAT. All rights reserved.",
+  footerOwnershipText: "100% Australian Owned",
+  footerPaymentsText: "Payments: Visa / MC / Amex / PayPal",
   productConditions: ["Brand New", "Like New", "Refurbished - Grade A", "Refurbished - Grade B", "Refurbished - Grade C", "Open Box", "For Parts / Repair"],
   productCpus: ["Intel Core i5", "Intel Core i7", "Intel Core i9", "Apple M1", "Apple M2", "Apple M3", "AMD Ryzen 5", "AMD Ryzen 7"],
   productRams: ["8GB DDR4", "16GB DDR4", "32GB DDR4", "64GB DDR4", "16GB Unified", "32GB Unified"],
@@ -823,7 +1046,9 @@ var APP_STATE_DEFAULTS = {
   repairJobs: [],
   stockUnits: [],
   warehouses: INITIAL_WAREHOUSES,
-  stockTransfers: []
+  stockTransfers: [],
+  stocktakes: [],
+  shrinkageRecords: []
 };
 var clone = (value) => JSON.parse(JSON.stringify(value));
 var mergeWithFallback = (fallback, parsed) => {
@@ -861,15 +1086,6 @@ var readAppStateStore = async () => {
     storeSettings: { ...DEFAULT_STORE_SETTINGS, ...state.storeSettings || {} }
   };
 };
-var writeAppStateStore = async (partial) => {
-  const current = await readAppStateStore();
-  const next = {
-    ...current,
-    ...partial,
-    storeSettings: { ...DEFAULT_STORE_SETTINGS, ...current.storeSettings || {}, ...partial.storeSettings || {} }
-  };
-  return writeJsonFile(APP_STATE_FILE, next);
-};
 var readAdminExtrasStore = async () => {
   const extras = await readJsonFile(ADMIN_EXTRAS_FILE, ADMIN_EXTRAS_DEFAULTS);
   return { ...ADMIN_EXTRAS_DEFAULTS, ...extras };
@@ -883,10 +1099,10 @@ var writeAdminExtrasStore = async (partial) => {
 // src/server/products.ts
 var normalizeProductForDb = (input) => {
   const normalized = { ...input };
-  const jsonFields = ["specs", "tags", "additionalImages", "colors", "sizes", "serialNumbers"];
+  const jsonFields = ["specs", "imageVariants", "tags", "additionalImages", "colors", "sizes", "serialNumbers"];
   for (const field of jsonFields) {
     if (normalized[field] === void 0 || normalized[field] === null) {
-      normalized[field] = field === "specs" ? "{}" : "[]";
+      normalized[field] = field === "specs" || field === "imageVariants" ? "{}" : "[]";
       continue;
     }
     if (typeof normalized[field] === "string") {
@@ -898,12 +1114,12 @@ var normalizeProductForDb = (input) => {
 };
 var serializeProductForResponse = (product) => {
   const serialized = { ...product };
-  for (const field of ["specs", "tags", "additionalImages", "colors", "sizes", "serialNumbers"]) {
+  for (const field of ["specs", "imageVariants", "tags", "additionalImages", "colors", "sizes", "serialNumbers"]) {
     if (typeof serialized[field] === "string") {
       try {
         serialized[field] = JSON.parse(serialized[field]);
       } catch {
-        serialized[field] = field === "specs" ? {} : [];
+        serialized[field] = field === "specs" || field === "imageVariants" ? {} : [];
       }
     }
   }
@@ -1285,12 +1501,12 @@ async function authMiddleware(req, res, next) {
       return res.status(401).json({ error: "Unauthorized", message: "Authentication token missing." });
     }
     const decoded = verifyAuthToken(token);
-    const userId = decoded.userId || decoded.sub;
+    const userId2 = decoded.userId || decoded.sub;
     let isSuperAdmin = !!decoded.isSuperAdmin;
     let email = decoded.email;
-    if (userId) {
+    if (userId2) {
       const dbUser = await prismaRaw.user.findUnique({
-        where: { id: userId },
+        where: { id: userId2 },
         select: { id: true, email: true, isSuperAdmin: true }
       });
       if (dbUser) {
@@ -1300,7 +1516,7 @@ async function authMiddleware(req, res, next) {
     }
     req.user = {
       ...decoded,
-      userId: userId || decoded.userId,
+      userId: userId2 || decoded.userId,
       email,
       isSuperAdmin
     };
@@ -1316,7 +1532,7 @@ async function authMiddleware(req, res, next) {
       }
       if (!isSuperAdmin) {
         const membership = await prismaRaw.tenantUser.findUnique({
-          where: { tenantId_userId: { tenantId: authenticatedTenantId, userId: userId || "" } },
+          where: { tenantId_userId: { tenantId: authenticatedTenantId, userId: userId2 || "" } },
           select: { role: true }
         });
         if (!membership) {
@@ -1334,7 +1550,7 @@ async function authMiddleware(req, res, next) {
           tenantId: tenant.id,
           tenantSlug: tenant.slug,
           customDomain: tenant.customDomain || void 0,
-          userId,
+          userId: userId2,
           userRole: req.user.role,
           isSuperAdmin
         },
@@ -1350,10 +1566,10 @@ async function requireSuperAdmin(req, res, next) {
   if (req.user && req.user.isSuperAdmin) {
     return next();
   }
-  const userId = req.user?.userId || req.user?.sub;
-  if (userId) {
+  const userId2 = req.user?.userId || req.user?.sub;
+  if (userId2) {
     const dbUser = await prismaRaw.user.findUnique({
-      where: { id: userId },
+      where: { id: userId2 },
       select: { isSuperAdmin: true }
     });
     if (dbUser && dbUser.isSuperAdmin) {
@@ -1429,6 +1645,7 @@ function requirePlanFeature(featureId) {
 }
 
 // src/server/legacyRoutes.ts
+init_tenantContext();
 var router = express.Router();
 router.use(cookieParser());
 var requireAuth = async (req, res, next) => {
@@ -1462,18 +1679,173 @@ router.post("/api/auth/logout", (req, res) => {
   res.clearCookie("authToken");
   res.json({ ok: true });
 });
-router.get("/api/state", async (_req, res) => {
+var STATE_SLICE_KEYS = [
+  "storeSettings",
+  "products",
+  "reviews",
+  "coupons",
+  "orders",
+  "customers",
+  "financeTransactions",
+  "users",
+  "returns",
+  "categories",
+  "customerSegments",
+  "upsellRules",
+  "collections",
+  "purchaseOrders",
+  "repairJobs",
+  "stockUnits",
+  "warehouses",
+  "stockTransfers",
+  "stocktakes",
+  "shrinkageRecords"
+];
+var stateSliceKeySet = new Set(STATE_SLICE_KEYS);
+var PUBLIC_STATE_DOMAINS = /* @__PURE__ */ new Set(["storeSettings", "products", "reviews", "coupons", "categories", "collections"]);
+var SINGLETON_STATE_DOMAINS = /* @__PURE__ */ new Set(["storeSettings"]);
+var optionalAuth = (req, res, next) => {
+  const token = req.cookies?.authToken || req.headers.authorization?.replace("Bearer ", "");
+  return token ? authMiddleware(req, res, next) : next();
+};
+var recordIdentity = (domain, value, index) => {
+  if (SINGLETON_STATE_DOMAINS.has(domain)) return "singleton";
+  if (typeof value === "string" || typeof value === "number") return String(value);
+  return String(value?.id || value?.code || value?.orderNumber || value?.email || `legacy-${index}`);
+};
+var deleteTrackedImage = async (imagePath) => {
+  if (!imagePath) return;
+  const match = imagePath.match(/^(.*)-(?:thumb|catalog|detail)\.webp(\?.*)?$/i);
+  const paths = match ? ["thumb", "catalog", "detail"].map((variant) => `${match[1]}-${variant}.webp${match[2] || ""}`) : [imagePath];
+  await Promise.all(paths.map((assetPath) => deleteImageIfExists(assetPath)));
+  await prisma.uploadedAsset.deleteMany({ where: { tenantId: getActiveTenantId(), path: { in: paths } } });
+};
+var getPagination = (req) => {
+  const requested = req.query.page !== void 0 || req.query.pageSize !== void 0;
+  const page = Math.max(1, Number.parseInt(String(req.query.page || "1"), 10) || 1);
+  const pageSize = Math.min(100, Math.max(1, Number.parseInt(String(req.query.pageSize || "50"), 10) || 50));
+  return { requested, page, pageSize, skip: (page - 1) * pageSize };
+};
+router.get("/api/state", optionalAuth, async (req, res) => {
   try {
-    const state = await readAppStateStore();
-    res.json(state);
+    const tenantId = getActiveTenantId();
+    const isAuthenticated = Boolean(req.user || res.locals.user);
+    const filterState = (state2) => isAuthenticated ? state2 : Object.fromEntries(Object.entries(state2).filter(([key]) => PUBLIC_STATE_DOMAINS.has(key) || key === "__stateVersion"));
+    const slices = await prisma.tenantStateSlice.findMany({
+      where: { tenantId },
+      select: { key: true, data: true }
+    });
+    if (slices.length === 0) {
+      const legacyState2 = await readAppStateStore();
+      return res.json(filterState({ ...legacyState2, __stateVersion: 1 }));
+    }
+    const legacyState = await readAppStateStore();
+    const state = Object.fromEntries(slices.map((slice) => [slice.key, slice.data]));
+    res.json(filterState({ ...legacyState, ...state, __stateVersion: 2 }));
   } catch (err) {
     handleError(err, res);
   }
 });
-router.put("/api/state", async (req, res) => {
+router.get("/api/state-records", optionalAuth, async (req, res) => {
   try {
-    const next = await writeAppStateStore(req.body || {});
-    res.json(next);
+    const tenantId = getActiveTenantId();
+    const isAuthenticated = Boolean(req.user || res.locals.user);
+    const requestedDomains = String(req.query.domains || "").split(",").map((item) => item.trim()).filter(Boolean);
+    const allowedDomains = STATE_SLICE_KEYS.filter(
+      (domain) => (isAuthenticated || PUBLIC_STATE_DOMAINS.has(domain)) && (requestedDomains.length === 0 || requestedDomains.includes(domain))
+    );
+    const records = await prisma.tenantStateRecord.findMany({
+      where: { tenantId, domain: { in: allowedDomains } },
+      select: { domain: true, recordId: true, data: true },
+      orderBy: [{ domain: "asc" }, { createdAt: "asc" }]
+    });
+    const state = {};
+    for (const domain of allowedDomains) state[domain] = SINGLETON_STATE_DOMAINS.has(domain) ? void 0 : [];
+    for (const record of records) {
+      if (SINGLETON_STATE_DOMAINS.has(record.domain)) state[record.domain] = record.data;
+      else state[record.domain].push(record.data);
+    }
+    res.json({ ...state, __stateVersion: records.length > 0 ? 3 : 0 });
+  } catch (err) {
+    handleError(err, res);
+  }
+});
+router.post("/api/state-records/import", authMiddleware, async (req, res) => {
+  try {
+    const tenantId = getActiveTenantId();
+    const entries = Object.entries(req.body?.state || {}).filter(([domain]) => stateSliceKeySet.has(domain));
+    const records = entries.flatMap(([domain, value]) => {
+      const values = SINGLETON_STATE_DOMAINS.has(domain) ? [value] : Array.isArray(value) ? value : [];
+      return values.map((data, index) => ({ tenantId, domain, recordId: recordIdentity(domain, data, index), data }));
+    });
+    await prisma.$transaction([
+      prisma.tenantStateRecord.deleteMany({ where: { tenantId, domain: { in: entries.map(([domain]) => domain) } } }),
+      ...records.length > 0 ? [prisma.tenantStateRecord.createMany({ data: records, skipDuplicates: true })] : []
+    ]);
+    res.json({ ok: true, importedRecords: records.length });
+  } catch (err) {
+    handleError(err, res);
+  }
+});
+router.put("/api/state-records/:domain/:recordId", authMiddleware, async (req, res) => {
+  try {
+    const domain = String(req.params.domain || "");
+    const recordId = String(req.params.recordId || "");
+    if (!stateSliceKeySet.has(domain) || !recordId) return res.status(400).json({ error: "Unsupported state record" });
+    const tenantId = getActiveTenantId();
+    const record = await prisma.tenantStateRecord.upsert({
+      where: { tenantId_domain_recordId: { tenantId, domain, recordId } },
+      create: { tenantId, domain, recordId, data: req.body?.data ?? null },
+      update: { data: req.body?.data ?? null },
+      select: { domain: true, recordId: true, updatedAt: true }
+    });
+    res.json(record);
+  } catch (err) {
+    handleError(err, res);
+  }
+});
+router.delete("/api/state-records/:domain/:recordId", authMiddleware, async (req, res) => {
+  try {
+    const domain = String(req.params.domain || "");
+    const recordId = String(req.params.recordId || "");
+    if (!stateSliceKeySet.has(domain) || !recordId) return res.status(400).json({ error: "Unsupported state record" });
+    const tenantId = getActiveTenantId();
+    await prisma.tenantStateRecord.deleteMany({ where: { tenantId, domain, recordId } });
+    res.json({ ok: true });
+  } catch (err) {
+    handleError(err, res);
+  }
+});
+router.put("/api/state/:key", authMiddleware, async (req, res) => {
+  try {
+    const key = String(req.params.key || "");
+    if (!stateSliceKeySet.has(key)) {
+      return res.status(400).json({ error: "Unsupported state slice" });
+    }
+    const tenantId = getActiveTenantId();
+    const slice = await prisma.tenantStateSlice.upsert({
+      where: { tenantId_key: { tenantId, key } },
+      create: { tenantId, key, data: req.body?.data ?? null },
+      update: { data: req.body?.data ?? null },
+      select: { key: true, updatedAt: true }
+    });
+    res.json(slice);
+  } catch (err) {
+    handleError(err, res);
+  }
+});
+router.put("/api/state", authMiddleware, async (req, res) => {
+  try {
+    const tenantId = getActiveTenantId();
+    const entries = Object.entries(req.body || {}).filter(([key]) => stateSliceKeySet.has(key));
+    await prisma.$transaction(
+      entries.map(([key, data]) => prisma.tenantStateSlice.upsert({
+        where: { tenantId_key: { tenantId, key } },
+        create: { tenantId, key, data },
+        update: { data }
+      }))
+    );
+    res.json({ ok: true, updatedSlices: entries.map(([key]) => key) });
   } catch (err) {
     handleError(err, res);
   }
@@ -1494,15 +1866,33 @@ router.put("/api/admin-extras", async (req, res) => {
     handleError(err, res);
   }
 });
-router.get("/api/products", async (_req, res) => {
+router.get("/api/products", async (req, res) => {
   try {
-    const products = await prisma.product.findMany({ include: { category: true, images: true } });
-    res.json(products.map((product) => serializeProductForResponse(product)));
+    const pagination = getPagination(req);
+    const search = String(req.query.search || "").trim();
+    const where = search ? { name: { contains: search, mode: "insensitive" } } : {};
+    const [products, total] = await Promise.all([
+      prisma.product.findMany({
+        where,
+        include: { category: true, images: true },
+        orderBy: { createdAt: "desc" },
+        ...pagination.requested ? { skip: pagination.skip, take: pagination.pageSize } : {}
+      }),
+      pagination.requested ? prisma.product.count({ where }) : Promise.resolve(0)
+    ]);
+    const items = products.map((product) => serializeProductForResponse(product));
+    res.json(pagination.requested ? {
+      items,
+      total,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+      totalPages: Math.max(1, Math.ceil(total / pagination.pageSize))
+    } : items);
   } catch (err) {
     handleError(err, res);
   }
 });
-router.post("/api/products", async (req, res) => {
+router.post("/api/products", authMiddleware, async (req, res) => {
   try {
     const parsed = productSchema.safeParse(req.body);
     if (!parsed.success) throw new AppError("Invalid product payload", 400);
@@ -1510,6 +1900,7 @@ router.post("/api/products", async (req, res) => {
       ...parsed.data,
       categoryId: parsed.data.categoryId || null,
       specs: parsed.data.specs ?? {},
+      imageVariants: parsed.data.imageVariants ?? {},
       tags: parsed.data.tags ?? [],
       additionalImages: parsed.data.additionalImages ?? [],
       colors: parsed.data.colors ?? [],
@@ -1522,7 +1913,29 @@ router.post("/api/products", async (req, res) => {
     handleError(err, res);
   }
 });
-router.put("/api/products/:id", async (req, res) => {
+router.post("/api/products/resolve", authMiddleware, async (req, res) => {
+  try {
+    const parsed = z2.object({
+      products: z2.array(z2.object({ id: z2.string().min(1), name: z2.string().min(1) })).min(1).max(100)
+    }).safeParse(req.body);
+    if (!parsed.success) throw new AppError("Invalid product resolution request", 400);
+    const ids = parsed.data.products.map((product) => product.id);
+    const names = parsed.data.products.map((product) => product.name);
+    const products = await prisma.product.findMany({
+      where: {
+        OR: [
+          { id: { in: ids } },
+          ...names.map((name) => ({ name: { equals: name, mode: "insensitive" } }))
+        ]
+      },
+      select: { id: true, name: true, price: true, discountPrice: true, stock: true }
+    });
+    res.json({ products });
+  } catch (err) {
+    handleError(err, res);
+  }
+});
+router.put("/api/products/:id", authMiddleware, async (req, res) => {
   try {
     const parsed = productSchema.safeParse(req.body);
     if (!parsed.success) throw new AppError("Invalid product payload", 400);
@@ -1532,34 +1945,47 @@ router.put("/api/products/:id", async (req, res) => {
       ...parsed.data,
       categoryId: parsed.data.categoryId || null,
       specs: parsed.data.specs ?? {},
+      imageVariants: parsed.data.imageVariants ?? {},
       tags: parsed.data.tags ?? [],
       additionalImages: parsed.data.additionalImages ?? [],
       colors: parsed.data.colors ?? [],
       sizes: parsed.data.sizes ?? [],
       serialNumbers: parsed.data.serialNumbers ?? []
     });
+    const existingProduct = serializeProductForResponse(existing);
     const product = await prisma.product.update({
       where: { id: req.params.id },
       data: normalizedData
     });
+    const retainedImages = new Set([parsed.data.image, ...Object.values(parsed.data.imageVariants ?? {}), ...parsed.data.additionalImages ?? []].filter(Boolean));
+    const replacedImages = [existingProduct.image, ...Object.values(existingProduct.imageVariants ?? {}), ...existingProduct.additionalImages ?? []].filter((imagePath) => !!imagePath && !retainedImages.has(imagePath));
+    await Promise.all(replacedImages.map((imagePath) => deleteTrackedImage(imagePath)));
     res.json(serializeProductForResponse(product));
   } catch (err) {
     handleError(err, res);
   }
 });
-router.delete("/api/products", async (_req, res) => {
+router.delete("/api/products", authMiddleware, async (_req, res) => {
   try {
+    const existingProducts = await prisma.product.findMany();
     await prisma.product.deleteMany({});
+    const imagePaths = existingProducts.flatMap((product) => {
+      const serialized = serializeProductForResponse(product);
+      return [serialized.image, ...Object.values(serialized.imageVariants ?? {}), ...serialized.additionalImages ?? []];
+    });
+    await Promise.all(imagePaths.map((imagePath) => deleteTrackedImage(imagePath)));
     res.json({ ok: true });
   } catch (err) {
     handleError(err, res);
   }
 });
-router.delete("/api/products/:id", async (req, res) => {
+router.delete("/api/products/:id", authMiddleware, async (req, res) => {
   try {
     const existing = await prisma.product.findUnique({ where: { id: req.params.id } });
     if (!existing) throw new AppError("Product not found", 404);
     await prisma.product.delete({ where: { id: req.params.id } });
+    const serialized = serializeProductForResponse(existing);
+    await Promise.all([serialized.image, ...Object.values(serialized.imageVariants ?? {}), ...serialized.additionalImages ?? []].map((imagePath) => deleteTrackedImage(imagePath)));
     res.json({ ok: true });
   } catch (err) {
     handleError(err, res);
@@ -1601,10 +2027,25 @@ router.delete("/api/categories/:id", async (req, res) => {
     handleError(err, res);
   }
 });
-router.get("/api/customers", requireAuth, async (_req, res) => {
+router.get("/api/customers", requireAuth, async (req, res) => {
   try {
-    const customers = await prisma.customer.findMany();
-    res.json(customers);
+    const pagination = getPagination(req);
+    const search = String(req.query.search || "").trim();
+    const where = search ? { OR: [
+      { name: { contains: search, mode: "insensitive" } },
+      { email: { contains: search, mode: "insensitive" } }
+    ] } : {};
+    const [items, total] = await Promise.all([
+      prisma.customer.findMany({ where, orderBy: { createdAt: "desc" }, ...pagination.requested ? { skip: pagination.skip, take: pagination.pageSize } : {} }),
+      pagination.requested ? prisma.customer.count({ where }) : Promise.resolve(0)
+    ]);
+    res.json(pagination.requested ? {
+      items,
+      total,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+      totalPages: Math.max(1, Math.ceil(total / pagination.pageSize))
+    } : items);
   } catch (err) {
     handleError(err, res);
   }
@@ -1619,6 +2060,26 @@ router.post("/api/customers", requireAuth, async (req, res) => {
     };
     const customer = await prisma.customer.create({ data: customerData });
     res.status(201).json(customer);
+  } catch (err) {
+    handleError(err, res);
+  }
+});
+router.patch("/api/customers/:id", authMiddleware, async (req, res) => {
+  try {
+    const parsed = customerSchema.partial().safeParse(req.body);
+    if (!parsed.success) throw new AppError("Invalid customer payload", 400);
+    const data = { ...parsed.data };
+    if (parsed.data.wishlist !== void 0) data.wishlist = JSON.stringify(parsed.data.wishlist || []);
+    const customer = await prisma.customer.update({ where: { id: req.params.id }, data });
+    res.json(customer);
+  } catch (err) {
+    handleError(err, res);
+  }
+});
+router.delete("/api/customers/:id", authMiddleware, async (req, res) => {
+  try {
+    await prisma.customer.delete({ where: { id: req.params.id } });
+    res.json({ ok: true });
   } catch (err) {
     handleError(err, res);
   }
@@ -1651,10 +2112,66 @@ router.get("/api/orders/track", async (req, res) => {
     handleError(err, res);
   }
 });
-router.get("/api/orders", requireAuth, async (_req, res) => {
+router.get("/api/orders", requireAuth, async (req, res) => {
   try {
-    const orders = await prisma.order.findMany({ include: { items: true } });
-    res.json(orders);
+    const pagination = getPagination(req);
+    const search = String(req.query.search || "").trim();
+    const status = String(req.query.status || "").trim();
+    const where = {
+      ...status ? { status } : {},
+      ...search ? { OR: [
+        { orderNumber: { contains: search, mode: "insensitive" } },
+        { customer: { email: { contains: search, mode: "insensitive" } } }
+      ] } : {}
+    };
+    const [items, total] = await Promise.all([
+      prisma.order.findMany({ where, include: { items: true }, orderBy: { createdAt: "desc" }, ...pagination.requested ? { skip: pagination.skip, take: pagination.pageSize } : {} }),
+      pagination.requested ? prisma.order.count({ where }) : Promise.resolve(0)
+    ]);
+    res.json(pagination.requested ? {
+      items,
+      total,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+      totalPages: Math.max(1, Math.ceil(total / pagination.pageSize))
+    } : items);
+  } catch (err) {
+    handleError(err, res);
+  }
+});
+router.patch("/api/orders/:id/status", authMiddleware, async (req, res) => {
+  try {
+    const parsed = z2.object({ status: z2.string().min(1).max(40) }).safeParse(req.body);
+    if (!parsed.success) throw new AppError("Invalid order status", 400);
+    const order = await prisma.order.update({ where: { id: req.params.id }, data: { status: parsed.data.status } });
+    res.json(order);
+  } catch (err) {
+    handleError(err, res);
+  }
+});
+router.get("/api/dashboard/summary", authMiddleware, async (_req, res) => {
+  try {
+    const [productCount, lowStockCount, orderCount, orderTotals, bestSellerRows] = await Promise.all([
+      prisma.product.count(),
+      prisma.product.count({ where: { stock: { lte: 5 } } }),
+      prisma.order.count(),
+      prisma.order.aggregate({ _sum: { total: true }, _avg: { total: true } }),
+      prisma.orderItem.groupBy({
+        by: ["productId"],
+        _sum: { quantity: true },
+        orderBy: { _sum: { quantity: "desc" } },
+        take: 1
+      })
+    ]);
+    const bestSeller = bestSellerRows[0] ? await prisma.product.findFirst({ where: { id: bestSellerRows[0].productId }, select: { id: true, name: true, price: true } }) : null;
+    res.json({
+      products: productCount,
+      lowStock: lowStockCount,
+      orders: orderCount,
+      revenue: Number(orderTotals._sum.total || 0),
+      averageOrderValue: Number(orderTotals._avg.total || 0),
+      bestSeller: bestSeller ? { ...bestSeller, quantity: Number(bestSellerRows[0]?._sum.quantity || 0) } : null
+    });
   } catch (err) {
     handleError(err, res);
   }
@@ -1698,22 +2215,52 @@ router.post("/api/orders", async (req, res) => {
     handleError(err, res);
   }
 });
-router.post("/api/uploads", async (req, res) => {
+router.post("/api/uploads", authMiddleware, async (req, res) => {
   try {
     const { file, folder } = req.body;
     if (!file || !folder) throw new AppError("Image and folder are required", 400);
+    const tenantId = getActiveTenantId();
+    const quotaBytes = Math.max(10, Number(process.env.TENANT_STORAGE_QUOTA_MB || 1024)) * 1024 * 1024;
+    const usage = await prisma.uploadedAsset.aggregate({ where: { tenantId }, _sum: { sizeBytes: true } });
     const result = await saveImageFromBase64(file, { folder });
+    if (Number(usage?._sum?.sizeBytes || 0) + result.size > quotaBytes) {
+      await Promise.all(result.assets.map((asset) => deleteImageIfExists(asset.path)));
+      throw new AppError("Tenant image storage quota exceeded", 413);
+    }
+    try {
+      if (result.assets.length > 0) {
+        await prisma.uploadedAsset.createMany({
+          data: result.assets.map((asset) => ({ tenantId, path: asset.path, sizeBytes: asset.size, mimeType: "image/webp" }))
+        });
+      }
+    } catch (error) {
+      await Promise.all(result.assets.map((asset) => deleteImageIfExists(asset.path)));
+      throw error;
+    }
     res.status(201).json(result);
   } catch (err) {
     handleError(err, res);
   }
 });
-router.post("/api/uploads/delete", async (req, res) => {
+router.post("/api/uploads/delete", authMiddleware, async (req, res) => {
   try {
     const { path: imagePath } = req.body;
     if (!imagePath) throw new AppError("Image path is required", 400);
-    await deleteImageIfExists(imagePath);
+    await deleteTrackedImage(imagePath);
     res.json({ ok: true });
+  } catch (err) {
+    handleError(err, res);
+  }
+});
+router.get("/api/uploads/usage", authMiddleware, async (_req, res) => {
+  try {
+    const tenantId = getActiveTenantId();
+    const quotaBytes = Math.max(10, Number(process.env.TENANT_STORAGE_QUOTA_MB || 1024)) * 1024 * 1024;
+    const [usage, files] = await Promise.all([
+      prisma.uploadedAsset.aggregate({ where: { tenantId }, _sum: { sizeBytes: true } }),
+      prisma.uploadedAsset.count({ where: { tenantId } })
+    ]);
+    res.json({ usedBytes: Number(usage?._sum?.sizeBytes || 0), quotaBytes, files });
   } catch (err) {
     handleError(err, res);
   }
@@ -2226,6 +2773,44 @@ var DEFAULT_PLAN_FEATURES = {
   ENTERPRISE: ALL_FEATURES.map((feature) => feature.id)
 };
 
+// src/server/performanceMetrics.ts
+var startedAt = (/* @__PURE__ */ new Date()).toISOString();
+var routeMetrics = /* @__PURE__ */ new Map();
+var normalizePath = (path6) => path6.replace(/\b[a-z0-9]{20,30}\b/gi, ":id").replace(/\/\d+(?=\/|$)/g, "/:id");
+function trackRequestPerformance(req, res, next) {
+  const start = performance.now();
+  res.on("finish", () => {
+    const durationMs = performance.now() - start;
+    const key = `${req.method} ${normalizePath(req.path)}`;
+    const current = routeMetrics.get(key) || { count: 0, errors: 0, totalDurationMs: 0, maxDurationMs: 0, responseBytes: 0 };
+    current.count += 1;
+    current.errors += res.statusCode >= 500 ? 1 : 0;
+    current.totalDurationMs += durationMs;
+    current.maxDurationMs = Math.max(current.maxDurationMs, durationMs);
+    current.responseBytes += Number(res.getHeader("content-length") || 0);
+    routeMetrics.set(key, current);
+    if (durationMs >= 1e3) {
+      console.warn(`[PERF] Slow request ${key} ${durationMs.toFixed(0)}ms status=${res.statusCode}`);
+    }
+    if (routeMetrics.size > 200) routeMetrics.delete(routeMetrics.keys().next().value);
+  });
+  next();
+}
+function getPerformanceSnapshot() {
+  return {
+    startedAt,
+    generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    routes: [...routeMetrics.entries()].map(([route, value]) => ({
+      route,
+      count: value.count,
+      errors: value.errors,
+      averageDurationMs: Number((value.totalDurationMs / value.count).toFixed(2)),
+      maxDurationMs: Number(value.maxDurationMs.toFixed(2)),
+      responseBytes: value.responseBytes
+    })).sort((a, b) => b.averageDurationMs - a.averageDurationMs)
+  };
+}
+
 // src/server/routes/superadmin.ts
 var router3 = Router2();
 var validFeatureIds = new Set(ALL_FEATURES.map((feature) => feature.id));
@@ -2243,22 +2828,23 @@ function normalizeFeaturesJson(value) {
 }
 router3.use(authMiddleware);
 router3.use(requireSuperAdmin);
+router3.get("/performance", (_req, res) => {
+  res.json(getPerformanceSnapshot());
+});
 router3.get("/metrics", async (_req, res) => {
   try {
-    const totalTenants = await prismaRaw.tenant.count();
-    const activeTenants = await prismaRaw.tenant.count({ where: { status: "ACTIVE" } });
-    const totalUsers = await prismaRaw.user.count();
-    const totalProducts = await prismaRaw.product.count();
-    const totalOrders = await prismaRaw.order.count();
-    const tenants = await prismaRaw.tenant.findMany({
-      include: { plan: true }
-    });
-    let estimatedMrr = 0;
-    tenants.forEach((t) => {
-      if (t.status === "ACTIVE" && t.plan) {
-        estimatedMrr += t.plan.priceMonthly;
-      }
-    });
+    const [totalTenants, activeTenants, totalUsers, totalProducts, totalOrders, activePlanCounts] = await Promise.all([
+      prismaRaw.tenant.count(),
+      prismaRaw.tenant.count({ where: { status: "ACTIVE" } }),
+      prismaRaw.user.count(),
+      prismaRaw.product.count(),
+      prismaRaw.order.count(),
+      prismaRaw.tenant.groupBy({ by: ["planId"], where: { status: "ACTIVE", planId: { not: null } }, _count: { _all: true } })
+    ]);
+    const planIds = activePlanCounts.map((row) => row.planId).filter((id) => Boolean(id));
+    const plans = planIds.length ? await prismaRaw.plan.findMany({ where: { id: { in: planIds } }, select: { id: true, priceMonthly: true } }) : [];
+    const monthlyPrices = new Map(plans.map((plan) => [plan.id, plan.priceMonthly]));
+    const estimatedMrr = activePlanCounts.reduce((sum, row) => sum + (monthlyPrices.get(row.planId || "") || 0) * row._count._all, 0);
     res.json({
       totalTenants,
       activeTenants,
@@ -2660,31 +3246,32 @@ router3.post("/invoices/run-auto-billing", async (req, res) => {
       where: { status: "ACTIVE" },
       include: { plan: true }
     });
-    let generatedCount = 0;
     const now = /* @__PURE__ */ new Date();
-    for (const tenant of tenants) {
-      if (!tenant.plan || tenant.plan.priceMonthly <= 0) continue;
-      const num = `INV-${now.getFullYear()}-${Math.floor(1e3 + Math.random() * 9e3)}`;
-      const dueDate = /* @__PURE__ */ new Date();
-      dueDate.setDate(dueDate.getDate() + 7);
-      await prismaRaw.tenantInvoice.create({
-        data: {
-          invoiceNumber: num,
-          tenantId: tenant.id,
-          planName: `${tenant.plan.name} Monthly Subscription`,
-          amount: tenant.plan.priceMonthly,
-          tax: 0,
-          total: tenant.plan.priceMonthly,
-          status: "UNPAID",
-          dueDate,
-          sentAt: now
-        }
-      });
-      generatedCount++;
-    }
+    const periodStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    const billable = tenants.filter((tenant) => tenant.plan && tenant.plan.priceMonthly > 0);
+    const existing = billable.length ? await prismaRaw.tenantInvoice.findMany({
+      where: { tenantId: { in: billable.map((tenant) => tenant.id) }, createdAt: { gte: periodStart } },
+      select: { tenantId: true }
+    }) : [];
+    const alreadyBilled = new Set(existing.map((invoice) => invoice.tenantId));
+    const dueDate = new Date(now);
+    dueDate.setDate(dueDate.getDate() + 7);
+    const invoices = billable.filter((tenant) => !alreadyBilled.has(tenant.id)).map((tenant, index) => ({
+      invoiceNumber: `INV-${now.getFullYear()}-${now.getTime()}-${index + 1}`,
+      tenantId: tenant.id,
+      planName: `${tenant.plan.name} Monthly Subscription`,
+      amount: tenant.plan.priceMonthly,
+      tax: 0,
+      total: tenant.plan.priceMonthly,
+      status: "UNPAID",
+      dueDate,
+      sentAt: now
+    }));
+    if (invoices.length) await prismaRaw.tenantInvoice.createMany({ data: invoices });
+    const generatedCount = invoices.length;
     res.json({
       success: true,
-      message: `Auto-billing routine complete! Generated and emailed ${generatedCount} subscription invoices.`,
+      message: `Auto-billing routine complete. Generated ${generatedCount} new subscription invoices; ${alreadyBilled.size} tenants were already billed this month.`,
       generatedCount
     });
   } catch (error) {
@@ -2840,8 +3427,11 @@ router3.delete("/plans/:id", async (req, res) => {
 router3.post("/tenants", async (req, res) => {
   try {
     const { storeName, slug, customDomain, ownerName, ownerEmail, password, planCode = "GROWTH" } = req.body;
-    if (!storeName || !slug || !ownerEmail) {
-      return res.status(400).json({ error: "Store Name, Subdomain Slug, and Owner Email are required." });
+    if (!storeName || !slug || !ownerEmail || !password) {
+      return res.status(400).json({ error: "Store Name, Subdomain Slug, Owner Email, and Initial Password are required." });
+    }
+    if (typeof password !== "string" || password.length < 8) {
+      return res.status(400).json({ error: "The initial owner password must contain at least 8 characters." });
     }
     const cleanSlug = slug.toLowerCase().replace(/[^a-z0-9-]/g, "");
     const cleanEmail = ownerEmail.toLowerCase().trim();
@@ -2868,7 +3458,7 @@ router3.post("/tenants", async (req, res) => {
     let user = await prismaRaw.user.findUnique({ where: { email: cleanEmail } });
     if (!user) {
       const { hashPassword: hashPassword3 } = await Promise.resolve().then(() => (init_auth(), auth_exports));
-      const hashedPassword = await hashPassword3(password || "Owner123!");
+      const hashedPassword = await hashPassword3(password);
       user = await prismaRaw.user.create({
         data: {
           name: ownerName || "Store Owner",
@@ -2876,6 +3466,12 @@ router3.post("/tenants", async (req, res) => {
           password: hashedPassword
         }
       });
+    } else {
+      const { verifyPassword: verifyPassword2 } = await Promise.resolve().then(() => (init_auth(), auth_exports));
+      const passwordMatches = await verifyPassword2(password, user.password);
+      if (!passwordMatches) {
+        return res.status(409).json({ error: "This owner email already has an account. Enter that account\u2019s current password or use a different owner email." });
+      }
     }
     const tenant = await prismaRaw.tenant.create({
       data: {
@@ -3115,7 +3711,7 @@ router4.post("/saas-login", async (req, res) => {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
-        maxAge: 24 * 60 * 60 * 1e3
+        maxAge: SESSION_MAX_AGE_MS
       });
       return res.json({
         success: true,
@@ -3160,7 +3756,7 @@ router4.post("/saas-login", async (req, res) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 24 * 60 * 60 * 1e3
+      maxAge: SESSION_MAX_AGE_MS
     });
     return res.json({
       success: true,
@@ -3172,7 +3768,9 @@ router4.post("/saas-login", async (req, res) => {
         email: user.email,
         isSuperAdmin: false,
         role,
-        allowedFeatures
+        allowedFeatures,
+        tenantName: tenant?.name,
+        tenantSlug: tenant?.slug
       },
       tenant: tenant ? {
         id: tenant.id,
@@ -3207,9 +3805,7 @@ router4.get("/me", async (req, res) => {
     if (!token) {
       return res.status(401).json({ authenticated: false });
     }
-    const jwt3 = await import("jsonwebtoken");
-    const secret = process.env.JWT_SECRET || "dev-secret";
-    const decoded = jwt3.default.verify(token, secret);
+    const decoded = verifyAuthToken(token);
     const user = await prismaRaw.user.findUnique({
       where: { id: decoded.userId },
       include: {
@@ -3234,7 +3830,9 @@ router4.get("/me", async (req, res) => {
         isSuperAdmin: user.isSuperAdmin,
         role: decoded.role,
         tenantId: decoded.tenantId,
-        allowedFeatures: membership ? parseAllowedFeatures(membership.allowedFeaturesJson) : []
+        allowedFeatures: membership ? parseAllowedFeatures(membership.allowedFeaturesJson) : [],
+        tenantName: membership?.tenant.name,
+        tenantSlug: membership?.tenant.slug
       },
       stores: user.tenantUsers.map((tu) => tu.tenant)
     });
@@ -3637,6 +4235,7 @@ init_prismaClient();
 init_tenantContext();
 import { Router as Router6 } from "express";
 import { Prisma } from "@prisma/client";
+import { z as z5 } from "zod";
 
 // src/server/posCheckout.ts
 import { z as z4 } from "zod";
@@ -3645,15 +4244,21 @@ var posTenderSchema = z4.object({
   amount: z4.number().positive(),
   reference: z4.string().trim().max(120).optional(),
   status: z4.enum(["APPROVED", "CAPTURED"]).default("CAPTURED")
+}).superRefine((value, ctx) => {
+  if (["EFTPOS", "CARD", "TAP"].includes(value.method) && !value.reference?.trim()) {
+    ctx.addIssue({ code: "custom", path: ["reference"], message: "Card and EFTPOS tenders require an approved provider reference" });
+  }
 });
 var posCheckoutSchema = z4.object({
   idempotencyKey: z4.string().trim().min(8).max(120),
   registerId: z4.string().trim().min(1).max(60).default("REGISTER-01"),
+  shiftId: z4.string().trim().min(1),
   customerId: z4.string().trim().optional(),
   taxInclusive: z4.boolean().default(true),
   discount: z4.number().nonnegative().default(0),
   shipping: z4.number().nonnegative().default(0),
   notes: z4.string().max(1e3).default(""),
+  approvalId: z4.string().trim().optional(),
   items: z4.array(z4.object({
     productId: z4.string().trim().min(1),
     quantity: z4.number().int().positive(),
@@ -3689,10 +4294,173 @@ function parseSerialInventory(value) {
     return [];
   }
 }
+function calculateExpectedCash(openingFloat, cashPayments, movements) {
+  const movementTotal = movements.reduce((sum, movement) => {
+    if (movement.type === "CASH_IN") return sum + movement.amount;
+    if (movement.type === "NO_SALE") return sum;
+    return sum - movement.amount;
+  }, 0);
+  return money(openingFloat + cashPayments + movementTotal);
+}
+function calculateProportionalRefund(grossReturned, orderGross, orderTotal, shipping) {
+  if (orderGross <= 0) return 0;
+  return money(grossReturned * (Math.max(0, orderTotal - shipping) / orderGross));
+}
+function calculateLaybyBalance(total, paid, installment2) {
+  const nextPaid = money(paid + installment2);
+  if (installment2 <= 0 || nextPaid > money(total)) throw new Error("Installment must be positive and cannot exceed the remaining balance");
+  const remainingBalance = money(total - nextPaid);
+  return { paidAmount: nextPaid, remainingBalance, completed: remainingBalance === 0 };
+}
 
 // src/server/routes/pos.ts
 var router7 = Router6();
 router7.use(authMiddleware, requirePlanFeature("pos"));
+var openShiftSchema = z5.object({ registerId: z5.string().trim().min(1).max(60), openingFloat: z5.number().nonnegative() });
+var cashMovementSchema = z5.object({ type: z5.enum(["CASH_IN", "CASH_OUT", "SAFE_DROP", "NO_SALE"]), amount: z5.number().nonnegative(), reason: z5.string().trim().min(3).max(250), approvalId: z5.string().optional() });
+var closeShiftSchema = z5.object({ countedCash: z5.number().nonnegative(), varianceReason: z5.string().trim().max(250).default("") });
+var returnSchema = z5.object({
+  orderNumber: z5.string().trim().min(1),
+  shiftId: z5.string().trim().optional(),
+  approvalId: z5.string().trim().optional(),
+  refundMethod: z5.enum(["CASH", "EFTPOS", "CARD", "TAP", "STORE_CREDIT"]),
+  reason: z5.string().trim().min(3).max(500),
+  items: z5.array(z5.object({ orderItemId: z5.string().trim().min(1), quantity: z5.number().int().positive(), disposition: z5.enum(["RESTOCK", "QUARANTINE", "RETURN_TO_SUPPLIER", "WRITE_OFF"]) })).min(1)
+});
+router7.get("/shifts/current", async (req, res) => {
+  const tenantId = getActiveTenantId();
+  const registerId = String(req.query.registerId || "REGISTER-01");
+  const shift = await prismaRaw.posRegisterShift.findFirst({ where: { tenantId, registerId, status: "OPEN" }, include: { cashMovements: true }, orderBy: { openedAt: "desc" } });
+  res.json({ shift });
+});
+router7.post("/shifts/open", requireTenantRole(["TENANT_OWNER", "TENANT_ADMIN", "TENANT_STAFF"]), async (req, res) => {
+  const parsed = openShiftSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "Invalid opening float or register" });
+  const tenantId = getActiveTenantId();
+  const existing = await prismaRaw.posRegisterShift.findFirst({ where: { tenantId, registerId: parsed.data.registerId, status: "OPEN" } });
+  if (existing) return res.status(409).json({ error: "This register already has an open shift", shift: existing });
+  const shift = await prismaRaw.posRegisterShift.create({ data: { tenantId, ...parsed.data, expectedCash: parsed.data.openingFloat, openedByUserId: req.user?.userId || req.user?.sub || "unknown" } });
+  await prismaRaw.activityLog.create({ data: { tenantId, action: "POS_SHIFT_OPENED", entity: "PosRegisterShift", details: JSON.stringify({ shiftId: shift.id, registerId: shift.registerId, openingFloat: shift.openingFloat }) } });
+  res.status(201).json({ shift });
+});
+router7.post("/shifts/:shiftId/cash-movements", requireTenantRole(["TENANT_OWNER", "TENANT_ADMIN", "TENANT_STAFF"]), async (req, res) => {
+  const parsed = cashMovementSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "A valid cash movement and reason are required" });
+  const tenantId = getActiveTenantId();
+  const shift = await prismaRaw.posRegisterShift.findFirst({ where: { id: req.params.shiftId, tenantId, status: "OPEN" } });
+  if (!shift) return res.status(404).json({ error: "Open shift not found" });
+  if (parsed.data.type === "NO_SALE") {
+    const approval = parsed.data.approvalId && await prismaRaw.posManagerApproval.findFirst({ where: { id: parsed.data.approvalId, tenantId, action: "OPEN_DRAWER", usedAt: null, expiresAt: { gt: /* @__PURE__ */ new Date() } } });
+    if (!approval) return res.status(403).json({ error: "A valid manager drawer approval is required" });
+    await prismaRaw.posManagerApproval.update({ where: { id: approval.id }, data: { usedAt: /* @__PURE__ */ new Date(), entityId: shift.id } });
+  }
+  const { approvalId: _approvalId, ...movementData } = parsed.data;
+  const movement = await prismaRaw.posCashMovement.create({ data: { tenantId, shiftId: shift.id, ...movementData, userId: req.user?.userId || req.user?.sub || "unknown" } });
+  res.status(201).json({ movement });
+});
+router7.post("/shifts/:shiftId/close", requireTenantRole(["TENANT_OWNER", "TENANT_ADMIN"]), async (req, res) => {
+  const parsed = closeShiftSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "A valid counted cash amount is required" });
+  const tenantId = getActiveTenantId();
+  try {
+    const shift = await prismaRaw.$transaction(async (tx) => {
+      const current = await tx.posRegisterShift.findFirst({ where: { id: req.params.shiftId, tenantId, status: "OPEN" } });
+      if (!current) throw new Error("Open shift not found");
+      const cashPayments = await tx.posPayment.aggregate({ where: { tenantId, shiftId: current.id, method: "CASH" }, _sum: { amount: true } });
+      const movements = await tx.posCashMovement.findMany({ where: { tenantId, shiftId: current.id } });
+      const expectedCash = calculateExpectedCash(current.openingFloat, cashPayments._sum.amount || 0, movements);
+      const variance = money(parsed.data.countedCash - expectedCash);
+      if (Math.abs(variance) >= 0.01 && !parsed.data.varianceReason) throw new Error("A variance reason is required when counted cash differs from expected cash");
+      return tx.posRegisterShift.update({ where: { id: current.id }, data: { status: "CLOSED", closedAt: /* @__PURE__ */ new Date(), closedByUserId: req.user?.userId || req.user?.sub || "unknown", expectedCash, countedCash: parsed.data.countedCash, variance, varianceReason: parsed.data.varianceReason } });
+    });
+    await prismaRaw.activityLog.create({ data: { tenantId, action: "POS_SHIFT_CLOSED", entity: "PosRegisterShift", details: JSON.stringify(shift) } });
+    res.json({ shift });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+router7.get("/receipts/:orderNumber", async (req, res) => {
+  const tenantId = getActiveTenantId();
+  const order = await prismaRaw.order.findFirst({ where: { tenantId, orderNumber: req.params.orderNumber }, include: { items: true } });
+  if (!order) return res.status(404).json({ error: "Receipt not found" });
+  const returned = await prismaRaw.posReturnItem.groupBy({ where: { tenantId, posReturn: { orderId: order.id } }, by: ["orderItemId"], _sum: { quantity: true } });
+  res.json({ order, returnedQuantities: Object.fromEntries(returned.map((item) => [item.orderItemId, item._sum.quantity || 0])) });
+});
+router7.post("/returns", requireTenantRole(["TENANT_OWNER", "TENANT_ADMIN", "TENANT_STAFF"]), async (req, res) => {
+  const parsed = returnSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "Invalid return request", details: parsed.error.flatten() });
+  const tenantId = getActiveTenantId();
+  const userId2 = req.user?.userId || req.user?.sub || "unknown";
+  try {
+    const result = await prismaRaw.$transaction(async (tx) => {
+      const order = await tx.order.findFirst({ where: { tenantId, orderNumber: parsed.data.orderNumber }, include: { items: true } });
+      if (!order || order.paymentStatus !== "Paid") throw new Error("A paid POS receipt is required");
+      if (parsed.data.shiftId) {
+        const shift = await tx.posRegisterShift.findFirst({ where: { id: parsed.data.shiftId, tenantId, status: "OPEN" } });
+        if (!shift) throw new Error("The selected register shift is not open");
+      }
+      const previous = await tx.posReturnItem.groupBy({ where: { tenantId, posReturn: { orderId: order.id } }, by: ["orderItemId"], _sum: { quantity: true } });
+      const previouslyReturned = new Map(previous.map((item) => [item.orderItemId, item._sum.quantity || 0]));
+      const requestedIds = new Set(parsed.data.items.map((item) => item.orderItemId));
+      if (requestedIds.size !== parsed.data.items.length) throw new Error("Each receipt line may only appear once in a return");
+      let grossRefund = 0;
+      const returnLines = parsed.data.items.map((requested) => {
+        const original = order.items.find((item) => item.id === requested.orderItemId);
+        if (!original) throw new Error("A selected item does not belong to this receipt");
+        const remaining = original.quantity - (previouslyReturned.get(original.id) || 0);
+        if (requested.quantity > remaining) throw new Error(`Only ${remaining} unit(s) of ${original.name} remain returnable`);
+        grossRefund += original.price * requested.quantity;
+        return { requested, original };
+      });
+      const orderGross = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+      const refundAmount = calculateProportionalRefund(grossRefund, orderGross, order.total, order.shipping);
+      if (refundAmount > 250) {
+        const approval = parsed.data.approvalId && await tx.posManagerApproval.findFirst({ where: { id: parsed.data.approvalId, tenantId, action: "REFUND", usedAt: null, expiresAt: { gt: /* @__PURE__ */ new Date() }, amount: { gte: refundAmount } } });
+        if (!approval) throw new Error(`Manager approval is required for refunds above $250. Refund amount: $${refundAmount.toFixed(2)}`);
+        await tx.posManagerApproval.update({ where: { id: approval.id }, data: { usedAt: /* @__PURE__ */ new Date(), entityId: order.id } });
+      }
+      const refundFactor = orderGross > 0 ? Math.max(0, order.total - order.shipping) / orderGross : 0;
+      const returnNumber = `RET-${Date.now().toString().slice(-10)}${Math.floor(Math.random() * 90 + 10)}`;
+      const posReturn = await tx.posReturn.create({
+        data: {
+          tenantId,
+          returnNumber,
+          orderId: order.id,
+          shiftId: parsed.data.shiftId,
+          refundMethod: parsed.data.refundMethod,
+          refundAmount,
+          reason: parsed.data.reason,
+          processedByUserId: userId2,
+          items: { create: returnLines.map(({ requested, original }) => ({
+            tenantId,
+            orderItemId: original.id,
+            productId: original.productId,
+            quantity: requested.quantity,
+            serialNumber: original.serialNumber,
+            unitRefund: money(original.price * refundFactor),
+            disposition: requested.disposition,
+            restocked: requested.disposition === "RESTOCK"
+          })) }
+        },
+        include: { items: true }
+      });
+      for (const { requested, original } of returnLines) {
+        if (requested.disposition !== "RESTOCK") continue;
+        const product = await tx.product.findFirst({ where: { id: original.productId, tenantId } });
+        if (!product) throw new Error(`Product ${original.productId} no longer exists`);
+        const serials = parseSerialInventory(product.serialNumbers);
+        if (original.serialNumber && !serials.includes(original.serialNumber)) serials.push(original.serialNumber);
+        await tx.product.update({ where: { id: product.id }, data: { stock: { increment: requested.quantity }, sales: { decrement: requested.quantity }, serialNumbers: JSON.stringify(serials) } });
+      }
+      await tx.posPayment.create({ data: { tenantId, shiftId: parsed.data.shiftId, orderId: order.id, method: parsed.data.refundMethod, amount: -refundAmount, status: "REFUNDED", idempotencyKey: posReturn.id } });
+      await tx.activityLog.create({ data: { tenantId, action: "POS_RETURN_COMPLETED", entity: "PosReturn", details: JSON.stringify({ returnId: posReturn.id, returnNumber, orderId: order.id, refundAmount, reason: parsed.data.reason }) } });
+      return posReturn;
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 5e3, timeout: 1e4 });
+    res.status(201).json({ return: result });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
 router7.post("/checkout", requireTenantRole(["TENANT_OWNER", "TENANT_ADMIN", "TENANT_STAFF"]), async (req, res) => {
   const parsed = posCheckoutSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Invalid POS checkout", details: parsed.error.flatten() });
@@ -3709,6 +4477,8 @@ router7.post("/checkout", requireTenantRole(["TENANT_OWNER", "TENANT_ADMIN", "TE
         const existing = await tx.order.findFirst({ where: { tenantId, id: details.orderId }, include: { items: true } });
         if (existing) return { order: existing, changeDue: details.changeDue || 0, duplicate: true };
       }
+      const shift = await tx.posRegisterShift.findFirst({ where: { id: input.shiftId, tenantId, registerId: input.registerId, status: "OPEN" } });
+      if (!shift) throw new Error("Open register shift not found");
       const requested = /* @__PURE__ */ new Map();
       for (const line of input.items) {
         const current = requested.get(line.productId) || { quantity: 0, serialNumbers: [] };
@@ -3732,6 +4502,11 @@ router7.post("/checkout", requireTenantRole(["TENANT_OWNER", "TENANT_ADMIN", "TE
       }
       const settings = await tx.storeSettings.findUnique({ where: { tenantId } });
       const totals = calculatePosTotals(orderLines, input.discount, input.shipping, settings?.taxRatePercent ?? 10, input.taxInclusive);
+      if (totals.rawSubtotal > 0 && totals.discount / totals.rawSubtotal > 0.1) {
+        const approval = input.approvalId && await tx.posManagerApproval.findFirst({ where: { id: input.approvalId, tenantId, action: "DISCOUNT", usedAt: null, expiresAt: { gt: /* @__PURE__ */ new Date() }, amount: { gte: totals.discount } } });
+        if (!approval) throw new Error(`Manager approval is required for discounts above 10%. Discount amount: $${totals.discount.toFixed(2)}`);
+        await tx.posManagerApproval.update({ where: { id: approval.id }, data: { usedAt: /* @__PURE__ */ new Date(), entityId: input.idempotencyKey } });
+      }
       const changeDue = assertTenderCoverage(input.tenders, totals.total);
       const receiptSuffix = `${Date.now().toString().slice(-10)}${Math.floor(Math.random() * 90 + 10)}`;
       const orderNumber = `POS-${input.registerId}-${receiptSuffix}`;
@@ -3799,6 +4574,16 @@ router7.post("/checkout", requireTenantRole(["TENANT_OWNER", "TENANT_ADMIN", "TE
           details: JSON.stringify({ orderId: order.id, method: tender.method, amount: tender.amount, reference: tender.reference, status: tender.status })
         }))
       ] });
+      await tx.posPayment.createMany({ data: input.tenders.map((tender) => ({
+        tenantId,
+        shiftId: shift.id,
+        orderId: order.id,
+        method: tender.method,
+        amount: tender.amount,
+        reference: tender.reference,
+        status: tender.status,
+        idempotencyKey: input.idempotencyKey
+      })) });
       return { order, changeDue, duplicate: false };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 5e3, timeout: 1e4 });
     return res.status(result.duplicate ? 200 : 201).json(result);
@@ -3810,13 +4595,214 @@ router7.post("/checkout", requireTenantRole(["TENANT_OWNER", "TENANT_ADMIN", "TE
 });
 var pos_default = router7;
 
+// src/server/routes/posOperations.ts
+init_prismaClient();
+init_tenantContext();
+init_auth();
+import { Router as Router7 } from "express";
+import { Prisma as Prisma2 } from "@prisma/client";
+import { z as z6 } from "zod";
+var router8 = Router7();
+router8.use(authMiddleware, requirePlanFeature("pos"));
+var userId = (req) => req.user?.userId || req.user?.sub || "unknown";
+var laybyItem = z6.object({ productId: z6.string().min(1), quantity: z6.number().int().positive(), serialNumbers: z6.array(z6.string().min(1)).default([]) });
+var createLayby = z6.object({
+  customerId: z6.string().min(1),
+  shiftId: z6.string().min(1),
+  expiryDays: z6.number().int().min(7).max(365).default(90),
+  notes: z6.string().max(1e3).default(""),
+  items: z6.array(laybyItem).min(1),
+  deposit: z6.object({ amount: z6.number().positive(), method: z6.enum(["CASH", "EFTPOS", "CARD", "BANK_TRANSFER"]), reference: z6.string().optional() })
+}).superRefine((value, ctx) => {
+  if (value.deposit.method !== "CASH" && !value.deposit.reference?.trim()) ctx.addIssue({ code: "custom", path: ["deposit", "reference"], message: "Non-cash deposits require a terminal or bank reference" });
+});
+var installment = z6.object({ shiftId: z6.string().optional(), amount: z6.number().positive(), method: z6.enum(["CASH", "EFTPOS", "CARD", "BANK_TRANSFER"]), reference: z6.string().optional() }).superRefine((value, ctx) => {
+  if (value.method !== "CASH" && !value.reference?.trim()) ctx.addIssue({ code: "custom", path: ["reference"], message: "Non-cash installments require a terminal or bank reference" });
+});
+router8.get("/laybys", async (req, res) => {
+  const tenantId = getActiveTenantId();
+  const status = typeof req.query.status === "string" ? req.query.status : void 0;
+  const laybys = await prismaRaw.posLayby.findMany({ where: { tenantId, ...status ? { status } : {} }, include: { items: true, payments: { orderBy: { createdAt: "desc" } } }, orderBy: { createdAt: "desc" } });
+  res.json({ laybys });
+});
+router8.post("/laybys", requireTenantRole(["TENANT_OWNER", "TENANT_ADMIN", "TENANT_STAFF"]), async (req, res) => {
+  const parsed = createLayby.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "Invalid lay-by request", details: parsed.error.flatten() });
+  const tenantId = getActiveTenantId();
+  try {
+    const result = await prismaRaw.$transaction(async (tx) => {
+      const shift = await tx.posRegisterShift.findFirst({ where: { id: parsed.data.shiftId, tenantId, status: "OPEN" } });
+      if (!shift) throw new Error("An open register shift is required");
+      const customer = await tx.customer.findFirst({ where: { id: parsed.data.customerId, tenantId } });
+      if (!customer) throw new Error("A registered customer is required for lay-by");
+      const productIds = [...new Set(parsed.data.items.map((item) => item.productId))];
+      const products = await tx.product.findMany({ where: { tenantId, id: { in: productIds } } });
+      if (products.length !== productIds.length) throw new Error("One or more products were not found");
+      const lines = parsed.data.items.map((item) => {
+        const product = products.find((candidate) => candidate.id === item.productId);
+        if (product.stock < item.quantity) throw new Error(`Insufficient stock for ${product.name}`);
+        if (new Set(item.serialNumbers).size !== item.serialNumbers.length || item.serialNumbers.length > item.quantity) throw new Error(`Invalid serial allocation for ${product.name}`);
+        const available = parseSerialInventory(product.serialNumbers);
+        item.serialNumbers.forEach((serial) => {
+          if (!available.includes(serial)) throw new Error(`Serial ${serial} is unavailable`);
+        });
+        return { product, ...item, unitPrice: product.discountPrice ?? product.price };
+      });
+      const settings = await tx.storeSettings.findUnique({ where: { tenantId } });
+      const totals = calculatePosTotals(lines, 0, 0, settings?.taxRatePercent ?? 10, true);
+      if (parsed.data.deposit.amount > totals.total) throw new Error("Deposit cannot exceed the lay-by total");
+      if (parsed.data.deposit.amount >= totals.total) throw new Error("Use a normal sale when the full balance is being paid");
+      for (const line of lines) {
+        const updated = await tx.product.updateMany({ where: { id: line.product.id, tenantId, stock: { gte: line.quantity } }, data: { stock: { decrement: line.quantity } } });
+        if (updated.count !== 1) throw new Error(`Stock changed for ${line.product.name}; retry`);
+        if (line.serialNumbers.length) await tx.product.update({ where: { id: line.product.id }, data: { serialNumbers: JSON.stringify(parseSerialInventory(line.product.serialNumbers).filter((serial) => !line.serialNumbers.includes(serial))) } });
+      }
+      const suffix = `${Date.now().toString().slice(-10)}${Math.floor(Math.random() * 90 + 10)}`;
+      const layby = await tx.posLayby.create({ data: {
+        tenantId,
+        laybyNumber: `LAY-${suffix}`,
+        customerId: customer.id,
+        customerName: customer.name,
+        shiftId: shift.id,
+        subtotal: totals.subtotal,
+        tax: totals.tax,
+        totalAmount: totals.total,
+        paidAmount: parsed.data.deposit.amount,
+        remainingBalance: money(totals.total - parsed.data.deposit.amount),
+        expiryDate: new Date(Date.now() + parsed.data.expiryDays * 864e5),
+        notes: parsed.data.notes,
+        createdByUserId: userId(req),
+        status: parsed.data.deposit.amount === totals.total ? "COMPLETED" : "ACTIVE",
+        items: { create: lines.map((line) => ({ tenantId, productId: line.product.id, productName: line.product.name, quantity: line.quantity, unitPrice: line.unitPrice, serialNumbers: JSON.stringify(line.serialNumbers) })) },
+        payments: { create: { tenantId, shiftId: shift.id, amount: parsed.data.deposit.amount, method: parsed.data.deposit.method, reference: parsed.data.deposit.reference, receiptNumber: `LR-${suffix}`, receivedByUserId: userId(req) } }
+      }, include: { items: true, payments: true } });
+      await tx.posPayment.create({ data: { tenantId, shiftId: shift.id, orderId: layby.id, method: parsed.data.deposit.method, amount: parsed.data.deposit.amount, reference: parsed.data.deposit.reference, status: "CAPTURED", idempotencyKey: `layby-${layby.id}` } });
+      await tx.activityLog.create({ data: { tenantId, action: "POS_LAYBY_CREATED", entity: "PosLayby", details: JSON.stringify({ laybyId: layby.id, laybyNumber: layby.laybyNumber, total: layby.totalAmount, deposit: layby.paidAmount }) } });
+      return layby;
+    }, { isolationLevel: Prisma2.TransactionIsolationLevel.Serializable, maxWait: 5e3, timeout: 1e4 });
+    res.status(201).json({ layby: result });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+router8.post("/laybys/:id/payments", requireTenantRole(["TENANT_OWNER", "TENANT_ADMIN", "TENANT_STAFF"]), async (req, res) => {
+  const parsed = installment.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "Invalid installment" });
+  const tenantId = getActiveTenantId();
+  try {
+    const result = await prismaRaw.$transaction(async (tx) => {
+      const layby = await tx.posLayby.findFirst({ where: { id: req.params.id, tenantId, status: "ACTIVE" }, include: { items: true } });
+      if (!layby) throw new Error("Active lay-by not found");
+      if (parsed.data.amount > layby.remainingBalance) throw new Error("Installment exceeds the remaining balance");
+      if (parsed.data.method === "CASH") {
+        const shift = parsed.data.shiftId && await tx.posRegisterShift.findFirst({ where: { id: parsed.data.shiftId, tenantId, status: "OPEN" } });
+        if (!shift) throw new Error("Cash installments require an open register shift");
+      }
+      const suffix = `${Date.now().toString().slice(-10)}${Math.floor(Math.random() * 90 + 10)}`;
+      const balance = calculateLaybyBalance(layby.totalAmount, layby.paidAmount, parsed.data.amount);
+      const { paidAmount, remainingBalance, completed } = balance;
+      const payment = await tx.posLaybyPayment.create({ data: { tenantId, laybyId: layby.id, shiftId: parsed.data.shiftId, amount: parsed.data.amount, method: parsed.data.method, reference: parsed.data.reference, receiptNumber: `LR-${suffix}`, receivedByUserId: userId(req) } });
+      let completedOrderId;
+      if (completed) {
+        const order = await tx.order.create({ data: { tenantId, customerId: layby.customerId, orderNumber: `POS-LAYBY-${suffix}`, status: "Delivered", subtotal: layby.subtotal, tax: layby.tax, total: layby.totalAmount, paymentMethod: "LAYBY", paymentStatus: "Paid", notes: `Completed lay-by ${layby.laybyNumber}`, items: { create: layby.items.flatMap((item) => {
+          const serials = parseSerialInventory(item.serialNumbers);
+          const serialLines = serials.map((serialNumber) => ({ tenantId, productId: item.productId, name: item.productName, price: item.unitPrice, quantity: 1, serialNumber }));
+          return item.quantity > serials.length ? [...serialLines, { tenantId, productId: item.productId, name: item.productName, price: item.unitPrice, quantity: item.quantity - serials.length }] : serialLines;
+        }) } } });
+        completedOrderId = order.id;
+      }
+      const updated = await tx.posLayby.update({ where: { id: layby.id }, data: { paidAmount, remainingBalance, status: completed ? "COMPLETED" : "ACTIVE", completedOrderId } });
+      await tx.posPayment.create({ data: { tenantId, shiftId: parsed.data.shiftId, orderId: completedOrderId || layby.id, method: parsed.data.method, amount: parsed.data.amount, reference: parsed.data.reference, status: "CAPTURED", idempotencyKey: `layby-payment-${payment.id}` } });
+      return { layby: updated, payment, completedOrderId };
+    }, { isolationLevel: Prisma2.TransactionIsolationLevel.Serializable });
+    res.status(201).json(result);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+router8.post("/laybys/:id/cancel", requireTenantRole(["TENANT_OWNER", "TENANT_ADMIN"]), async (req, res) => {
+  const tenantId = getActiveTenantId();
+  try {
+    const layby = await prismaRaw.$transaction(async (tx) => {
+      const current = await tx.posLayby.findFirst({ where: { id: req.params.id, tenantId, status: "ACTIVE" }, include: { items: true } });
+      if (!current) throw new Error("Active lay-by not found");
+      for (const item of current.items) {
+        const product = await tx.product.findFirst({ where: { id: item.productId, tenantId } });
+        if (!product) continue;
+        const serials = [.../* @__PURE__ */ new Set([...parseSerialInventory(product.serialNumbers), ...parseSerialInventory(item.serialNumbers)])];
+        await tx.product.update({ where: { id: product.id }, data: { stock: { increment: item.quantity }, serialNumbers: JSON.stringify(serials) } });
+      }
+      return tx.posLayby.update({ where: { id: current.id }, data: { status: "CANCELLED", notes: `${current.notes}
+Cancelled: ${String(req.body?.reason || "Manager cancellation")}`.trim() } });
+    });
+    res.json({ layby });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+var approvalSchema = z6.object({ managerEmail: z6.string().email(), managerPassword: z6.string().min(1), action: z6.enum(["DISCOUNT", "REFUND", "VOID", "OPEN_DRAWER"]), amount: z6.number().nonnegative().optional(), reason: z6.string().min(3).max(250) });
+router8.post("/approvals", async (req, res) => {
+  const parsed = approvalSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "Manager credentials, action and reason are required" });
+  const tenantId = getActiveTenantId();
+  const manager = await prismaRaw.user.findUnique({ where: { email: parsed.data.managerEmail }, include: { tenantUsers: { where: { tenantId } } } });
+  if (!manager || !await verifyPassword(parsed.data.managerPassword, manager.password) || !manager.tenantUsers.some((member) => ["TENANT_OWNER", "TENANT_ADMIN"].includes(member.role))) return res.status(403).json({ error: "Valid owner or manager credentials are required" });
+  const approval = await prismaRaw.posManagerApproval.create({ data: { tenantId, action: parsed.data.action, amount: parsed.data.amount, reason: parsed.data.reason, requestedByUserId: userId(req), approvedByUserId: manager.id, expiresAt: new Date(Date.now() + 5 * 6e4) } });
+  res.status(201).json({ approval: { id: approval.id, action: approval.action, expiresAt: approval.expiresAt } });
+});
+var authorizationSchema = z6.object({ shiftId: z6.string().min(1), amount: z6.number().positive(), method: z6.enum(["EFTPOS", "CARD", "TAP"]), provider: z6.string().min(2).max(60) });
+router8.post("/payment-authorizations", async (req, res) => {
+  const parsed = authorizationSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "Invalid payment authorization request" });
+  const tenantId = getActiveTenantId();
+  const shift = await prismaRaw.posRegisterShift.findFirst({ where: { id: parsed.data.shiftId, tenantId, status: "OPEN" } });
+  if (!shift) return res.status(400).json({ error: "Open shift not found" });
+  const authorization = await prismaRaw.posPaymentAuthorization.create({ data: { tenantId, ...parsed.data, requestedByUserId: userId(req), expiresAt: new Date(Date.now() + 5 * 6e4) } });
+  res.status(201).json({ authorization });
+});
+router8.post("/payment-authorizations/:id/confirm", requireTenantRole(["TENANT_OWNER", "TENANT_ADMIN"]), async (req, res) => {
+  const parsed = z6.object({ status: z6.enum(["AUTHORIZED", "DECLINED", "CANCELLED"]), providerReference: z6.string().min(3).max(120) }).safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "Provider result and reference are required" });
+  const tenantId = getActiveTenantId();
+  const existing = await prismaRaw.posPaymentAuthorization.findFirst({ where: { id: req.params.id, tenantId, status: "PENDING", expiresAt: { gt: /* @__PURE__ */ new Date() } } });
+  if (!existing) return res.status(404).json({ error: "Pending authorization not found or expired" });
+  const authorization = await prismaRaw.posPaymentAuthorization.update({ where: { id: existing.id }, data: { ...parsed.data, confirmedByUserId: userId(req) } });
+  res.json({ authorization });
+});
+router8.get("/reports/summary", requireTenantRole(["TENANT_OWNER", "TENANT_ADMIN"]), async (req, res) => {
+  const tenantId = getActiveTenantId();
+  const from = req.query.from ? new Date(String(req.query.from)) : new Date((/* @__PURE__ */ new Date()).setHours(0, 0, 0, 0));
+  const to = req.query.to ? new Date(String(req.query.to)) : /* @__PURE__ */ new Date();
+  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || from > to) return res.status(400).json({ error: "Invalid report date range" });
+  const [orders, payments, returns, shifts, laybys] = await Promise.all([
+    prismaRaw.order.findMany({ where: { tenantId, createdAt: { gte: from, lte: to }, paymentStatus: "Paid", orderNumber: { startsWith: "POS-" } }, include: { items: true } }),
+    prismaRaw.posPayment.findMany({ where: { tenantId, createdAt: { gte: from, lte: to } } }),
+    prismaRaw.posReturn.findMany({ where: { tenantId, createdAt: { gte: from, lte: to } } }),
+    prismaRaw.posRegisterShift.findMany({ where: { tenantId, openedAt: { gte: from, lte: to } } }),
+    prismaRaw.posLayby.findMany({ where: { tenantId, createdAt: { gte: from, lte: to } } })
+  ]);
+  const byTender = Object.entries(payments.reduce((acc, payment) => {
+    acc[payment.method] = money((acc[payment.method] || 0) + payment.amount);
+    return acc;
+  }, {})).map(([method, amount]) => ({ method, amount }));
+  const productSales = /* @__PURE__ */ new Map();
+  orders.flatMap((order) => order.items).forEach((item) => {
+    const row = productSales.get(item.productId) || { productId: item.productId, name: item.name, quantity: 0, revenue: 0 };
+    row.quantity += item.quantity;
+    row.revenue = money(row.revenue + item.price * item.quantity);
+    productSales.set(item.productId, row);
+  });
+  res.json({ from, to, sales: { count: orders.length, subtotal: money(orders.reduce((sum, order) => sum + order.subtotal, 0)), tax: money(orders.reduce((sum, order) => sum + order.tax, 0)), total: money(orders.reduce((sum, order) => sum + order.total, 0)) }, refunds: { count: returns.length, total: money(returns.reduce((sum, item) => sum + item.refundAmount, 0)) }, tenders: byTender, shifts: { count: shifts.length, variance: money(shifts.reduce((sum, shift) => sum + (shift.variance || 0), 0)) }, laybys: { created: laybys.length, outstanding: money(laybys.filter((item) => item.status === "ACTIVE").reduce((sum, item) => sum + item.remainingBalance, 0)) }, topProducts: [...productSales.values()].sort((a, b) => b.revenue - a.revenue).slice(0, 10) });
+});
+var posOperations_default = router8;
+
 // src/server/routes/tenantStaff.ts
 init_prismaClient();
 init_tenantContext();
-import { Router as Router7 } from "express";
+import { Router as Router8 } from "express";
 init_auth();
-var router8 = Router7();
-router8.use(authMiddleware, requireTenantRole(["TENANT_OWNER", "TENANT_ADMIN"]));
+var router9 = Router8();
+router9.use(authMiddleware, requireTenantRole(["TENANT_OWNER", "TENANT_ADMIN"]));
 var staffRoles = /* @__PURE__ */ new Set(["Admin", "Sales Executive", "Warehouse Manager", "Procurement Officer", "Accountant", "Custom Staff"]);
 function parseFeatures(value) {
   try {
@@ -3839,7 +4825,7 @@ function serializeStaff(member) {
     lastLogin: "Not recorded"
   };
 }
-router8.get("/", async (_req, res) => {
+router9.get("/", async (_req, res) => {
   try {
     const tenantId = getActiveTenantId();
     const staff = await prismaRaw.tenantUser.findMany({
@@ -3852,7 +4838,7 @@ router8.get("/", async (_req, res) => {
     res.status(500).json({ error: error.message || "Unable to load tenant staff." });
   }
 });
-router8.post("/", async (_req, res) => {
+router9.post("/", async (_req, res) => {
   try {
     const tenantId = getActiveTenantId();
     const { name, email, password, role = "Custom Staff", allowedFeatures = [] } = _req.body;
@@ -3881,7 +4867,7 @@ router8.post("/", async (_req, res) => {
     res.status(500).json({ error: error.message || "Unable to create staff account." });
   }
 });
-router8.patch("/:userId", async (req, res) => {
+router9.patch("/:userId", async (req, res) => {
   try {
     const tenantId = getActiveTenantId();
     const { active, role, allowedFeatures } = req.body;
@@ -3905,7 +4891,7 @@ router8.patch("/:userId", async (req, res) => {
     res.status(500).json({ error: error.message || "Unable to update staff account." });
   }
 });
-var tenantStaff_default = router8;
+var tenantStaff_default = router9;
 
 // src/server/middleware/tenantResolver.ts
 init_prismaClient();
@@ -4088,13 +5074,18 @@ var buildSitemapXml = (urls) => `<?xml version="1.0" encoding="UTF-8"?>
 dotenv2.config({ path: [".env.local", ".env"] });
 dotenv2.config({ path: ".env.development.local", override: true });
 var app = express2();
+app.use(compression({ threshold: 1024 }));
 var stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
 app.use(express2.json({ limit: "10mb" }));
 app.use(express2.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser2());
+app.use(trackRequestPerformance);
 var publicDir = path5.resolve(process.cwd(), "public");
-app.use(express2.static(publicDir));
-app.use("/uploads", express2.static(path5.resolve(publicDir, "uploads")));
+app.use(express2.static(publicDir, { maxAge: "1h" }));
+app.use("/uploads", express2.static(path5.resolve(publicDir, "uploads"), {
+  maxAge: "30d",
+  immutable: true
+}));
 var limiter = rateLimit({
   windowMs: 15 * 60 * 1e3,
   max: process.env.NODE_ENV === "production" ? 300 : 5e3,
@@ -4104,7 +5095,9 @@ var limiter = rateLimit({
 });
 app.use("/api", limiter);
 app.use((req, _res, next) => {
-  void writeLog(`${req.method} ${req.path}`);
+  if (process.env.NODE_ENV !== "production" || process.env.LOG_REQUESTS === "true") {
+    void writeLog(`${req.method} ${req.path}`);
+  }
   next();
 });
 app.use(tenantResolverMiddleware);
@@ -4116,6 +5109,7 @@ app.use("/api/billing", tenantBilling_default);
 app.use("/billing", tenantBilling_default);
 app.use("/api/inbound-jobs", inboundJobs_default);
 app.use("/api/pos", pos_default);
+app.use("/api/pos", posOperations_default);
 app.use("/api/tenant-staff", tenantStaff_default);
 app.use("/api/superadmin", superadmin_default);
 app.use("/superadmin", superadmin_default);
