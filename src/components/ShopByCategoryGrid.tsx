@@ -1,7 +1,7 @@
 import React from 'react';
 import { Product } from '../types';
 import { getCategoryHardwareInfo, HARDWARE_CATEGORY_CATALOG } from '../constants/categoryImages';
-import { ArrowRight, Layers } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Layers } from 'lucide-react';
 
 interface ShopByCategoryGridProps {
   products: Product[];
@@ -20,6 +20,10 @@ export const ShopByCategoryGrid: React.FC<ShopByCategoryGridProps> = ({
   title = 'Shop by Category',
   description = 'Real-time dynamic category catalog mapped to store inventory',
 }) => {
+  const categoryRailRef = React.useRef<HTMLDivElement>(null);
+  const [hasOverflow, setHasOverflow] = React.useState(false);
+  const [isAutoScrollPaused, setIsAutoScrollPaused] = React.useState(false);
+
   // Dynamically compute category counts from active tenant's inventory
   const categoryCounts = React.useMemo(() => {
     const counts: Record<string, number> = {};
@@ -53,6 +57,42 @@ export const ShopByCategoryGrid: React.FC<ShopByCategoryGridProps> = ({
       .filter((cat) => cat.count > 0 || presentCategoryNames.length === 0);
   }, [categoryCounts]);
 
+  React.useEffect(() => {
+    const rail = categoryRailRef.current;
+    if (!rail) return;
+    const updateOverflow = () => setHasOverflow(rail.scrollWidth > rail.clientWidth + 2);
+    updateOverflow();
+    const observer = new ResizeObserver(updateOverflow);
+    observer.observe(rail);
+    Array.from(rail.children).forEach((child) => observer.observe(child));
+    return () => observer.disconnect();
+  }, [availableCategories.length]);
+
+  React.useEffect(() => {
+    const rail = categoryRailRef.current;
+    if (!rail || !hasOverflow || isAutoScrollPaused || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    let animationFrame = 0;
+    let previousTime = performance.now();
+    const moveRightToLeft = (time: number) => {
+      const elapsed = Math.min(time - previousTime, 50);
+      previousTime = time;
+      const maximumScroll = rail.scrollWidth - rail.clientWidth;
+      if (rail.scrollLeft >= maximumScroll - 1) {
+        rail.scrollLeft = 0;
+      } else {
+        rail.scrollLeft += elapsed * 0.025;
+      }
+      animationFrame = requestAnimationFrame(moveRightToLeft);
+    };
+    animationFrame = requestAnimationFrame(moveRightToLeft);
+    return () => cancelAnimationFrame(animationFrame);
+  }, [hasOverflow, isAutoScrollPaused, availableCategories.length]);
+
+  const scrollCategories = (direction: -1 | 1) => {
+    categoryRailRef.current?.scrollBy({ left: direction * 420, behavior: 'smooth' });
+  };
+
   if (availableCategories.length === 0) return null;
 
   return (
@@ -70,13 +110,33 @@ export const ShopByCategoryGrid: React.FC<ShopByCategoryGridProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2 text-xs font-bold text-neutral-500">
-          <Layers className="w-4 h-4 text-blue-600" />
-          <span>{availableCategories.length} Active Categories</span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 text-xs font-bold text-neutral-500">
+            <Layers className="w-4 h-4 text-blue-600" />
+            <span>{availableCategories.length} Active Categories</span>
+          </div>
+          {hasOverflow && (
+            <div className="flex items-center gap-1" aria-label="Category carousel controls">
+              <button type="button" onClick={() => scrollCategories(-1)} className="flex h-8 w-8 items-center justify-center rounded-full border border-neutral-300 bg-white text-neutral-700 hover:border-neutral-900 hover:text-black" aria-label="Show previous categories"><ArrowLeft className="h-4 w-4" /></button>
+              <button type="button" onClick={() => scrollCategories(1)} className="flex h-8 w-8 items-center justify-center rounded-full border border-neutral-300 bg-white text-neutral-700 hover:border-neutral-900 hover:text-black" aria-label="Show more categories"><ArrowRight className="h-4 w-4" /></button>
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-5">
+      <div
+        ref={categoryRailRef}
+        className="flex snap-x snap-mandatory gap-5 overflow-x-auto pb-3 scrollbar-none"
+        onMouseEnter={() => setIsAutoScrollPaused(true)}
+        onMouseLeave={() => setIsAutoScrollPaused(false)}
+        onFocusCapture={() => setIsAutoScrollPaused(true)}
+        onBlurCapture={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setIsAutoScrollPaused(false);
+        }}
+        onTouchStart={() => setIsAutoScrollPaused(true)}
+        onTouchEnd={() => setIsAutoScrollPaused(false)}
+        aria-label="Shop by category"
+      >
         {availableCategories.map((cat) => {
           const isSelected = activeCategory === cat.label || activeCategory === cat.id;
 
@@ -84,7 +144,7 @@ export const ShopByCategoryGrid: React.FC<ShopByCategoryGridProps> = ({
             <button
               key={cat.id}
               onClick={() => onSelectCategory(cat.label)}
-              className={`group relative h-48 rounded-2xl overflow-hidden shadow-md border transition-all duration-300 text-left flex flex-col justify-end p-4 ${
+              className={`group relative h-48 w-[78vw] max-w-[210px] min-w-[170px] flex-none snap-start rounded-2xl overflow-hidden shadow-md border transition-all duration-300 text-left flex flex-col justify-end p-4 sm:w-[210px] ${
                 isSelected
                   ? 'border-blue-600 ring-4 ring-blue-500/20 scale-[1.02]'
                   : 'border-neutral-200 dark:border-neutral-800 hover:border-blue-500 hover:shadow-xl hover:-translate-y-1'

@@ -2007,10 +2007,10 @@ export default function DashboardView({
                 e.preventDefault();
                 setActiveTab('metrics');
               }}
-              className={`font-mono text-[10px] uppercase tracking-wider transition-colors ${
+              className={`flex h-9 items-center border-b-2 px-1 font-sans text-xs font-medium uppercase tracking-wide text-slate-950 transition-colors hover:text-black ${
                 activeTab === 'metrics'
-                  ? 'text-emerald-700 dark:text-emerald-300 font-black'
-                  : 'text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-300 font-bold'
+                  ? 'border-slate-950'
+                  : 'border-transparent'
               }`}
             >
               Dashboard
@@ -2026,10 +2026,10 @@ export default function DashboardView({
               <button
                 type="button"
                 onClick={() => setHoverMenu(hoverMenu === 'sales' ? null : 'sales')}
-                className="h-7 rounded-md bg-white px-2.5 font-mono text-[10px] font-bold uppercase tracking-wider text-emerald-700 outline-none flex items-center gap-1.5 cursor-pointer shadow-sm hover:bg-slate-50 active:scale-95"
+                className="flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 font-sans text-xs font-medium uppercase tracking-wide text-slate-950 shadow-sm outline-none transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-black"
               >
                 <span>Sales, B2B &amp; Pricing</span>
-                <span className="text-[9px] leading-none text-emerald-600 font-bold">▾</span>
+                <span className="text-[10px] leading-none text-slate-500">▾</span>
               </button>
               {hoverMenu === 'sales' && (
                 <div className="absolute left-0 top-full z-50 pt-0.5 min-w-[210px]">
@@ -2060,10 +2060,10 @@ export default function DashboardView({
               <button
                 type="button"
                 onClick={() => setHoverMenu(hoverMenu === 'inventory' ? null : 'inventory')}
-                className="h-7 rounded-md bg-white px-2.5 font-mono text-[10px] font-bold uppercase tracking-wider text-emerald-700 outline-none flex items-center gap-1.5 cursor-pointer shadow-sm hover:bg-slate-50 active:scale-95"
+                className="flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 font-sans text-xs font-medium uppercase tracking-wide text-slate-950 shadow-sm outline-none transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-black"
               >
                 <span>Inventory, WMS &amp; Logistics</span>
-                <span className="text-[9px] leading-none text-emerald-600 font-bold">▾</span>
+                <span className="text-[10px] leading-none text-slate-500">▾</span>
               </button>
               {hoverMenu === 'inventory' && (
                 <div className="absolute left-0 top-full z-50 pt-0.5 min-w-[220px]">
@@ -2094,10 +2094,10 @@ export default function DashboardView({
               <button
                 type="button"
                 onClick={() => setHoverMenu(hoverMenu === 'procurement' ? null : 'procurement')}
-                className="h-7 rounded-md bg-white px-2.5 font-mono text-[10px] font-bold uppercase tracking-wider text-emerald-700 outline-none flex items-center gap-1.5 cursor-pointer shadow-sm hover:bg-slate-50 active:scale-95"
+                className="flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 font-sans text-xs font-medium uppercase tracking-wide text-slate-950 shadow-sm outline-none transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-black"
               >
                 <span>Purchasing &amp; Vendors</span>
-                <span className="text-[9px] leading-none text-emerald-600 font-bold">▾</span>
+                <span className="text-[10px] leading-none text-slate-500">▾</span>
               </button>
               {hoverMenu === 'procurement' && (
                 <div className="absolute left-0 top-full z-50 pt-0.5 min-w-[210px]">
@@ -2122,10 +2122,10 @@ export default function DashboardView({
               <button
                 type="button"
                 onClick={() => setHoverMenu(hoverMenu === 'intelligence' ? null : 'intelligence')}
-                className="h-7 rounded-md bg-white px-2.5 font-mono text-[10px] font-bold uppercase tracking-wider text-emerald-700 outline-none flex items-center gap-1.5 cursor-pointer shadow-sm hover:bg-slate-50 active:scale-95"
+                className="flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 font-sans text-xs font-medium uppercase tracking-wide text-slate-950 shadow-sm outline-none transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-black"
               >
                 <span>Financials, HR &amp; Intelligence</span>
-                <span className="text-[9px] leading-none text-emerald-600 font-bold">▾</span>
+                <span className="text-[10px] leading-none text-slate-500">▾</span>
               </button>
               {hoverMenu === 'intelligence' && (
                 <div className="absolute left-0 top-full z-50 pt-0.5 min-w-[230px]">
@@ -2149,7 +2149,7 @@ export default function DashboardView({
             <button
               type="button"
               onClick={() => onOpenSettings?.('invoice')}
-              className="font-mono text-[10px] uppercase tracking-wider text-amber-700 hover:text-amber-600 font-black transition-colors"
+              className="flex h-9 items-center border-b-2 border-transparent px-1 font-sans text-xs font-medium uppercase tracking-wide text-slate-950 transition-colors hover:border-slate-400 hover:text-black"
             >
               Settings
             </button>
