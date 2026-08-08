@@ -2,13 +2,14 @@ import { Router } from 'express';
 import { prismaRaw } from '../prismaClient';
 import { findUserByEmail, verifyPassword, createAuthToken, verifyAuthToken, SESSION_MAX_AGE_MS } from '../auth';
 import { validateEnvironment } from '../envValidator';
+import { normalizeStaffFeatureIds } from '../../constants/features';
 
 const router = Router();
 
 const parseAllowedFeatures = (value: string): string[] => {
   try {
     const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed.filter((feature): feature is string => typeof feature === 'string') : [];
+    return Array.isArray(parsed) ? normalizeStaffFeatureIds(parsed.filter((feature): feature is string => typeof feature === 'string')) : [];
   } catch {
     return [];
   }

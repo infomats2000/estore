@@ -4,6 +4,7 @@ import {
   Truck, Shield, Sliders, ListFilter, Globe, DollarSign, Languages as LangIcon, 
   CheckCircle2, AlertTriangle, Plus, Search, Edit3, Trash2, Download, Upload, RefreshCw, X, Lock, Check
 } from 'lucide-react';
+import { useAdminInteractions } from '../../context/AdminInteractionContext';
 
 export type MasterDataEntityKey = 
   | 'categories' | 'brands' | 'units' | 'product-status' | 'warehouses' 
@@ -201,6 +202,7 @@ const DEFAULT_FALLBACKS: Record<MasterDataEntityKey, MasterDataItem[]> = {
 };
 
 export default function MasterDataManager() {
+  const interactions = useAdminInteractions();
   const [activeTab, setActiveTab] = useState<MasterDataEntityKey>('categories');
   const [items, setItems] = useState<MasterDataItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -338,7 +340,7 @@ export default function MasterDataManager() {
       return;
     }
 
-    if (!window.confirm(`Are you sure you want to delete "${item.name || item.value || item.code}"?`)) {
+    if (!(await interactions.confirm({ title: 'Delete Lookup Record?', message: `Delete "${item.name || item.value || item.code}"? This action cannot be undone.`, confirmLabel: 'Delete Record', destructive: true }))) {
       return;
     }
 

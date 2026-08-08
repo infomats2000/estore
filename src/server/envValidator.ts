@@ -11,7 +11,10 @@ export interface EnvValidationResult {
   };
 }
 
-const PLACEHOLDER_DB_HOSTS = new Set(['db.prisma.io', 'pooled.db.prisma.io', 'HOST']);
+// Prisma Postgres legitimately uses db.prisma.io/pooled.db.prisma.io. Only
+// reject an explicit template hostname; credential/template checks below
+// catch example connection strings without blocking real Prisma databases.
+const PLACEHOLDER_DB_HOSTS = new Set(['HOST']);
 
 function getDbHost(rawUrl: string): string {
   try {

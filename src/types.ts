@@ -663,6 +663,7 @@ export interface User {
   email: string;
   permissions: string[];
   lastLogin?: string;
+  canManage?: boolean;
 }
 
 export interface StoreSettings {
@@ -706,6 +707,15 @@ export interface StoreSettings {
   // Website & Storefront Rules
   announcementText: string;
   showAnnouncementBar: boolean;
+  showStorefrontHeader: boolean;
+  showStorefrontSearch: boolean;
+  showStorefrontAccount: boolean;
+  showStorefrontCart: boolean;
+  showStorefrontCompare: boolean;
+  showStorefrontPcBuilder: boolean;
+  showStorefrontTracking: boolean;
+  showStorefrontAdminLogin: boolean;
+  showStorefrontCategoryNav: boolean;
   themePrimaryColor: string;
   themeAccentColor: string;
   storefrontBackgroundColor: string;
@@ -731,9 +741,35 @@ export interface StoreSettings {
   flashSaleText: string;
   flashSaleCouponCode: string;
   showCategorySection: boolean;
+  showCatalogSection: boolean;
+  showCatalogToolbar: boolean;
+  showCatalogFilters: boolean;
+  showBrandSection: boolean;
+  brandSectionTitle: string;
+  storefrontBrands: string[];
+  showRecentlyViewedSection: boolean;
+  recentlyViewedEyebrow: string;
+  recentlyViewedTitle: string;
+  showTrustSection: boolean;
+  trustSectionEyebrow: string;
+  trustSectionTitle: string;
+  trustDeliveryTitle: string;
+  trustDeliveryText: string;
+  trustReturnsTitle: string;
+  trustReturnsText: string;
+  trustPaymentTitle: string;
+  trustPaymentText: string;
+  trustSupportTitle: string;
+  trustSupportText: string;
   categorySectionEyebrow: string;
   categorySectionTitle: string;
   categorySectionDescription: string;
+  categoryNavigationScrollStyle: 'manual' | 'auto-left';
+  categoryNavigationImages: Array<{
+    category: string;
+    imageUrl: string;
+    altText: string;
+  }>;
   catalogSectionEyebrow: string;
   catalogSectionTitle: string;
   catalogStyle: 'classic' | 'compact' | 'minimal' | 'list';
@@ -761,6 +797,15 @@ export interface StoreSettings {
   supportHighlightTitle: string;
   supportHighlightText: string;
   showStorefrontFooter: boolean;
+  showFooterBrandColumn: boolean;
+  showFooterCategoriesColumn: boolean;
+  showFooterCustomerCareColumn: boolean;
+  showFooterLegalBar: boolean;
+  showFooterPolicyLinks: boolean;
+  privacyPolicyUrl: string;
+  termsUrl: string;
+  returnsPolicyUrl: string;
+  shippingPolicyUrl: string;
   footerCategoriesHeading: string;
   footerCustomerCareHeading: string;
   footerWarrantyText: string;
@@ -814,6 +859,15 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
 
   announcementText: 'Welcome to our new store!',
   showAnnouncementBar: true,
+  showStorefrontHeader: true,
+  showStorefrontSearch: true,
+  showStorefrontAccount: true,
+  showStorefrontCart: true,
+  showStorefrontCompare: true,
+  showStorefrontPcBuilder: true,
+  showStorefrontTracking: true,
+  showStorefrontAdminLogin: true,
+  showStorefrontCategoryNav: true,
   themePrimaryColor: '#0f172a',
   themeAccentColor: '#3b82f6',
   storefrontBackgroundColor: '#f8f8f8',
@@ -846,9 +900,31 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   flashSaleText: 'Extra 10% Off Everything!',
   flashSaleCouponCode: 'FLASH10',
   showCategorySection: true,
+  showCatalogSection: true,
+  showCatalogToolbar: true,
+  showCatalogFilters: true,
+  showBrandSection: true,
+  brandSectionTitle: 'Major Brands We Carry',
+  storefrontBrands: ['DELL', 'HP', 'LENOVO', 'APPLE', 'CISCO', 'SAMSUNG'],
+  showRecentlyViewedSection: true,
+  recentlyViewedEyebrow: 'History',
+  recentlyViewedTitle: 'Recently Viewed',
+  showTrustSection: true,
+  trustSectionEyebrow: 'Shop with confidence',
+  trustSectionTitle: 'Everything an online order needs',
+  trustDeliveryTitle: 'Tracked Delivery',
+  trustDeliveryText: 'Clear delivery options and shipment tracking for every eligible order.',
+  trustReturnsTitle: 'Straightforward Returns',
+  trustReturnsText: 'Published return and warranty support when an item is not right.',
+  trustPaymentTitle: 'Secure Checkout',
+  trustPaymentText: 'Protected checkout with transparent totals before payment.',
+  trustSupportTitle: 'Real Customer Support',
+  trustSupportText: 'Contact the store before or after purchase for product and order help.',
   categorySectionEyebrow: 'Quick Navigation',
   categorySectionTitle: 'Shop by Category',
   categorySectionDescription: 'Real-time dynamic category catalog mapped to store inventory',
+  categoryNavigationScrollStyle: 'auto-left',
+  categoryNavigationImages: [],
   catalogSectionEyebrow: 'Collection',
   catalogSectionTitle: 'Products',
   catalogStyle: 'classic',
@@ -876,6 +952,15 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   supportHighlightTitle: 'Expert Support',
   supportHighlightText: '100% Local Tech Team',
   showStorefrontFooter: true,
+  showFooterBrandColumn: true,
+  showFooterCategoriesColumn: true,
+  showFooterCustomerCareColumn: true,
+  showFooterLegalBar: true,
+  showFooterPolicyLinks: true,
+  privacyPolicyUrl: '#privacy-policy',
+  termsUrl: '#terms-and-conditions',
+  returnsPolicyUrl: '#returns-policy',
+  shippingPolicyUrl: '#shipping-policy',
   footerCategoriesHeading: 'Hardware Categories',
   footerCustomerCareHeading: 'Customer Care',
   footerWarrantyText: '12 Month Express Warranty',
@@ -1589,6 +1674,8 @@ export interface StaffUserProfile {
   allowedFeatures: string[];
   createdAt: string;
   lastLogin: string;
+  canManage?: boolean;
+  membershipRole?: string;
 }
 
 export interface ReportFilterParams {

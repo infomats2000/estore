@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { FeatureGateModal } from '../components/FeatureGateModal';
-import { ALL_FEATURES } from '../constants/features';
+import { ALL_FEATURES, resolvePlanFeatureIds } from '../constants/features';
 
 // POS is a baseline feature included for every tenant on every plan tier
 const ALWAYS_UNLOCKED_FEATURES = ['pos'];
@@ -69,7 +69,7 @@ export const TenantFeatureProvider: React.FC<{
             feats = [];
           }
         }
-        setEnabledFeatureIds(feats);
+        setEnabledFeatureIds(resolvePlanFeatureIds(plan.code, feats));
       } else {
         setEnabledFeatureIds([]);
       }

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Product } from '../../types';
 import { Tag, Plus, Edit2, Trash2, Search, ArrowRight, Layers, DollarSign, Package } from 'lucide-react';
+import { useAdminInteractions } from '../../context/AdminInteractionContext';
 
 interface CategoriesManagerProps {
   categories: string[];
@@ -19,6 +20,7 @@ export default function CategoriesManager({
   onDeleteCategory,
   onFilterByCategory
 }: CategoriesManagerProps) {
+  const interactions = useAdminInteractions();
   const [newCatName, setNewCatName] = useState('');
   const [editingCat, setEditingCat] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
@@ -64,16 +66,16 @@ export default function CategoriesManager({
       return;
     }
     if (categories.includes(name) && name !== oldCat) {
-      alert(`Category "${name}" already exists.`);
+      setErrorMsg(`Category "${name}" already exists.`);
       return;
     }
     onEditCategory(oldCat, name);
     setEditingCat(null);
   };
 
-  const handleDelete = (cat: string) => {
+  const handleDelete = async (cat: string) => {
     if (categories.length <= 1) {
-      alert('You must have at least one category in the catalog.');
+      await interactions.notify({ title: 'Category Required', message: 'You must keep at least one category in the catalogue.' });
       return;
     }
     const catProducts = products.filter((p) => p.category === cat);
@@ -82,7 +84,7 @@ export default function CategoriesManager({
         ? `Are you sure you want to delete category "${cat}"? ${catProducts.length} items will be reassigned to the default category.`
         : `Delete category "${cat}"?`;
 
-    if (window.confirm(confirmMessage)) {
+    if (await interactions.confirm({ title: 'Delete Category?', message: confirmMessage, confirmLabel: 'Delete Category', destructive: true })) {
       onDeleteCategory(cat);
     }
   };
@@ -305,6 +307,7 @@ export default function CategoriesManager({
                             onClick={() => handleDelete(cat.name)}
                             className="p-1.5 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-neutral-400 hover:text-rose-500 rounded transition-colors"
                             title="Delete category"
+                            aria-label="Delete category"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>

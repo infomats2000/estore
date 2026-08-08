@@ -4,11 +4,14 @@ import App from './App.tsx';
 import './index.css';
 
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { AdminInteractionProvider } from './context/AdminInteractionContext';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
-      <App />
+      <AdminInteractionProvider>
+        <App />
+      </AdminInteractionProvider>
     </ErrorBoundary>
   </StrictMode>,
 );

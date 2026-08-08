@@ -204,8 +204,158 @@ body {
   outline-offset: 1px;
 }
 
-.admin-theme button:not(:disabled):focus-visible,
-.super-admin-scope button:not(:disabled):focus-visible {
-  outline: 2px solid rgba(96, 165, 250, 0.9);
+.admin-theme :where(button, a[href], input, select, textarea, [tabindex]):focus-visible,
+.super-admin-scope :where(button, a[href], input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid #2563eb !important;
   outline-offset: 2px;
+}
+
+/* Admin text must remain readable without changing independently branded storefronts. */
+.admin-theme :where([class*="text-[8px]"], [class*="text-[9px]"], [class*="text-[10px]"], [class*="text-[11px]"]),
+.super-admin-scope :where([class*="text-[8px]"], [class*="text-[9px]"], [class*="text-[10px]"], [class*="text-[11px]"]) {
+  font-size: 0.75rem !important;
+  line-height: 1rem !important;
+}
+
+/* Reflow safeguards for browser zoom and narrow effective viewports. */
+.admin-theme,
+.super-admin-scope,
+.admin-theme :where(main, section, article, form),
+.super-admin-scope :where(main, section, article, form) {
+  min-width: 0;
+}
+
+.admin-theme :where(img, svg, video, canvas),
+.super-admin-scope :where(img, svg, video, canvas) {
+  max-width: 100%;
+}
+
+@media (max-width: 48rem) {
+  .admin-theme [role="dialog"] > div,
+  .super-admin-scope [role="dialog"] > div {
+    max-width: calc(100vw - 1rem) !important;
+    max-height: calc(100vh - 1rem) !important;
+  }
+}
+
+/* Responsive administration tables: pinned actions on larger screens, cards on phones. */
+@media (min-width: 40.001rem) {
+  .admin-theme .responsive-data-table :where(th:last-child, td:last-child),
+  .super-admin-scope .responsive-data-table :where(th:last-child, td:last-child) {
+    position: sticky;
+    right: 0;
+    z-index: 2;
+    background: inherit;
+    box-shadow: -8px 0 12px -12px rgba(15, 23, 42, 0.55);
+  }
+
+  .admin-theme .responsive-data-table thead th:last-child,
+  .super-admin-scope .responsive-data-table thead th:last-child {
+    z-index: 3;
+  }
+}
+
+@media (max-width: 40rem) {
+  .admin-page-header {
+    align-items: center;
+  }
+
+  .admin-page-header > div:nth-child(2) {
+    flex-basis: calc(100% - 3.5rem);
+  }
+
+  .admin-page-actions {
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+  }
+
+  .admin-page-actions > :where(button, a) {
+    flex: 0 0 auto;
+  }
+
+  .admin-theme .responsive-table-shell,
+  .super-admin-scope .responsive-table-shell {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+  }
+
+  .admin-theme .responsive-data-table,
+  .super-admin-scope .responsive-data-table,
+  .admin-theme .responsive-data-table tbody,
+  .super-admin-scope .responsive-data-table tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .admin-theme .responsive-data-table thead,
+  .super-admin-scope .responsive-data-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .admin-theme .responsive-data-table tbody tr,
+  .super-admin-scope .responsive-data-table tbody tr {
+    display: block;
+    margin-bottom: 0.75rem;
+    overflow: hidden;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.75rem;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  }
+
+  .admin-theme .responsive-data-table tbody td,
+  .super-admin-scope .responsive-data-table tbody td {
+    display: grid !important;
+    grid-template-columns: minmax(6.5rem, 38%) minmax(0, 1fr);
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0.65rem 0.75rem !important;
+    border-bottom: 1px solid #e2e8f0;
+    text-align: left;
+  }
+
+  .admin-theme .responsive-data-table tbody td:last-child,
+  .super-admin-scope .responsive-data-table tbody td:last-child {
+    border-bottom: 0;
+  }
+
+  .admin-theme .responsive-data-table tbody td::before,
+  .super-admin-scope .responsive-data-table tbody td::before {
+    content: attr(data-label);
+    color: #475569;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1rem;
+    text-transform: uppercase;
+  }
+}
+
+/* Tablet/laptop sizing checkpoints: 768px, 1024px and 1366px effective widths. */
+@media (min-width: 48rem) and (max-width: 63.999rem) {
+  .admin-theme main, .super-admin-scope main { padding-inline: 1rem; }
+}
+
+@media (min-width: 64rem) and (max-width: 85.375rem) {
+  .admin-theme main, .super-admin-scope main { padding-inline: 1.5rem; }
+}
+
+/* Keep field headings prominent and consistent throughout Store Settings. */
+.settings-dialog label:not([class*="text-rose"]),
+.settings-dialog legend {
+  color: #1d4ed8;
+}
+
+/* Distinguish major settings groups from their blue field headings. */
+.settings-dialog h4:not([class*="text-rose"]),
+.settings-dialog h5:not([class*="text-rose"]) {
+  color: #047857;
 }

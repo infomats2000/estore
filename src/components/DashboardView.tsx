@@ -1,5 +1,6 @@
 import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { ContextualHelp } from './ContextualHelp';
+import { AdminConfirmDialog, AdminPageHeader } from './ui/AdminUI';
 import { 
   BarChart as RechartsBarChart, Bar, LineChart as RechartsLineChart, Line, XAxis, YAxis, 
   CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, PieChart, Pie,
@@ -19,6 +20,7 @@ import { buildCustomInvoiceSyncPayload } from '../utils/customInvoice';
 import { Product, Order, Coupon, ReturnRequest, Review, CustomerSegment, UpsellRule, Supplier, SupplierOrder, Shipment, FinanceTransaction, User, Invoice, StoreSettings, CustomerProfile, PurchaseOrder, RepairJob, StockUnit, WarehouseLocation, StockTransfer, StocktakeSession, ShrinkageRecord } from '../types';
 import { useTenantFeatures } from '../context/TenantFeatureContext';
 import { DASHBOARD_TAB_FEATURE_MAP } from '../constants/features';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 const FinanceManager = lazy(() => import('./FinanceManager'));
 const UserManager = lazy(() => import('./UserManager'));
@@ -128,6 +130,7 @@ interface DashboardViewProps {
   onAddCollection: (name: string) => void;
   onDeleteCollection: (name: string) => void;
   onAddPOSOrder: (order: Order) => void;
+  onOpenPOS?: () => void;
   financeTransactions: FinanceTransaction[];
   onAddTransaction: (tx: FinanceTransaction) => void;
   onDeleteTransaction: (id: string) => void;
@@ -208,6 +211,7 @@ export default function DashboardView({
   onAddCollection,
   onDeleteCollection,
   onAddPOSOrder,
+  onOpenPOS,
   financeTransactions,
   onAddTransaction,
   onDeleteTransaction,
@@ -291,6 +295,9 @@ export default function DashboardView({
   const [tabHistory, setTabHistory] = useState<string[]>(['metrics']);
   const [hoverMenu, setHoverMenu] = useState<'sales' | 'inventory' | 'procurement' | 'intelligence' | null>(null);
   const [showCustomizePanel, setShowCustomizePanel] = useState(false);
+  const [moduleSearch, setModuleSearch] = useState('');
+  const [showMobileNavigation, setShowMobileNavigation] = useState(false);
+  const [adminConfirmation, setAdminConfirmation] = useState<{ title: string; message: string; confirmLabel: string; onConfirm: () => void } | null>(null);
 
   // ----- ALL TABS REGISTRY -----
   const ALL_TABS = [
@@ -301,10 +308,10 @@ export default function DashboardView({
     { id: 'invoices',          label: 'Invoicing',           icon: FileText,       group: 'Core' },
     { id: 'inventory',         label: 'Inventory',           icon: Boxes,          group: 'Core' },
     { id: 'purchase-orders',   label: 'Purchase Orders',     icon: ClipboardList,  group: 'Procurement' },
-    { id: 'inbound-jobs',      label: 'Inbound Processing Jobs', icon: ClipboardList, group: 'Procurement' },
+    { id: 'inbound-jobs',      label: 'Receive Goods',         icon: ClipboardList, group: 'Procurement' },
     { id: 'suppliers',         label: 'Suppliers',           icon: Award,          group: 'Procurement' },
     { id: 'warehouses',        label: 'Warehouses',          icon: Building2,      group: 'Operations' },
-    { id: 'bi',                label: 'Sales Analytics & Insights',icon: Activity, group: 'Intelligence' },
+    { id: 'bi',                label: 'Business Reports',      icon: Activity, group: 'Intelligence' },
     { id: 'reports',           label: 'ERP Reports',         icon: FileSpreadsheet,group: 'Intelligence' },
     { id: 'payroll',           label: 'Staff & Payroll',     icon: Coins,          group: 'HR' },
     { id: 'shipping',          label: 'Shipments',           icon: Truck,          group: 'Operations' },
@@ -314,7 +321,7 @@ export default function DashboardView({
     // extras (not pinned by default)
     { id: 'commercial-sales',  label: 'Commercial Sales',    icon: DollarSign,     group: 'Sales' },
     { id: 'massive-inventory', label: 'Full Product Catalog',icon: Package,        group: 'Operations' },
-    { id: 'wms',               label: 'Warehouse & Stock Locations (WMS)', icon: Building2, group: 'Operations' },
+    { id: 'wms',               label: 'Warehouses and Stock',  icon: Building2, group: 'Operations' },
     { id: 'procurement',       label: 'Global Procurement & Purchasing', icon: Truck, group: 'Procurement' },
     { id: 'pricing-matrix',    label: 'Customer Pricing Tier Matrix', icon: Calculator, group: 'Sales' },
     { id: 'logistics-dispatch',label: 'Courier & Freight Dispatch', icon: Navigation, group: 'Operations' },
@@ -335,6 +342,46 @@ export default function DashboardView({
   ] as const;
 
   type TabId = typeof ALL_TABS[number]['id'];
+
+  const TAB_HELP: Record<TabId, { summary: string; action: string }> = {
+    metrics: { summary: 'Review today’s sales, orders, stock alerts and store performance.', action: 'Use the cards and charts to identify work requiring attention.' },
+    products: { summary: 'Create catalogue products and maintain descriptions, prices, images and stock.', action: 'Search for an item, then add, edit, label or review its inventory details.' },
+    orders: { summary: 'Review customer orders from creation through payment and fulfilment.', action: 'Open an order to update its status, prepare fulfilment or create an invoice.' },
+    customers: { summary: 'Manage customer profiles, contact details, purchase history and account value.', action: 'Search for a customer to review or update their account.' },
+    invoices: { summary: 'Create, issue, print and track customer invoices and payment status.', action: 'Choose an order or build a custom invoice, then save or print it.' },
+    inventory: { summary: 'Manage stock, categories, collections, stocktakes and inventory reporting.', action: 'Choose an inventory section to complete the required stock task.' },
+    'purchase-orders': { summary: 'Create and track supplier purchase orders for required goods.', action: 'Open a purchase order to review quantities, delivery and receiving progress.' },
+    'inbound-jobs': { summary: 'Receive delivered goods into quarantine and record every inspection step.', action: 'Start with Receive Delivery, complete checks in order, then release approved stock.' },
+    suppliers: { summary: 'Maintain supplier contacts, terms, performance and supplied categories.', action: 'Add or select a supplier before creating purchasing activity.' },
+    warehouses: { summary: 'Maintain warehouse locations, storage areas and available capacity.', action: 'Select a warehouse to review or update its location settings.' },
+    bi: { summary: 'Review forecasts, product analysis, customer value and business trends.', action: 'Select a report area to investigate performance and risks.' },
+    reports: { summary: 'Run operational, sales, inventory, finance and management reports.', action: 'Choose a report, set its filters, then view or export the results.' },
+    payroll: { summary: 'Manage employees, timesheets, leave, commissions and payroll runs.', action: 'Select the relevant HR section before adding or processing records.' },
+    shipping: { summary: 'Prepare shipments and monitor courier delivery progress.', action: 'Select an order, enter dispatch details and update tracking milestones.' },
+    finance: { summary: 'Review accounts, ledger activity, expenses, tax and financial performance.', action: 'Choose a finance area to record or reconcile transactions.' },
+    'master-data': { summary: 'Maintain shared lookup values used across catalogue and operations.', action: 'Select a lookup type before adding, editing or retiring a value.' },
+    ebay: { summary: 'Manage marketplace connections, listings and external store activity.', action: 'Choose a connected marketplace workflow to review or synchronize data.' },
+    'commercial-sales': { summary: 'Prepare commercial quotes and manage business sales opportunities.', action: 'Create or open a quote to progress the customer requirement.' },
+    'massive-inventory': { summary: 'Search and manage the complete high-volume product catalogue.', action: 'Use filters and bulk tools to work efficiently across many SKUs.' },
+    wms: { summary: 'Coordinate warehouse zones, picking, packing, stock location and cycle counts.', action: 'Choose a warehouse workflow and progress its assigned tasks.' },
+    procurement: { summary: 'Plan purchasing, supplier requests and procurement approvals.', action: 'Start a request or review open purchasing work.' },
+    'pricing-matrix': { summary: 'Set customer-specific pricing tiers, dimensions and commercial rules.', action: 'Select a tier or rule before reviewing and updating its prices.' },
+    'logistics-dispatch': { summary: 'Coordinate freight, courier allocation and delivery dispatch.', action: 'Open a dispatch task to assign and progress its delivery.' },
+    automation: { summary: 'Create automated workflows, alerts and scheduled business actions.', action: 'Choose a trigger, add actions and test the workflow before enabling it.' },
+    users: { summary: 'Manage staff login accounts, roles and permitted tenant modules.', action: 'Select a user to update access, status or account details.' },
+    repairs: { summary: 'Track repair, warranty and service jobs from intake to completion.', action: 'Open a job to update diagnosis, parts, labour and customer status.' },
+    returns: { summary: 'Review product return requests, reasons and resolution status.', action: 'Open a return to inspect the request and approve or decline it.' },
+    analytics: { summary: 'Explore store activity and performance trends across core operations.', action: 'Use filters and date ranges to focus the analysis.' },
+    'stock-units': { summary: 'Track individual serialized items, ownership and stock condition.', action: 'Search a serial number or add a controlled stock unit.' },
+    'trade-accounts': { summary: 'Manage business customers, credit limits, terms and account balances.', action: 'Select a trade customer to review credit and transaction activity.' },
+    refurb: { summary: 'Test, grade and prepare refurbished hardware for sale.', action: 'Open a device record and complete each required quality step.' },
+    distribution: { summary: 'Manage wholesale, reseller and distribution sales operations.', action: 'Select an account or order to review pricing and fulfilment.' },
+    coupons: { summary: 'Create promotion codes with controlled value, dates and usage rules.', action: 'Add a coupon or select an existing promotion to update it.' },
+    segments: { summary: 'Group customers for pricing, communication and loyalty activity.', action: 'Create a segment and define which customers belong to it.' },
+    upsells: { summary: 'Configure related-product and recommendation rules for sales channels.', action: 'Select trigger and recommended products, then enable the rule.' },
+    reviews: { summary: 'Moderate customer product reviews and catalogue feedback.', action: 'Review submitted content and remove inappropriate entries when required.' },
+    stores: { summary: 'Manage branch locations and their operational information.', action: 'Select a branch to review or update its details.' },
+  };
 
   const { hasFeature, openFeatureGate } = useTenantFeatures();
 
@@ -374,33 +421,40 @@ export default function DashboardView({
       return;
     }
     setActiveTab(id as any);
+    setHoverMenu(null);
+    setModuleSearch('');
+    setShowMobileNavigation(false);
+    window.setTimeout(() => {
+      document.getElementById('dashboard-view-main')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 0);
   };
 
-  const DEFAULT_PINNED: TabId[] = [
-    'metrics','products','orders','customers','invoices','inventory',
-    'purchase-orders','inbound-jobs','suppliers','warehouses','bi','reports',
-    'payroll','shipping','finance','ebay',
-  ];
+  const MAX_SHORTCUTS = 10;
+  const DEFAULT_PINNED: TabId[] = ['metrics', 'products', 'orders', 'customers', 'invoices', 'inventory', 'inbound-jobs', 'reports'];
 
   const [pinnedTabs, setPinnedTabs] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('pinnedTabs');
       if (saved) {
         const parsed = JSON.parse(saved) as string[];
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed.slice(0, MAX_SHORTCUTS);
       }
     } catch {}
     return [...DEFAULT_PINNED];
   });
 
   const savePinnedTabs = (tabs: string[]) => {
-    const visibleTabs = tabs.filter((tabId) => isTabVisible(tabId));
+    const visibleTabs = tabs.filter((tabId) => isTabVisible(tabId)).slice(0, MAX_SHORTCUTS);
     setPinnedTabs(visibleTabs);
     try { localStorage.setItem('pinnedTabs', JSON.stringify(visibleTabs)); } catch {}
   };
 
   const togglePin = (id: string) => {
     if (id === 'metrics') return; // Dashboard always pinned
+    if (!pinnedTabs.includes(id) && pinnedTabs.filter(isTabVisible).length >= MAX_SHORTCUTS) {
+      onShowAlert?.(`Shortcuts are limited to ${MAX_SHORTCUTS}. Hide one before adding another.`, 'info');
+      return;
+    }
     const updated = pinnedTabs.includes(id)
       ? pinnedTabs.filter(t => t !== id)
       : [...pinnedTabs, id];
@@ -414,6 +468,9 @@ export default function DashboardView({
     .filter((tab): tab is typeof ALL_TABS[number] => !!tab && isTabVisible(tab.id));
 
   const VISIBLE_TABS = ALL_TABS.filter((tab) => isTabVisible(tab.id));
+  const searchedModules = moduleSearch.trim()
+    ? VISIBLE_TABS.filter(tab => `${tab.label} ${tab.group}`.toLowerCase().includes(moduleSearch.trim().toLowerCase()))
+    : [];
 
   const TAB_GROUPS = Array.from(new Set(VISIBLE_TABS.map(t => t.group)));
 
@@ -479,7 +536,34 @@ export default function DashboardView({
     if (activeTab !== 'metrics' && !isTabVisible(activeTab)) {
       setActiveTab('metrics');
     }
-  }, [activeTab, hasFeature, storeSettings?.hiddenDashboardTabs]);
+  }, [activeTab, hasFeature, storeSettings?.hiddenDashboardTabs, currentUser?.role, currentUser?.allowedFeatures]);
+
+  React.useEffect(() => {
+    const closeNavigation = (event: KeyboardEvent | MouseEvent) => {
+      if (event instanceof KeyboardEvent && event.key === 'Escape') {
+        setHoverMenu(null);
+        setModuleSearch('');
+        setShowMobileNavigation(false);
+        setShowCustomizePanel(false);
+        return;
+      }
+      if (event instanceof MouseEvent) {
+        const target = event.target as Node;
+        const navigation = document.getElementById('tenant-admin-navigation');
+        if (navigation && !navigation.contains(target)) {
+          setHoverMenu(null);
+          setModuleSearch('');
+          setShowCustomizePanel(false);
+        }
+      }
+    };
+    document.addEventListener('keydown', closeNavigation);
+    document.addEventListener('mousedown', closeNavigation);
+    return () => {
+      document.removeEventListener('keydown', closeNavigation);
+      document.removeEventListener('mousedown', closeNavigation);
+    };
+  }, []);
 
   React.useEffect(() => {
     if (!invoiceBuilderOpen || activeTab !== 'invoices') return;
@@ -1723,9 +1807,7 @@ export default function DashboardView({
   };
 
   const handleDeleteSupplier = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this supplier?')) {
-      setSuppliers(prev => prev.filter(sup => sup.id !== id));
-    }
+    setAdminConfirmation({ title: 'Delete Supplier?', message: 'This supplier will be removed from the local supplier directory. This action cannot be undone.', confirmLabel: 'Delete Supplier', onConfirm: () => setSuppliers(prev => prev.filter(sup => sup.id !== id)) });
   };
 
   // SUPPLIER PURCHASE ORDERS
@@ -1826,7 +1908,7 @@ export default function DashboardView({
   const handleCreateShipmentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!shipOrderId) {
-      alert('Please select an order to ship');
+      onShowAlert?.('Please select an order to ship.', 'error');
       return;
     }
 
@@ -1943,9 +2025,7 @@ export default function DashboardView({
   };
 
   const handleDeleteShipment = (shipmentId: string) => {
-    if (window.confirm('Are you sure you want to archive or delete this shipment tracking record?')) {
-      setShipments(prev => prev.filter(s => s.id !== shipmentId));
-    }
+    setAdminConfirmation({ title: 'Delete Shipment Record?', message: 'This shipment tracking record will be removed. This action cannot be undone.', confirmLabel: 'Delete Shipment', onConfirm: () => setShipments(prev => prev.filter(s => s.id !== shipmentId)) });
   };
 
 
@@ -1974,9 +2054,7 @@ export default function DashboardView({
   };
 
   const handleClearLedger = () => {
-    if (window.confirm('Are you sure you want to purge the local inventory adjustment audit log?')) {
-      setInventoryLogs([]);
-    }
+    setAdminConfirmation({ title: 'Clear Inventory Audit Log?', message: 'Every local inventory adjustment entry will be permanently removed. This action cannot be undone.', confirmLabel: 'Clear Audit Log', onConfirm: () => setInventoryLogs([]) });
   };
 
   const openInvoiceBuilder = () => {
@@ -2010,15 +2088,114 @@ export default function DashboardView({
   const hasInventoryMenuLinks = ['massive-inventory', 'wms', 'logistics-dispatch', 'warehouses', 'stock-units', 'inventory', 'refurb', 'products'].some(isTabVisible);
   const hasProcurementMenuLinks = ['procurement', 'suppliers', 'purchase-orders', 'inbound-jobs'].some(isTabVisible);
   const hasIntelligenceMenuLinks = ['bi', 'reports', 'finance', 'payroll', 'automation', 'repairs', 'ebay', 'stores', 'reviews', 'users'].some(isTabVisible);
+  const mobileNavigationRef = useFocusTrap<HTMLDivElement>(showMobileNavigation, () => setShowMobileNavigation(false));
+
+  const handlePrimaryMenuKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement;
+    const menu = target.closest<HTMLElement>('[role="menu"]');
+    if (menu && ['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+      event.preventDefault();
+      const items = Array.from(menu.querySelectorAll<HTMLButtonElement>('button:not([disabled])'));
+      if (!items.length) return;
+      const currentIndex = items.indexOf(target as HTMLButtonElement);
+      const nextIndex = event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1 : event.key === 'ArrowDown' ? (currentIndex + 1) % items.length : (currentIndex - 1 + items.length) % items.length;
+      items[nextIndex].focus();
+      return;
+    }
+    const trigger = target.closest<HTMLButtonElement>('button[aria-haspopup="menu"]');
+    if (trigger && ['ArrowDown', 'ArrowUp'].includes(event.key)) {
+      event.preventDefault();
+      trigger.click();
+      window.requestAnimationFrame(() => {
+        const items = trigger.parentElement?.querySelectorAll<HTMLButtonElement>('[role="menu"] button:not([disabled])');
+        if (items?.length) items[event.key === 'ArrowUp' ? items.length - 1 : 0].focus();
+      });
+    }
+  };
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 text-left" id="dashboard-view-main">
       {/* HORIZONTAL TOP NAVIGATION */}
-      <div className="mb-5 space-y-4">
+      <div className="mb-5 space-y-4" id="tenant-admin-navigation">
 
         {/* Store Operations Group */}
         <div className="space-y-2">
-          <div className="flex w-full flex-wrap items-center justify-center gap-2 px-1 pb-1" id="tenant-admin-primary-menu">
+          <div className="flex items-center justify-between gap-3 md:hidden">
+            <button
+              type="button"
+              onClick={() => setShowMobileNavigation(true)}
+              className="flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-xs font-bold uppercase tracking-wide text-slate-900 shadow-sm"
+              aria-expanded={showMobileNavigation}
+              aria-controls="tenant-mobile-navigation"
+            >
+              <PanelLeftOpen className="h-4 w-4" /> Menu
+            </button>
+            {onOpenPOS && <button type="button" onClick={onOpenPOS} className="h-10 rounded-md border border-[#8f0000] bg-[#b30000] px-4 text-xs font-bold uppercase text-white">POS</button>}
+          </div>
+
+          {showMobileNavigation && (
+            <div className="fixed inset-0 z-[250] bg-slate-950/60 md:hidden" role="dialog" aria-modal="true" aria-label="Tenant navigation">
+              <div ref={mobileNavigationRef} tabIndex={-1} id="tenant-mobile-navigation" className="flex h-full w-[88vw] max-w-sm flex-col bg-white shadow-2xl">
+                <div className="flex items-center justify-between border-b border-slate-200 px-4 py-4">
+                  <div>
+                    <p className="text-sm font-black uppercase tracking-wide text-slate-900">Navigation</p>
+                    <p className="text-xs text-slate-500">Open a permitted store module</p>
+                  </div>
+                  <button type="button" onClick={() => setShowMobileNavigation(false)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label="Close navigation"><X className="h-5 w-5" /></button>
+                </div>
+                <div className="relative border-b border-slate-200 p-3">
+                  <Search className="absolute left-6 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <input type="search" value={moduleSearch} onChange={event => setModuleSearch(event.target.value)} placeholder="Search modules…" className="h-10 w-full rounded-lg border border-slate-300 pl-9 pr-3 text-sm outline-none focus:border-blue-500" autoFocus />
+                </div>
+                <div className="flex-1 overflow-y-auto p-3">
+                  {(moduleSearch.trim() ? ['Search results'] : TAB_GROUPS).map(group => {
+                    const groupTabs = moduleSearch.trim() ? searchedModules : VISIBLE_TABS.filter(tab => tab.group === group);
+                    if (!groupTabs.length) return null;
+                    return <div key={group} className="mb-5">
+                      <p className="mb-2 px-2 text-[10px] font-black uppercase tracking-widest text-slate-400">{group}</p>
+                      <div className="space-y-1">
+                        {groupTabs.map(tab => {
+                          const Icon = tab.icon;
+                          return <button key={tab.id} type="button" onClick={() => requestTab(tab.id)} className={`flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left ${activeTab === tab.id ? 'bg-blue-600 text-white' : 'text-slate-800 hover:bg-slate-100'}`}>
+                            <Icon className="h-4 w-4 shrink-0" />
+                            <span className="min-w-0"><span className="block text-sm font-semibold">{tab.label}</span><span className={`mt-0.5 block text-[10px] leading-4 ${activeTab === tab.id ? 'text-blue-100' : 'text-slate-500'}`}>{TAB_HELP[tab.id].summary}</span></span>
+                          </button>;
+                        })}
+                      </div>
+                    </div>;
+                  })}
+                  {moduleSearch.trim() && !searchedModules.length && <p className="py-8 text-center text-sm text-slate-500">No permitted modules found.</p>}
+                </div>
+                <button type="button" onClick={() => onOpenSettings?.('general')} className="border-t border-slate-200 px-5 py-4 text-left text-sm font-bold text-slate-800">Settings</button>
+              </div>
+            </div>
+          )}
+
+          <div className="relative mx-auto hidden w-full max-w-md md:block">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              type="search"
+              value={moduleSearch}
+              onChange={event => setModuleSearch(event.target.value)}
+              placeholder="Search modules…"
+              aria-label="Search tenant admin modules"
+              className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm text-slate-900 shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+            />
+            {moduleSearch.trim() && (
+              <div className="absolute left-0 right-0 top-full z-[210] mt-1 max-h-80 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-2xl">
+                {searchedModules.length ? searchedModules.map(tab => {
+                  const Icon = tab.icon;
+                  return <button key={tab.id} type="button" onClick={() => requestTab(tab.id)} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left hover:bg-blue-50 focus:bg-blue-50">
+                    <Icon className="h-4 w-4 text-blue-600" />
+                    <span className="min-w-0 flex-1"><span className="block text-xs font-bold text-slate-800">{tab.label}</span><span className="mt-0.5 block truncate text-[10px] text-slate-500">{TAB_HELP[tab.id].summary}</span></span>
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{tab.group}</span>
+                  </button>;
+                }) : <p className="px-3 py-4 text-center text-xs text-slate-500">No permitted modules found.</p>}
+              </div>
+            )}
+          </div>
+
+          <div onKeyDown={handlePrimaryMenuKeyDown} className="relative hidden w-full flex-wrap items-center justify-center gap-2 px-1 pb-1 pr-16 md:flex" id="tenant-admin-primary-menu">
             <button
               type="button"
               onClick={(e) => {
@@ -2038,19 +2215,19 @@ export default function DashboardView({
             {hasSalesMenuLinks && (
             <div
               className="relative group"
-              onMouseEnter={() => setHoverMenu('sales')}
-              onMouseLeave={() => setHoverMenu(null)}
             >
               <button
                 type="button"
                 onClick={() => setHoverMenu(hoverMenu === 'sales' ? null : 'sales')}
+                aria-expanded={hoverMenu === 'sales'}
+                aria-haspopup="menu"
                 className="flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 font-sans text-xs font-medium uppercase tracking-wide text-slate-950 shadow-sm outline-none transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-black"
               >
                 <span>Sales, B2B &amp; Pricing</span>
                 <span className="text-[10px] leading-none text-slate-500">▾</span>
               </button>
               {hoverMenu === 'sales' && (
-                <div className="absolute left-0 top-full z-50 pt-0.5 min-w-[210px]">
+                <div role="menu" aria-label="Sales, B2B and pricing modules" className="absolute left-0 top-full z-50 pt-0.5 min-w-[210px]">
                   <div className="rounded-xl border border-slate-300 bg-white py-1 shadow-2xl space-y-0.5 font-sans">
                     {isTabVisible('commercial-sales') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('commercial-sales'); setHoverMenu(null); }} onClick={() => { requestTab('commercial-sales'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Commercial B2B Sales &amp; Quotes</button>}
                     {isTabVisible('pricing-matrix') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('pricing-matrix'); setHoverMenu(null); }} onClick={() => { requestTab('pricing-matrix'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">14-Dimension Pricing Matrix</button>}
@@ -2072,22 +2249,22 @@ export default function DashboardView({
             {hasInventoryMenuLinks && (
             <div
               className="relative group"
-              onMouseEnter={() => setHoverMenu('inventory')}
-              onMouseLeave={() => setHoverMenu(null)}
             >
               <button
                 type="button"
                 onClick={() => setHoverMenu(hoverMenu === 'inventory' ? null : 'inventory')}
+                aria-expanded={hoverMenu === 'inventory'}
+                aria-haspopup="menu"
                 className="flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 font-sans text-xs font-medium uppercase tracking-wide text-slate-950 shadow-sm outline-none transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-black"
               >
-                <span>Inventory, WMS &amp; Logistics</span>
+                <span>Inventory, Warehouses &amp; Logistics</span>
                 <span className="text-[10px] leading-none text-slate-500">▾</span>
               </button>
               {hoverMenu === 'inventory' && (
-                <div className="absolute left-0 top-full z-50 pt-0.5 min-w-[220px]">
+                <div role="menu" aria-label="Inventory, warehouses and logistics modules" className="absolute left-0 top-full z-50 pt-0.5 min-w-[220px]">
                   <div className="rounded-xl border border-slate-300 bg-white py-1 shadow-2xl space-y-0.5 font-sans">
                     {isTabVisible('massive-inventory') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('massive-inventory'); setHoverMenu(null); }} onClick={() => { requestTab('massive-inventory'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">100,000+ SKU Catalog</button>}
-                    {isTabVisible('wms') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('wms'); setHoverMenu(null); }} onClick={() => { requestTab('wms'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Warehouse Management (WMS)</button>}
+                    {isTabVisible('wms') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('wms'); setHoverMenu(null); }} onClick={() => { requestTab('wms'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Warehouses and Stock</button>}
                     {isTabVisible('logistics-dispatch') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('logistics-dispatch'); setHoverMenu(null); }} onClick={() => { requestTab('logistics-dispatch'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Logistics &amp; Courier Dispatch</button>}
                     {isTabVisible('warehouses') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('warehouses'); setHoverMenu(null); }} onClick={() => { requestTab('warehouses'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Multi-Warehouse Locations</button>}
                     {isTabVisible('stock-units') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('stock-units'); setHoverMenu(null); }} onClick={() => { requestTab('stock-units'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Stock Units &amp; Serials</button>}
@@ -2104,24 +2281,24 @@ export default function DashboardView({
             {hasProcurementMenuLinks && (
             <div
               className="relative group"
-              onMouseEnter={() => setHoverMenu('procurement')}
-              onMouseLeave={() => setHoverMenu(null)}
             >
               <button
                 type="button"
                 onClick={() => setHoverMenu(hoverMenu === 'procurement' ? null : 'procurement')}
+                aria-expanded={hoverMenu === 'procurement'}
+                aria-haspopup="menu"
                 className="flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 font-sans text-xs font-medium uppercase tracking-wide text-slate-950 shadow-sm outline-none transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-black"
               >
                 <span>Purchasing &amp; Vendors</span>
                 <span className="text-[10px] leading-none text-slate-500">▾</span>
               </button>
               {hoverMenu === 'procurement' && (
-                <div className="absolute left-0 top-full z-50 pt-0.5 min-w-[210px]">
+                <div role="menu" aria-label="Purchasing and vendor modules" className="absolute left-0 top-full z-50 pt-0.5 min-w-[210px]">
                   <div className="rounded-xl border border-slate-300 bg-white py-1 shadow-2xl space-y-0.5 font-sans">
                     {isTabVisible('procurement') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('procurement'); setHoverMenu(null); }} onClick={() => { requestTab('procurement'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Global Procurement &amp; RFQs</button>}
                     {isTabVisible('suppliers') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('suppliers'); setHoverMenu(null); }} onClick={() => { requestTab('suppliers'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Supplier Scorecards</button>}
                     {isTabVisible('purchase-orders') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('purchase-orders'); setHoverMenu(null); }} onClick={() => { requestTab('purchase-orders'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Purchase Orders</button>}
-                    {isTabVisible('inbound-jobs') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('inbound-jobs'); setHoverMenu(null); }} onClick={() => { requestTab('inbound-jobs'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Inbound Processing Jobs &amp; GRN</button>}
+                    {isTabVisible('inbound-jobs') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('inbound-jobs'); setHoverMenu(null); }} onClick={() => { requestTab('inbound-jobs'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Receive Goods &amp; GRN</button>}
                   </div>
                 </div>
               )}
@@ -2132,21 +2309,21 @@ export default function DashboardView({
             {hasIntelligenceMenuLinks && (
             <div
               className="relative group"
-              onMouseEnter={() => setHoverMenu('intelligence')}
-              onMouseLeave={() => setHoverMenu(null)}
             >
               <button
                 type="button"
                 onClick={() => setHoverMenu(hoverMenu === 'intelligence' ? null : 'intelligence')}
+                aria-expanded={hoverMenu === 'intelligence'}
+                aria-haspopup="menu"
                 className="flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 font-sans text-xs font-medium uppercase tracking-wide text-slate-950 shadow-sm outline-none transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-black"
               >
                 <span>Financials, HR &amp; Intelligence</span>
                 <span className="text-[10px] leading-none text-slate-500">▾</span>
               </button>
               {hoverMenu === 'intelligence' && (
-                <div className="absolute left-0 top-full z-50 pt-0.5 min-w-[230px]">
+                <div role="menu" aria-label="Financials, HR and intelligence modules" className="absolute left-0 top-full z-50 pt-0.5 min-w-[230px]">
                   <div className="rounded-xl border border-slate-300 bg-white py-1 shadow-2xl space-y-0.5 font-sans">
-                    {isTabVisible('bi') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('bi'); setHoverMenu(null); }} onClick={() => { requestTab('bi'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Executive Business Intelligence</button>}
+                    {isTabVisible('bi') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('bi'); setHoverMenu(null); }} onClick={() => { requestTab('bi'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Business Reports</button>}
                     {isTabVisible('reports') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('reports'); setHoverMenu(null); }} onClick={() => { requestTab('reports'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">300+ ERP Reports</button>}
                     {isTabVisible('finance') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('finance'); setHoverMenu(null); }} onClick={() => { requestTab('finance'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">Finance &amp; GL Accounting</button>}
                     {isTabVisible('payroll') && <button type="button" onMouseDown={(e) => { e.preventDefault(); requestTab('payroll'); setHoverMenu(null); }} onClick={() => { requestTab('payroll'); setHoverMenu(null); }} className="w-full px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wider text-slate-800 hover:bg-blue-600 hover:text-white transition-colors">HR Staff &amp; Payroll</button>}
@@ -2169,12 +2346,31 @@ export default function DashboardView({
             >
               Settings
             </button>
+
+            {onOpenPOS && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (hasFeature('pos')) onOpenPOS();
+                  else openFeatureGate('pos');
+                }}
+                className={`absolute right-0 top-0 flex h-9 items-center rounded-md border border-[#8f0000] bg-[#b30000] px-3 font-sans text-xs font-medium uppercase tracking-wide text-white shadow-sm transition-colors hover:border-[#650000] hover:bg-[#990000] ${hasFeature('pos') ? '' : 'opacity-70'}`}
+                title={hasFeature('pos') ? 'Open the point-of-sale register' : 'POS feature locked—click to review plan access'}
+              >
+                {!hasFeature('pos') && <Lock className="mr-1 h-3 w-3 shrink-0" />}
+                POS
+              </button>
+            )}
           </div>
 
           {/* ═══ CUSTOMIZABLE TAB BAR ═══ */}
-          <div className="relative">
+          <div className="relative hidden md:block">
+            <div className="mb-2 flex items-center gap-2">
+              <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Shortcuts</span>
+              <span className="text-[9px] text-slate-400">{pinnedTabObjects.length}/{MAX_SHORTCUTS}</span>
+            </div>
             {/* Tab buttons row */}
-            <div className="flex flex-wrap items-center justify-center gap-1.5 pb-2 pr-[84px]">
+            <div className="flex flex-wrap items-center justify-center gap-1.5 pb-2 pr-[112px]">
               {pinnedTabObjects.map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
@@ -2209,7 +2405,7 @@ export default function DashboardView({
             <div className="absolute right-0 top-0 flex items-start">
               <button
                 type="button"
-                title="Customize tab bar"
+                title="Customize shortcuts"
                 onClick={() => setShowCustomizePanel(p => !p)}
                 className={`flex items-center gap-1 h-8 px-2.5 rounded-lg border text-[10px] font-bold uppercase tracking-wider transition-all shadow-sm ${
                   showCustomizePanel
@@ -2218,18 +2414,18 @@ export default function DashboardView({
                 }`}
               >
                 <SlidersHorizontal className="h-3 w-3" />
-                <span>Edit</span>
+                <span>Show / Hide</span>
               </button>
             </div>
 
             {/* ═══ CUSTOMIZE PANEL ═══ */}
             {showCustomizePanel && (
-              <div className="absolute right-0 top-10 z-[200] w-[480px] max-w-[95vw] rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
+              <div className="absolute right-0 top-10 z-[200] w-[620px] max-w-[95vw] rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
                 {/* Header */}
                 <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-slate-800 to-slate-700">
                   <div>
-                    <p className="text-white font-bold text-sm">Customize Your Tab Bar</p>
-                    <p className="text-slate-400 text-[10px] mt-0.5">{pinnedTabs.length} tabs pinned · Click any module to add or remove</p>
+                    <p className="text-white font-bold text-sm">Customize Shortcuts</p>
+                    <p className="text-slate-400 text-[10px] mt-0.5">Choose up to {MAX_SHORTCUTS} frequently used modules.</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -2271,7 +2467,7 @@ export default function DashboardView({
                                 togglePin(tab.id);
                               }}
                               title={locked ? `${tab.label} is locked on your current plan tier — click to upgrade` : tab.label}
-                              className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border text-left transition-all duration-150 ${
+                              className={`flex items-start gap-2 px-2.5 py-2.5 rounded-lg border text-left transition-all duration-150 ${
                                 isPinned
                                   ? 'bg-blue-50 border-blue-300 ring-1 ring-blue-400'
                                   : locked
@@ -2284,9 +2480,10 @@ export default function DashboardView({
                               }`}>
                                 {locked ? <Lock className="h-3 w-3 text-white" /> : <Icon className="h-3 w-3 text-white" />}
                               </div>
-                              <span className={`text-[10px] font-bold uppercase tracking-wide leading-tight ${
-                                isPinned ? 'text-blue-800' : locked ? 'text-amber-700' : 'text-slate-600'
-                              }`}>{tab.label}</span>
+                              <span className="min-w-0 flex-1">
+                                <span className={`block text-[10px] font-bold uppercase tracking-wide leading-tight ${isPinned ? 'text-blue-800' : locked ? 'text-amber-700' : 'text-slate-700'}`}>{tab.label}</span>
+                                <span className="mt-1 block text-[9px] leading-3.5 text-slate-500">{TAB_HELP[tab.id].summary}</span>
+                              </span>
                               {isPinned && (
                                 <span className="ml-auto text-blue-500 text-[11px] font-black flex-shrink-0">✓</span>
                               )}
@@ -2299,7 +2496,7 @@ export default function DashboardView({
                 </div>
                 {/* Footer */}
                 <div className="px-4 py-2.5 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
-                  <p className="text-[10px] text-slate-500">Click any module above to add or remove it from your tab bar</p>
+                  <p className="text-[10px] text-slate-500">Select a button to show or hide it in the button menu.</p>
                   <button
                     type="button"
                     onClick={() => setShowCustomizePanel(false)}
@@ -2314,20 +2511,15 @@ export default function DashboardView({
       </div>
 
       {/* CONTEXTUAL PAGE TITLE */}
-      <div className="mb-4 flex items-start gap-3 border-b border-slate-200 pb-3 dark:border-slate-800" id="admin-page-title">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-          <ActivePageIcon className="h-5 w-5" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
-            <h1 className="truncate text-xl font-black tracking-tight text-slate-950 dark:text-white sm:text-2xl">{activePage.label}</h1>
-            <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-slate-400">{activePage.group}</p>
-          </div>
-          <div className="mt-1 text-xs leading-4 text-slate-500 dark:text-slate-400">
-            <p>Use this page to review and manage the store&apos;s {activePage.group.toLowerCase()} information and daily tasks.</p>
-            <p>Use the actions, filters and tabs below to work with records; save or confirm changes when prompted.</p>
-          </div>
-        </div>
+      <div id="admin-page-title">
+        <AdminPageHeader
+          icon={<ActivePageIcon className="h-5 w-5" />}
+          title={activePage.label}
+          section={activePage.group}
+          breadcrumbs={['Admin', activePage.group, activePage.label]}
+          line1={TAB_HELP[activePage.id].summary}
+          line2={TAB_HELP[activePage.id].action}
+        />
       </div>
 
       <div className="space-y-6" id="dashboard-main-content">
@@ -2454,7 +2646,7 @@ export default function DashboardView({
               onClick={() => setActiveTab('bi')}
               className="rounded-xl border-2 border-blue-200 dark:border-blue-900/60 bg-gradient-to-br from-blue-50/80 to-indigo-50/80 dark:from-slate-900 dark:to-blue-950/40 p-4 flex flex-col justify-between shadow-sm cursor-pointer hover:scale-[1.02] hover:shadow-xl transition-all" 
               id="bento-target"
-              title="Click to view Executive Business Intelligence"
+              title="Click to view Business Reports"
             >
               <div>
                 <div className="flex items-center justify-between mb-2">
@@ -2517,7 +2709,7 @@ export default function DashboardView({
               onClick={() => requestTab('wms')}
               className="rounded-xl border-2 border-emerald-200 dark:border-emerald-900/60 bg-gradient-to-br from-emerald-50/80 to-teal-50/80 dark:from-slate-900 dark:to-emerald-950/40 p-4 flex flex-col justify-between shadow-sm cursor-pointer hover:scale-[1.02] hover:shadow-xl transition-all" 
               id="bento-fulfillment"
-              title="Click to view Warehouse Management System (WMS)"
+              title="Click to view Warehouses and Stock"
             >
               <div>
                 <div className="flex items-center justify-between mb-2">
@@ -2540,7 +2732,7 @@ export default function DashboardView({
               <div className="mt-3 pt-2 border-t border-emerald-200 dark:border-emerald-800/80 flex items-center justify-between text-[8px] font-mono font-black text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">
                 <span className="bg-emerald-100 dark:bg-emerald-900/60 px-2 py-0.5 rounded-md">Pending: {pendingCount}</span>
                 <span className="bg-emerald-100 dark:bg-emerald-900/60 px-2 py-0.5 rounded-md">Processing: {processingCount}</span>
-                <span className="bg-emerald-200 dark:bg-emerald-800/80 text-emerald-950 dark:text-emerald-100 px-2 py-0.5 rounded-md">VIEW WMS ➔</span>
+                <span className="bg-emerald-200 dark:bg-emerald-800/80 text-emerald-950 dark:text-emerald-100 px-2 py-0.5 rounded-md">VIEW WAREHOUSES ➔</span>
               </div>
             </div>}
           </div>
@@ -2967,12 +3159,14 @@ export default function DashboardView({
           storeSettings={storeSettings}
           categories={categories}
           collections={collections}
+          currentUser={currentUser}
         />
       )}
 
       {/* INVENTORY TAB - complete inventory suite */}
       {activeTab === 'inventory' && (
         <InventoryModule
+          currentUser={currentUser}
           products={products}
           onAddProduct={onAddProduct}
           onUpdateProduct={onUpdateProduct}
@@ -5246,7 +5440,7 @@ export default function DashboardView({
                   e.preventDefault();
                   if (!newUpsellTrigger || !newUpsellOffer) return;
                   if (newUpsellTrigger === newUpsellOffer) {
-                    alert('Trigger and Upsell products must be distinct!');
+                    onShowAlert?.('Trigger and upsell products must be different.', 'error');
                     return;
                   }
                   const u: UpsellRule = {
@@ -6062,11 +6256,11 @@ export default function DashboardView({
                       onClick={() => {
                         const linkedOrder = orders.find(o => o.id === selectedShipment.orderId);
                         if (!linkedOrder) {
-                          alert('Linked customer order details are not available.');
+                          onShowAlert?.('Linked customer order details are not available.', 'error');
                           return;
                         }
                         
-                        alert(`MANIFEST DETAILS:\nRecipient: ${selectedShipment.customerName}\nOrder Total: $${linkedOrder.total.toFixed(2)}\nItems:\n${linkedOrder.items.map(item => `- ${item.name} (Qty: ${item.quantity})`).join('\n')}`);
+                        onShowAlert?.(`Manifest for ${selectedShipment.customerName}: $${linkedOrder.total.toFixed(2)}, ${linkedOrder.items.length} item line(s).`, 'info');
                       }}
                       className="rounded-none border border-neutral-400 dark:border-neutral-700 hover:border-neutral-950 px-4 py-2.5 font-sans text-[10px] uppercase tracking-widest font-black transition-colors"
                     >
@@ -6348,11 +6542,11 @@ export default function DashboardView({
           const normalizedEmail = newPosCustEmail.toLowerCase().trim();
 
           if (!trimmedName || !normalizedEmail) {
-            alert('Please provide customer name and email.');
+            onShowAlert?.('Please provide the customer name and email.', 'error');
             return;
           }
           if (customers.some(c => c.email.toLowerCase() === normalizedEmail)) {
-            alert('A customer with this email is already registered.');
+            onShowAlert?.('A customer with this email is already registered.', 'error');
             return;
           }
 
@@ -6384,7 +6578,7 @@ export default function DashboardView({
 
         const handlePOSCheckout = () => {
           if (posCart.length === 0) {
-            alert('POS Cart is empty! Add products first.');
+            onShowAlert?.('The POS cart is empty. Add products first.', 'error');
             return;
           }
 
@@ -6392,11 +6586,11 @@ export default function DashboardView({
 
           if (posPaymentMethod === 'Wallet') {
             if (!activeCustomer.isRegistered) {
-              alert('Wallet checkout is only available for registered customers.');
+              onShowAlert?.('Wallet checkout is only available for registered customers.', 'error');
               return;
             }
             if (activeCustomer.walletBalance < posTotal) {
-              alert(`Insufficient wallet funds. Available balance is $${activeCustomer.walletBalance.toFixed(2)}.`);
+              onShowAlert?.(`Insufficient wallet funds. Available balance is $${activeCustomer.walletBalance.toFixed(2)}.`, 'error');
               return;
             }
           }
@@ -6405,7 +6599,7 @@ export default function DashboardView({
           if (posPaymentMethod === 'Cash') {
             const cashVal = parseFloat(posCashReceived) || 0;
             if (cashVal < totalToPay) {
-              alert(`Insufficient Cash! Amount received ($${cashVal.toFixed(2)}) is less than total due ($${totalToPay.toFixed(2)}).`);
+              onShowAlert?.(`Amount received ($${cashVal.toFixed(2)}) is less than the total due ($${totalToPay.toFixed(2)}).`, 'error');
               return;
             }
           }
@@ -6607,7 +6801,7 @@ export default function DashboardView({
                           const defaultSize = prod.sizes?.[0] || 'One Size';
                           
                           if (cartItemCount >= prod.stock) {
-                            alert(`Insufficient stock. Only ${prod.stock} units available.`);
+                            onShowAlert?.(`Insufficient stock. Only ${prod.stock} units are available.`, 'error');
                             return;
                           }
 
@@ -6773,7 +6967,7 @@ export default function DashboardView({
                                     type="button"
                                     onClick={() => {
                                       if (item.quantity >= item.product.stock) {
-                                        alert(`Only ${item.product.stock} units of stock available.`);
+                                        onShowAlert?.(`Only ${item.product.stock} units are available.`, 'error');
                                         return;
                                       }
                                       setPosCart(prev => {
@@ -7601,6 +7795,19 @@ export default function DashboardView({
       )}
 
       {/* INVOICE & PRINTING MODAL */}
+      <AdminConfirmDialog
+        open={!!adminConfirmation}
+        title={adminConfirmation?.title || 'Confirm Action'}
+        message={adminConfirmation?.message || ''}
+        confirmLabel={adminConfirmation?.confirmLabel}
+        destructive
+        onClose={() => setAdminConfirmation(null)}
+        onConfirm={() => {
+          adminConfirmation?.onConfirm();
+          setAdminConfirmation(null);
+        }}
+      />
+
       <InvoiceModal
         isOpen={!!selectedInvoiceOrder || !!selectedInvoiceData}
         onClose={() => {

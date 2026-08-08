@@ -8,6 +8,7 @@ import { SuperAdminUserManagerModal } from './SuperAdminUserManagerModal';
 import { SuperAdminTenantChargeModal } from './SuperAdminTenantChargeModal';
 import { SuperAdminInvoiceManagerModal } from './SuperAdminInvoiceManagerModal';
 import { ContextualHelp } from './ContextualHelp';
+import { useAdminInteractions } from '../context/AdminInteractionContext';
 
 interface SuperAdminDashboardProps {
   onBackToApp: () => void;
@@ -17,6 +18,7 @@ interface SuperAdminDashboardProps {
 }
 
 export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onBackToApp, onLogout, onImpersonateStore, currentUser }) => {
+  const interactions = useAdminInteractions();
 
   const [metrics, setMetrics] = useState<any>(null);
   const [tenants, setTenants] = useState<any[]>([]);
@@ -174,7 +176,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onBack
         onImpersonateStore(data.tenant);
       }
     } catch (err: any) {
-      alert(err.message);
+      void interactions.notify({ title: 'Impersonation Failed', message: err.message || 'The tenant store could not be opened.' });
     }
   };
 
@@ -342,7 +344,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onBack
             {/* BOOTSTRAP SLEEK CARD CONTAINER TABLE */}
             <div className="rounded-xl bg-white border border-slate-200 shadow-xs overflow-hidden">
               {/* Card Header */}
-              <div className="p-4 bg-white border-b border-slate-200 flex items-center justify-between">
+              <div className="p-4 bg-white border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h2 className="text-base font-bold text-slate-900">Tenant Store Directory</h2>
                   <p className="text-xs text-slate-500">Overview of all active store ERPs, custom domains, and subscription tiers</p>
@@ -357,8 +359,8 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onBack
               </div>
 
               {/* Bootstrap Table */}
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+              <div className="responsive-table-shell overflow-x-auto">
+                <table className="responsive-data-table w-full text-left text-xs">
                   <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-200">
                     <tr>
                       <th className="p-3.5">Store Name &amp; Domain</th>
@@ -372,12 +374,12 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onBack
                   <tbody className="divide-y divide-slate-100 font-medium">
                     {tenants.map((t) => (
                       <tr key={t.id} className="hover:bg-slate-50/80 transition">
-                        <td className="p-3.5">
+                        <td data-label="Store" className="p-3.5">
                           <div className="font-bold text-slate-900 text-sm">{t.name}</div>
                           <div className="text-[11px] text-blue-600 font-mono font-semibold">{t.slug}.infomats.net</div>
                         </td>
 
-                        <td className="p-3.5">
+                        <td data-label="Custom domain" className="p-3.5">
                           {t.customDomain ? (
                             <span className="px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 font-mono text-[11px] font-bold flex items-center gap-1 w-fit">
                               <Globe className="w-3 h-3 text-emerald-600" />
@@ -388,17 +390,17 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onBack
                           )}
                         </td>
 
-                        <td className="p-3.5">
+                        <td data-label="Plan" className="p-3.5">
                           <span className="px-2.5 py-1 rounded-md bg-purple-50 text-purple-900 border border-purple-200 font-bold text-xs inline-block">
                             {t.plan?.name || 'Free Plan'}
                           </span>
                         </td>
 
-                        <td className="p-3.5 font-bold text-slate-800">
+                        <td data-label="Products" className="p-3.5 font-bold text-slate-800">
                           {t._count?.products || 0} Products
                         </td>
 
-                        <td className="p-3.5">
+                        <td data-label="Status" className="p-3.5">
                           {t.status === 'ACTIVE' ? (
                             <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 text-[10px] font-extrabold border border-emerald-200 uppercase">
                               ✓ Active
@@ -410,7 +412,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onBack
                           )}
                         </td>
 
-                        <td className="p-3.5 text-right flex items-center justify-end gap-1.5">
+                        <td data-label="Actions" className="p-3.5 text-right flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => handleImpersonate(t.id)}
                             className="px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-extrabold shadow-xs transition text-xs flex items-center gap-1"

@@ -11,6 +11,9 @@ import MasterDataManager from './masterdata/MasterDataManager';
 import { CustomDomainSettings } from './CustomDomainSettings';
 import { TenantBillingSettings } from './TenantBillingSettings';
 import { ContextualHelp } from './ContextualHelp';
+import { HARDWARE_CATEGORY_CATALOG } from '../constants/categoryImages';
+import { useTenantFeatures } from '../context/TenantFeatureContext';
+import { useAdminInteractions } from '../context/AdminInteractionContext';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -37,7 +40,7 @@ interface SettingsModalProps {
   users: User[];
   onAddUser: (u: User) => void;
   onDeleteUser: (id: string) => void;
-  onHardReset: () => void;
+  onHardReset: () => Promise<void>;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -64,11 +67,48 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onDeleteUser,
   onHardReset
 }) => {
+  const interactions = useAdminInteractions();
   if (!isOpen) return null;
 
   const [formData, setFormData] = useState<StoreSettings>(settings);
   const [activeTab, setActiveTab] = useState<'general' | 'invoice' | 'tax_bank' | 'storefront' | 'marketing' | 'users' | 'system' | 'master_data' | 'domain' | 'billing'>(initialTab || 'general');
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [destructiveAction, setDestructiveAction] = useState<'defaults' | 'wipe' | null>(null);
+  const [confirmationText, setConfirmationText] = useState('');
+  const [isDestructiveActionRunning, setIsDestructiveActionRunning] = useState(false);
+  const [destructiveActionError, setDestructiveActionError] = useState('');
+  const [uploadingNavigationCategory, setUploadingNavigationCategory] = useState('');
+  const [navigationImageError, setNavigationImageError] = useState('');
+  const [pendingNavigationImagePaths, setPendingNavigationImagePaths] = useState<string[]>([]);
+  const { hasFeature, loading: featuresLoading } = useTenantFeatures();
+  const canAccessStorefront = !featuresLoading && hasFeature('storefront');
+  const canAccessCustomDomain = canAccessStorefront && hasFeature('custom_domain');
+
+  React.useEffect(() => {
+    if (!featuresLoading && activeTab === 'storefront' && !canAccessStorefront) setActiveTab('general');
+    if (!featuresLoading && activeTab === 'domain' && !canAccessCustomDomain) setActiveTab('general');
+  }, [activeTab, canAccessCustomDomain, canAccessStorefront, featuresLoading]);
+
+  const storefrontVisibilityControls = [
+    ['showAnnouncementBar', 'Announcement bar'], ['showStorefrontHeader', 'Main header and branding'],
+    ['showStorefrontSearch', 'Product search'], ['showStorefrontAccount', 'Customer account link'],
+    ['showStorefrontCart', 'Shopping cart'], ['showStorefrontCompare', 'Compare products'],
+    ['showStorefrontPcBuilder', 'Custom PC builder link'], ['showStorefrontTracking', 'Track shipment link'],
+    ['showStorefrontAdminLogin', 'Staff/admin login'], ['showStorefrontCategoryNav', 'Top category navigation'],
+    ['showHeroBanner', 'Hero banner'], ['showFlashSaleBanner', 'Flash sale banner'],
+    ['showCategorySection', 'Quick Navigation images'], ['showCatalogSection', 'Product catalogue'],
+    ['showCatalogToolbar', 'Catalogue sort and product count'], ['showCatalogFilters', 'Quick Specs filters'],
+    ['showBrandSection', 'Brands section'], ['showRecentlyViewedSection', 'Recently viewed products'],
+    ['showTrustSection', 'Shopping assurance section'], ['showWhyShopSection', 'Why Shop section'],
+    ['showNewsletterSection', 'Newsletter section'], ['showServiceHighlights', 'Navigation service highlights'],
+    ['showStorefrontFooter', 'Storefront footer'], ['showFooterBrandColumn', 'Footer store details'],
+    ['showFooterCategoriesColumn', 'Footer categories'], ['showFooterCustomerCareColumn', 'Footer customer care'],
+    ['showFooterLegalBar', 'Footer legal/payment bar'], ['showFooterPolicyLinks', 'Footer policy links'],
+  ] as const satisfies ReadonlyArray<readonly [keyof StoreSettings, string]>;
+
+  const setAllStorefrontVisibility = (visible: boolean) => {
+    setFormData((current) => storefrontVisibilityControls.reduce((next, [field]) => ({ ...next, [field]: visible }), current));
+  };
 
 
 
@@ -79,9 +119,92 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }));
   };
 
+  const navigationCategories = React.useMemo(() => Array.from(new Set([
+    ...Object.keys(HARDWARE_CATEGORY_CATALOG),
+    ...products.map((product) => product.category).filter(Boolean),
+    ...(formData.categoryNavigationImages || []).map((item) => item.category),
+  ])).sort((a, b) => a.localeCompare(b)), [products, formData.categoryNavigationImages]);
+
+  const authenticatedJsonHeaders = () => ({
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${localStorage.getItem('authToken') || ''}`,
+  });
+
+  const readImageAsDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
+    if (!file.type.startsWith('image/')) return reject(new Error('Please choose a PNG, JPG or WebP image.'));
+    if (file.size > 10 * 1024 * 1024) return reject(new Error('The image must be 10 MB or smaller.'));
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(new Error('The selected image could not be read.'));
+    reader.readAsDataURL(file);
+  });
+
+  const deleteStoredNavigationImage = async (imageUrl: string) => {
+    if (!imageUrl.startsWith('/uploads/')) return;
+    const response = await fetch('/api/uploads/delete', {
+      method: 'POST',
+      headers: authenticatedJsonHeaders(),
+      body: JSON.stringify({ path: imageUrl }),
+    });
+    if (!response.ok) throw new Error('The previous image could not be removed from storage.');
+  };
+
+  const handleNavigationImageUpload = async (category: string, file?: File) => {
+    if (!file) return;
+    setUploadingNavigationCategory(category);
+    setNavigationImageError('');
+    try {
+      const fileData = await readImageAsDataUrl(file);
+      const response = await fetch('/api/uploads', {
+        method: 'POST',
+        headers: authenticatedJsonHeaders(),
+        body: JSON.stringify({ file: fileData, folder: 'categories' }),
+      });
+      const result = await response.json().catch(() => ({})) as { path?: string; error?: string };
+      if (!response.ok || !result.path) throw new Error(result.error || 'The image could not be uploaded.');
+
+      const existing = (formData.categoryNavigationImages || []).find((item) => item.category === category);
+      if (existing?.imageUrl && pendingNavigationImagePaths.includes(existing.imageUrl)) {
+        await deleteStoredNavigationImage(existing.imageUrl);
+        setPendingNavigationImagePaths((paths) => paths.filter((path) => path !== existing.imageUrl));
+      }
+      setPendingNavigationImagePaths((paths) => [...paths, result.path!]);
+      handleChange('categoryNavigationImages', [
+        ...(formData.categoryNavigationImages || []).filter((item) => item.category !== category),
+        { category, imageUrl: result.path, altText: `${category} category` },
+      ]);
+    } catch (error) {
+      setNavigationImageError(error instanceof Error ? error.message : 'The image could not be uploaded.');
+    } finally {
+      setUploadingNavigationCategory('');
+    }
+  };
+
+  const removeNavigationImage = async (category: string) => {
+    const existing = (formData.categoryNavigationImages || []).find((item) => item.category === category);
+    if (!existing) return;
+    setUploadingNavigationCategory(category);
+    setNavigationImageError('');
+    try {
+      if (pendingNavigationImagePaths.includes(existing.imageUrl)) {
+        await deleteStoredNavigationImage(existing.imageUrl);
+        setPendingNavigationImagePaths((paths) => paths.filter((path) => path !== existing.imageUrl));
+      }
+      handleChange('categoryNavigationImages', (formData.categoryNavigationImages || []).filter((item) => item.category !== category));
+    } catch (error) {
+      setNavigationImageError(error instanceof Error ? error.message : 'The image could not be removed.');
+    } finally {
+      setUploadingNavigationCategory('');
+    }
+  };
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+    const retainedPaths = new Set((formData.categoryNavigationImages || []).map((item) => item.imageUrl));
+    const replacedPaths = (settings.categoryNavigationImages || []).map((item) => item.imageUrl).filter((imageUrl) => !retainedPaths.has(imageUrl));
     onSaveSettings(formData);
+    setPendingNavigationImagePaths([]);
+    void Promise.allSettled(replacedPaths.map((imageUrl) => deleteStoredNavigationImage(imageUrl)));
     setSavedSuccess(true);
     setTimeout(() => {
       setSavedSuccess(false);
@@ -89,9 +212,39 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }, 1200);
   };
 
+  const closeWithoutSaving = () => {
+    void Promise.allSettled(pendingNavigationImagePaths.map((imageUrl) => deleteStoredNavigationImage(imageUrl)));
+    setPendingNavigationImagePaths([]);
+    onClose();
+  };
+
   const handleResetDefaults = () => {
-    if (window.confirm('Reset all store and invoice settings to factory defaults?')) {
-      setFormData(DEFAULT_STORE_SETTINGS);
+    setConfirmationText('');
+    setDestructiveActionError('');
+    setDestructiveAction('defaults');
+  };
+
+  const completeDestructiveAction = async () => {
+    if (confirmationText !== 'confirm' || !destructiveAction) return;
+    setIsDestructiveActionRunning(true);
+    setDestructiveActionError('');
+    try {
+      if (destructiveAction === 'defaults') {
+        await Promise.allSettled((formData.categoryNavigationImages || []).map((item) => deleteStoredNavigationImage(item.imageUrl)));
+        setPendingNavigationImagePaths([]);
+        setFormData(DEFAULT_STORE_SETTINGS);
+        onSaveSettings(DEFAULT_STORE_SETTINGS);
+        setSavedSuccess(true);
+        setTimeout(() => setSavedSuccess(false), 1500);
+        setDestructiveAction(null);
+        setConfirmationText('');
+      } else {
+        await onHardReset();
+      }
+    } catch (error) {
+      setDestructiveActionError(error instanceof Error ? error.message : 'The operation could not be completed.');
+    } finally {
+      setIsDestructiveActionRunning(false);
     }
   };
 
@@ -113,9 +266,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         try {
           const parsed = JSON.parse(event.target?.result as string);
           setFormData({ ...DEFAULT_STORE_SETTINGS, ...parsed });
-          alert('Settings successfully imported from file!');
+          void interactions.notify({ title: 'Settings Imported', message: 'Settings were successfully imported from the selected file. Review and save them when ready.' });
         } catch (err) {
-          alert('Invalid JSON settings file format.');
+          void interactions.notify({ title: 'Import Failed', message: 'The selected file is not a valid settings JSON file.' });
         }
       };
     }
@@ -123,7 +276,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+      <div className="settings-dialog bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
         
         {/* Modal Header */}
         <div className="bg-slate-900 text-white p-6 flex justify-between items-center border-b border-slate-800">
@@ -141,7 +294,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </div>
           <button 
-            onClick={onClose}
+            onClick={closeWithoutSaving}
             className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
           >
             <X className="h-5 w-5" />
@@ -149,6 +302,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         </div>
 
         <ContextualHelp className="mx-6 mt-4" compact line1="Configure tenant store operations, documents, billing and the separately scoped public storefront design." line2="Choose a settings tab, review its options, then save; storefront design controls do not restyle the tenant admin panel." />
+
+        <nav aria-label="Settings breadcrumb" className="mx-6 mt-3 flex items-center gap-1 text-[10px] font-semibold text-slate-400">
+          <span>Admin</span><span aria-hidden="true">›</span><span>Settings</span><span aria-hidden="true">›</span><span className="text-slate-600">{{ general: 'General', invoice: 'Invoices', tax_bank: 'Tax & Banking', storefront: 'Storefront', marketing: 'Marketing', users: 'Users', system: 'System', master_data: 'Master Data', domain: 'Custom Domain', billing: 'Billing' }[activeTab]}</span>
+        </nav>
 
         {/* Navigation Tabs */}
         <div className="flex flex-wrap border-b border-slate-200 bg-slate-50/80 px-6">
@@ -185,7 +342,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <CreditCard className="h-4 w-4" /> Tax &amp; Banking Details
           </button>
 
-          <button
+          {canAccessStorefront && <button
             onClick={() => setActiveTab('storefront')}
             className={`py-3 px-4 font-semibold text-xs border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap ${
               activeTab === 'storefront'
@@ -194,7 +351,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             }`}
           >
             <Globe className="h-4 w-4" /> Website Storefront
-          </button>
+          </button>}
 
           <button
             onClick={() => setActiveTab('marketing')}
@@ -240,7 +397,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <Sliders className="h-4 w-4 text-blue-600" /> Store Lookup Tables &amp; Setup
           </button>
 
-          <button
+          {canAccessCustomDomain && <button
             onClick={() => setActiveTab('domain')}
             className={`py-3 px-4 font-semibold text-xs border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap ${
               activeTab === 'domain'
@@ -249,7 +406,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             }`}
           >
             <Globe className="h-4 w-4 text-indigo-600" /> Custom Domain (TLD)
-          </button>
+          </button>}
 
           <button
             onClick={() => setActiveTab('billing')}
@@ -266,9 +423,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
         {/* Tab Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-
-          {activeTab === 'domain' && <CustomDomainSettings />}
-
 
           {/* TAB 1: General Store Identity */}
           {activeTab === 'general' && (
@@ -611,7 +765,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           )}
 
           {/* TAB 4: Website Storefront */}
-          {activeTab === 'storefront' && (
+          {canAccessStorefront && activeTab === 'storefront' && (
             <div className="space-y-6 text-left">
               <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 text-xs text-purple-900 flex items-start gap-3">
                 <Megaphone className="h-5 w-5 text-purple-600 shrink-0 mt-0.5" />
@@ -624,6 +778,27 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
 
               <div className="space-y-4">
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4">
+                  <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900">Storefront Element Visibility</h4>
+                      <p className="mt-0.5 text-[11px] text-slate-600">Show or hide every major customer-facing element. Hidden content keeps its saved text and design settings.</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => setAllStorefrontVisibility(true)} className="rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-[10px] font-bold text-emerald-700 hover:border-emerald-500">Show all</button>
+                      <button type="button" onClick={() => setAllStorefrontVisibility(false)} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[10px] font-bold text-slate-700 hover:border-slate-500">Hide all</button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    {storefrontVisibilityControls.map(([field, label]) => (
+                      <label key={field} className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-700">
+                        <span>{label}</span>
+                        <input type="checkbox" checked={Boolean(formData[field])} onChange={(event) => handleChange(field, event.target.checked)} className="h-4 w-4 shrink-0 rounded border-slate-300 text-emerald-600" />
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-slate-700">Display Top Announcement Bar</label>
                   <input 
@@ -680,6 +855,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
 
                 <div className="border-t border-slate-200 pt-4 space-y-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div><h4 className="text-sm font-bold text-slate-900">Shopping Assurance</h4><p className="mt-0.5 text-[11px] text-slate-500">Communicate delivery, returns, payment security and support before customers reach checkout.</p></div>
+                    <input type="checkbox" checked={formData.showTrustSection} onChange={(e) => handleChange('showTrustSection', e.target.checked)} className="h-5 w-5" />
+                  </div>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div><label className="mb-1 block text-xs font-bold text-slate-700">Eyebrow</label><input value={formData.trustSectionEyebrow} onChange={(e) => handleChange('trustSectionEyebrow', e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" /></div>
+                    <div><label className="mb-1 block text-xs font-bold text-slate-700">Section Heading</label><input value={formData.trustSectionTitle} onChange={(e) => handleChange('trustSectionTitle', e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" /></div>
+                    {([['trustDeliveryTitle', 'trustDeliveryText', 'Delivery'], ['trustReturnsTitle', 'trustReturnsText', 'Returns & Warranty'], ['trustPaymentTitle', 'trustPaymentText', 'Payment Security'], ['trustSupportTitle', 'trustSupportText', 'Customer Support']] as const).map(([titleField, textField, label]) => (
+                      <div key={titleField} className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                        <label className="block text-xs font-bold text-slate-700">{label}</label>
+                        <input value={formData[titleField]} onChange={(e) => handleChange(titleField, e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="Title" />
+                        <textarea value={formData[textField]} onChange={(e) => handleChange(textField, e.target.value)} rows={2} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="Customer-facing explanation" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-200 pt-4 space-y-4">
                   <div className="flex items-center justify-between">
                     <div><h4 className="text-sm font-bold text-slate-900">Hero Banner</h4><p className="text-[11px] text-slate-500">Main promotional banner shown on the public storefront.</p></div>
                     <input type="checkbox" checked={formData.showHeroBanner} onChange={(e) => handleChange('showHeroBanner', e.target.checked)} className="h-5 w-5" />
@@ -712,6 +905,53 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <div><label className="block text-xs font-bold text-slate-700 mb-1">Eyebrow</label><input value={formData.categorySectionEyebrow} onChange={(e) => handleChange('categorySectionEyebrow', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
                     <div><label className="block text-xs font-bold text-slate-700 mb-1">Heading</label><input value={formData.categorySectionTitle} onChange={(e) => handleChange('categorySectionTitle', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
                     <div className="md:col-span-2"><label className="block text-xs font-bold text-slate-700 mb-1">Description</label><input value={formData.categorySectionDescription} onChange={(e) => handleChange('categorySectionDescription', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
+                    <div className="md:col-span-2">
+                      <label className="mb-1 block text-xs font-bold text-slate-700">Quick Navigation Image Scrolling</label>
+                      <select value={formData.categoryNavigationScrollStyle} onChange={(e) => handleChange('categoryNavigationScrollStyle', e.target.value as StoreSettings['categoryNavigationScrollStyle'])} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
+                        <option value="manual">Manual — arrows, touch or trackpad</option>
+                        <option value="auto-left">Automatic — images move right to left</option>
+                      </select>
+                      <p className="mt-1 text-[11px] text-slate-500">Automatic movement pauses while a visitor hovers, focuses, or touches the image bar.</p>
+                    </div>
+                    <div className="md:col-span-2">
+                      <div className="mb-2 flex items-end justify-between gap-3">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700">Custom Quick Navigation Images</label>
+                          <p className="mt-1 text-[11px] text-slate-500">Replace any category picture. Images are optimised to WebP and remain linked to the selected category.</p>
+                        </div>
+                        <span className="shrink-0 text-[10px] font-semibold text-slate-500">PNG, JPG or WebP · max 10 MB</span>
+                      </div>
+                      {navigationImageError && (
+                        <div role="alert" className="mb-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{navigationImageError}</div>
+                      )}
+                      <div className="max-h-72 space-y-2 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-2">
+                        {navigationCategories.map((category) => {
+                          const customImage = (formData.categoryNavigationImages || []).find((item) => item.category === category);
+                          const fallbackImage = HARDWARE_CATEGORY_CATALOG[category]?.image;
+                          const busy = uploadingNavigationCategory === category;
+                          return (
+                            <div key={category} className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-2">
+                              <div className="h-12 w-16 shrink-0 overflow-hidden rounded-md border border-slate-200 bg-slate-100">
+                                {(customImage?.imageUrl || fallbackImage) ? <img src={customImage?.imageUrl || fallbackImage} alt="" className="h-full w-full object-cover" /> : null}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="truncate text-xs font-semibold text-slate-900">{category}</div>
+                                <div className="text-[10px] text-slate-500">{customImage ? 'Custom tenant image' : 'Default category image'}</div>
+                              </div>
+                              <label className={`cursor-pointer rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[11px] font-semibold text-blue-700 hover:border-blue-400 ${busy ? 'pointer-events-none opacity-50' : ''}`}>
+                                <Upload className="mr-1 inline h-3.5 w-3.5" />{busy ? 'Working…' : customImage ? 'Replace' : 'Upload'}
+                                <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" disabled={busy} onChange={(event) => { void handleNavigationImageUpload(category, event.target.files?.[0]); event.currentTarget.value = ''; }} />
+                              </label>
+                              {customImage && (
+                                <button type="button" disabled={busy} onClick={() => void removeNavigationImage(category)} className="rounded-lg border border-rose-200 bg-white p-2 text-rose-600 hover:border-rose-400 disabled:opacity-50" aria-label={`Restore default image for ${category}`} title="Remove custom image and restore default">
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                     <div><label className="block text-xs font-bold text-slate-700 mb-1">Catalogue Eyebrow</label><input value={formData.catalogSectionEyebrow} onChange={(e) => handleChange('catalogSectionEyebrow', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
                     <div><label className="block text-xs font-bold text-slate-700 mb-1">Catalogue Heading</label><input value={formData.catalogSectionTitle} onChange={(e) => handleChange('catalogSectionTitle', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
                     <div className="md:col-span-2">
@@ -857,6 +1097,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
 
                 <div className="border-t border-slate-200 pt-4 space-y-4">
+                  <div><h4 className="text-sm font-bold text-slate-900">Brands &amp; Browsing History</h4><p className="mt-0.5 text-[11px] text-slate-500">Customise supporting merchandising sections beneath the catalogue.</p></div>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div><label className="mb-1 block text-xs font-bold text-slate-700">Brands Heading</label><input value={formData.brandSectionTitle} onChange={(e) => handleChange('brandSectionTitle', e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" /></div>
+                    <div><label className="mb-1 block text-xs font-bold text-slate-700">Brand Names</label><input value={(formData.storefrontBrands || []).join(', ')} onChange={(e) => handleChange('storefrontBrands', e.target.value.split(',').map((item) => item.trim()).filter(Boolean))} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="Dell, HP, Lenovo" /></div>
+                    <div><label className="mb-1 block text-xs font-bold text-slate-700">Recently Viewed Eyebrow</label><input value={formData.recentlyViewedEyebrow} onChange={(e) => handleChange('recentlyViewedEyebrow', e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" /></div>
+                    <div><label className="mb-1 block text-xs font-bold text-slate-700">Recently Viewed Heading</label><input value={formData.recentlyViewedTitle} onChange={(e) => handleChange('recentlyViewedTitle', e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" /></div>
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-200 pt-4 space-y-4">
                   <div className="flex items-center justify-between"><div><h4 className="text-sm font-bold text-slate-900">Storefront Footer</h4><p className="text-[11px] text-slate-500">Footer headings, service statements and legal/payment labels.</p></div><input type="checkbox" checked={formData.showStorefrontFooter} onChange={(e) => handleChange('showStorefrontFooter', e.target.checked)} className="h-5 w-5" /></div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div><label className="block text-xs font-bold text-slate-700 mb-1">Categories Heading</label><input value={formData.footerCategoriesHeading} onChange={(e) => handleChange('footerCategoriesHeading', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
@@ -867,6 +1117,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <div className="md:col-span-2"><label className="block text-xs font-bold text-slate-700 mb-1">Copyright Text</label><input value={formData.footerCopyrightText} onChange={(e) => handleChange('footerCopyrightText', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
                     <div><label className="block text-xs font-bold text-slate-700 mb-1">Ownership Text</label><input value={formData.footerOwnershipText} onChange={(e) => handleChange('footerOwnershipText', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
                     <div><label className="block text-xs font-bold text-slate-700 mb-1">Payments Text</label><input value={formData.footerPaymentsText} onChange={(e) => handleChange('footerPaymentsText', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
+                    <div><label className="block text-xs font-bold text-slate-700 mb-1">Privacy Policy URL</label><input value={formData.privacyPolicyUrl} onChange={(e) => handleChange('privacyPolicyUrl', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
+                    <div><label className="block text-xs font-bold text-slate-700 mb-1">Terms &amp; Conditions URL</label><input value={formData.termsUrl} onChange={(e) => handleChange('termsUrl', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
+                    <div><label className="block text-xs font-bold text-slate-700 mb-1">Returns Policy URL</label><input value={formData.returnsPolicyUrl} onChange={(e) => handleChange('returnsPolicyUrl', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
+                    <div><label className="block text-xs font-bold text-slate-700 mb-1">Shipping Policy URL</label><input value={formData.shippingPolicyUrl} onChange={(e) => handleChange('shippingPolicyUrl', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
                   </div>
                 </div>
 
@@ -1001,15 +1255,51 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
                 <button
                   type="button"
-                  onClick={() => {
-                    if (window.confirm('CRITICAL: Delete ALL store data, including every product, order, and customer? This will perform a complete factory reset.')) {
-                      onHardReset();
-                    }
-                  }}
+                  onClick={() => { setConfirmationText(''); setDestructiveActionError(''); setDestructiveAction('wipe'); }}
                   className="py-2 px-6 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-xs flex items-center gap-2 transition-all shadow-lg shadow-rose-500/20 active:scale-95"
                 >
                   <Trash2 className="h-4 w-4" /> Wipe All Store Data
                 </button>
+              </div>
+            </div>
+          )}
+
+          {destructiveAction && (
+            <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/75 p-4" role="dialog" aria-modal="true" aria-labelledby="destructive-confirmation-title">
+              <div className="w-full max-w-md rounded-2xl border border-rose-300 bg-white p-6 shadow-2xl">
+                <div className="mb-4 flex items-start gap-3">
+                  <div className="rounded-full bg-rose-100 p-2 text-rose-700"><Trash2 className="h-5 w-5" /></div>
+                  <div>
+                    <h4 id="destructive-confirmation-title" className="font-bold text-rose-900">
+                      {destructiveAction === 'wipe' ? 'Permanently wipe all store data?' : 'Reset all settings to factory defaults?'}
+                    </h4>
+                    <p className="mt-1 text-xs leading-5 text-slate-600">
+                      This action cannot be undone. Export a backup first if you may need to recover the current information.
+                    </p>
+                  </div>
+                </div>
+                <label className="block text-xs font-semibold text-slate-800" htmlFor="destructive-confirmation-input">
+                  Please type <span className="font-mono font-black text-rose-700">confirm</span> to continue
+                </label>
+                <input
+                  id="destructive-confirmation-input"
+                  autoFocus
+                  value={confirmationText}
+                  onChange={(event) => setConfirmationText(event.target.value)}
+                  onKeyDown={(event) => { if (event.key === 'Enter') void completeDestructiveAction(); }}
+                  className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-100"
+                  placeholder="Type confirm"
+                  autoComplete="off"
+                />
+                {destructiveActionError && <p role="alert" className="mt-2 rounded-lg border border-rose-200 bg-rose-50 p-2 text-xs font-semibold text-rose-700">{destructiveActionError}</p>}
+                <div className="mt-5 flex justify-end gap-2">
+                  <button type="button" disabled={isDestructiveActionRunning} onClick={() => { setDestructiveAction(null); setConfirmationText(''); setDestructiveActionError(''); }} className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+                    Cancel
+                  </button>
+                  <button type="button" disabled={confirmationText !== 'confirm' || isDestructiveActionRunning} onClick={() => void completeDestructiveAction()} className="rounded-lg bg-rose-600 px-4 py-2 text-xs font-bold text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-40">
+                    {isDestructiveActionRunning ? 'Processing…' : destructiveAction === 'wipe' ? 'Permanently Wipe Data' : 'Reset Defaults'}
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -1022,7 +1312,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           )}
 
           {/* TAB 9: Custom Domain Settings */}
-          {activeTab === 'domain' && (
+          {canAccessCustomDomain && activeTab === 'domain' && (
             <div className="space-y-4">
               <CustomDomainSettings />
             </div>
@@ -1052,7 +1342,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={onClose}
+              onClick={closeWithoutSaving}
               className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 rounded-lg transition-colors"
             >
               Cancel

@@ -4,6 +4,7 @@ import {
   Search, Scan, FileText, ArrowRight, X, Volume2, Save, Printer, ArrowDownRight, TrendingUp, Sparkles, LayoutGrid, Package, ChevronRight, Check
 } from 'lucide-react';
 import { Product, StocktakeSession, StocktakeItem, ShrinkageRecord, StocktakeType } from '../../types';
+import { useAdminInteractions } from '../../context/AdminInteractionContext';
 
 interface StocktakeManagerProps {
   products: Product[];
@@ -26,6 +27,7 @@ export default function StocktakeManager({
   onAddShrinkageRecord,
   onUpdateProductStock
 }: StocktakeManagerProps) {
+  const interactions = useAdminInteractions();
   const [activeTab, setActiveTab] = useState<'sessions' | 'counting' | 'variance' | 'shrinkage'>('sessions');
 
   // Guided counting session states
@@ -192,7 +194,7 @@ export default function StocktakeManager({
       triggerBeep('success');
     } else {
       triggerBeep('error');
-      alert(`Barcode "${barcodeInput}" not found in current session inventory schedule.`);
+      void interactions.notify({ title: 'Barcode Not Found', message: `Barcode "${barcodeInput}" is not in the current stocktake schedule.` });
     }
 
     setBarcodeInput('');
@@ -231,11 +233,11 @@ export default function StocktakeManager({
   };
 
   // Finalize audit and post adjustments to database
-  const handleFinalizeSession = (sessionId: string) => {
+  const handleFinalizeSession = async (sessionId: string) => {
     const session = stocktakes.find(s => s.id === sessionId);
     if (!session) return;
 
-    if (!window.confirm('Are you sure you want to finalize this stocktake? System stock levels will be updated to match counted quantities.')) {
+    if (!(await interactions.confirm({ title: 'Finalize Stocktake?', message: 'System stock levels will be updated to match the counted quantities. Review all discrepancies before continuing.', confirmLabel: 'Finalize Stocktake' }))) {
       return;
     }
 
@@ -295,7 +297,7 @@ export default function StocktakeManager({
     if (isNaN(qty) || qty <= 0) return;
 
     if (qty > product.stock) {
-      alert(`Cannot write off more units than currently in stock (${product.stock} available).`);
+      void interactions.notify({ title: 'Write-off Exceeds Stock', message: `Only ${product.stock} unit(s) are currently available to write off.` });
       return;
     }
 

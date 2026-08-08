@@ -67,7 +67,7 @@ export default function BusinessIntelligenceManager({
             <span className="px-2.5 py-0.5 text-[10px] font-mono font-bold uppercase tracking-widest bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300 rounded border border-purple-200 dark:border-purple-800">
               EXECUTIVE PREDICTIVE INTELLIGENCE
             </span>
-            <h2 className="text-xl font-black tracking-tight mt-1">Business Intelligence &amp; AI Decision Suite</h2>
+            <h2 className="text-xl font-black tracking-tight mt-1">Business Reports &amp; Decision Support</h2>
             <p className="text-xs text-slate-600 dark:text-slate-400">Sales Forecasting, ABC/XYZ Matrix, Customer CLV, Churn Radar &amp; Dynamic Pricing</p>
           </div>
         </div>

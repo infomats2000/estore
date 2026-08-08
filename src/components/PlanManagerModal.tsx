@@ -111,6 +111,10 @@ export const PlanManagerModal: React.FC<PlanManagerModalProps> = ({ onClose, onP
       setFormMsg('Plan name and code are required.');
       return;
     }
+    if (!Number.isInteger(Number(maxStaff)) || Number(maxStaff) < 1) {
+      setFormMsg('Maximum tenant users must be at least 1 because it includes the tenant owner/admin account.');
+      return;
+    }
 
     try {
       setSubmitting(true);
@@ -403,14 +407,16 @@ export const PlanManagerModal: React.FC<PlanManagerModalProps> = ({ onClose, onP
 
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
-                    Max Staff
+                    Maximum Tenant Users
                   </label>
                   <input
                     type="number"
+                    min="1"
                     value={maxStaff}
                     onChange={(e) => setMaxStaff(e.target.value)}
                     className="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 text-slate-900 text-xs font-bold focus:outline-none focus:border-indigo-600 transition"
                   />
+                  <p className="mt-1 text-[10px] text-slate-500">Includes the tenant owner/admin and every staff login.</p>
                 </div>
               </div>
 

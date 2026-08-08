@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, CheckCircle2, ClipboardCheck, Loader2, PackageCheck, Plus, RefreshCw, ShieldCheck, Warehouse, X } from 'lucide-react';
 import { PurchaseOrder, WarehouseLocation } from '../../types';
+import { useAdminInteractions } from '../../context/AdminInteractionContext';
 
 type Step = { id: string; stepKey: string; sequence: number; status: string; result?: string; notes: string; required: boolean };
 type JobItem = { id: string; productName: string; itemType: string; manufacturerSerial?: string; internalAssetNumber?: string; acceptedQuantity: number; rejectedQuantity: number; status: string; currentStep: string; sellable: boolean; currentLocation: string; steps: Step[] };
@@ -22,6 +23,7 @@ export default function InboundJobsManager({ purchaseOrders, warehouses, onUpdat
   onUpdatePurchaseOrder?: (purchaseOrder: PurchaseOrder) => void;
   onShowAlert?: (message: string, type: 'success' | 'error' | 'info') => void;
 }) {
+  const interactions = useAdminInteractions();
   const [jobs, setJobs] = useState<InboundJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -93,7 +95,8 @@ export default function InboundJobsManager({ purchaseOrders, warehouses, onUpdat
   };
 
   const completeStep = async (job: InboundJob, item: JobItem, step: Step, result: 'PASSED' | 'FAILED') => {
-    const notes = window.prompt(`${STEP_NAMES[step.stepKey] || step.stepKey} notes:`, '') ?? '';
+    const notes = await interactions.prompt({ title: `${STEP_NAMES[step.stepKey] || step.stepKey} Result`, help: `Record notes for the ${result.toLowerCase()} result.`, label: 'Processing notes', required: false, confirmLabel: 'Save Result' });
+    if (notes === null) return;
     try {
       const res = await fetch(`/api/inbound-jobs/${job.id}/items/${item.id}/steps/${step.id}`, {
         method: 'PATCH', headers: authHeaders(true), body: JSON.stringify({ result, notes }),
@@ -106,9 +109,9 @@ export default function InboundJobsManager({ purchaseOrders, warehouses, onUpdat
   };
 
   const putAway = async (job: InboundJob, item: JobItem) => {
-    const destinationWarehouse = window.prompt('Destination warehouse code or ID:', warehouseId || warehouses[0]?.id || 'WH-MAIN');
+    const destinationWarehouse = await interactions.prompt({ title: 'Put Away Inventory', help: 'Select the warehouse that will hold this sellable stock.', label: 'Destination warehouse code or ID', initialValue: warehouseId || warehouses[0]?.id || 'WH-MAIN', confirmLabel: 'Continue' });
     if (!destinationWarehouse) return;
-    const bin = window.prompt('Destination bin:', 'A-01-01');
+    const bin = await interactions.prompt({ title: 'Choose Storage Bin', help: `Enter the bin location inside ${destinationWarehouse}.`, label: 'Destination bin', initialValue: 'A-01-01', confirmLabel: 'Release Inventory' });
     if (!bin) return;
     try {
       const res = await fetch(`/api/inbound-jobs/${job.id}/items/${item.id}/put-away`, {
@@ -123,7 +126,7 @@ export default function InboundJobsManager({ purchaseOrders, warehouses, onUpdat
 
   return <div className="space-y-5">
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <div><h2 className="text-xl font-black uppercase text-slate-900">Inbound Processing Jobs</h2><p className="text-xs text-slate-500">Receive into quarantine, process every required step, approve QC, then release through put-away.</p></div>
+      <div><h2 className="text-xl font-black uppercase text-slate-900">Receive Goods</h2><p className="text-xs text-slate-500">Receive into quarantine, process every required step, approve QC, then release through put-away.</p></div>
       <div className="flex gap-2"><button onClick={() => void fetchJobs()} className="p-2 border rounded-lg"><RefreshCw className="h-4 w-4" /></button><button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 text-white text-xs font-bold"><Plus className="h-4 w-4" /> Receive Delivery</button></div>
     </div>
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

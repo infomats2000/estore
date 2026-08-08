@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Product } from '../../types';
 import { Globe, Plus, Trash2, Search, ArrowRight, Sparkles, Package, DollarSign } from 'lucide-react';
+import { useAdminInteractions } from '../../context/AdminInteractionContext';
 
 interface CollectionsManagerProps {
   collections: string[];
@@ -17,6 +18,7 @@ export default function CollectionsManager({
   onDeleteCollection,
   onFilterByCollection
 }: CollectionsManagerProps) {
+  const interactions = useAdminInteractions();
   const [newCollName, setNewCollName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -51,14 +53,14 @@ export default function CollectionsManager({
     setErrorMsg('');
   };
 
-  const handleDelete = (coll: string) => {
+  const handleDelete = async (coll: string) => {
     const collProducts = products.filter((p) => p.collection === coll);
     const confirmMsg =
       collProducts.length > 0
         ? `Are you sure you want to delete campaign "${coll}"? ${collProducts.length} items will have their collection tag removed.`
         : `Delete collection campaign "${coll}"?`;
 
-    if (window.confirm(confirmMsg)) {
+    if (await interactions.confirm({ title: 'Delete Collection?', message: confirmMsg, confirmLabel: 'Delete Collection', destructive: true })) {
       onDeleteCollection(coll);
     }
   };
@@ -236,6 +238,7 @@ export default function CollectionsManager({
                             onClick={() => handleDelete(coll.name)}
                             className="p-1.5 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-neutral-400 hover:text-rose-500 rounded transition-colors"
                             title="Delete collection"
+                            aria-label="Delete collection"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>

@@ -9,7 +9,7 @@ export const ALL_ERP_FEATURE_PERMISSIONS: ERPFeaturePermission[] = [
   { featureKey: 'logistics-dispatch', category: 'Wholesale & Logistics', label: 'Logistics & Courier Freight Dispatch', description: 'Multi-carrier API bookings, route optimization, tracking, digital POD' },
   { featureKey: 'procurement', category: 'Purchasing & Vendors', label: 'Enterprise Global Procurement', description: 'RFQs, multi-currency bids, landed cost allocation (freight, duty, customs)' },
   { featureKey: 'suppliers', category: 'Purchasing & Vendors', label: 'Supplier Performance & Scorecards', description: 'Master contracts, SKU price history, lead times, defect rates %, scorecards' },
-  { featureKey: 'bi', category: 'Analytics & Executive', label: 'Business Intelligence & Predictive Suite', description: 'Sales forecasting, stock depletion forecasts, ABC/XYZ grid, CLV churn radar' },
+  { featureKey: 'bi', category: 'Analytics & Executive', label: 'Business Reports & Forecasting', description: 'Sales forecasting, stock depletion forecasts, ABC/XYZ grid, CLV churn radar' },
   { featureKey: 'reports', category: 'Analytics & Executive', label: '300+ ERP Analytics Reports', description: 'GST reports, margin analysis, technician performance, warranty claim logs' },
   { featureKey: 'finance', category: 'Financials & HR', label: 'Accounting & Commercial Finance', description: 'GL ledger, accounts receivable Net 30/60, accounts payable, P&L statements' },
   { featureKey: 'payroll', category: 'Financials & HR', label: 'HR, Staff Roster & Payroll', description: 'Employee rosters, STP tax reporting, commission payouts' },

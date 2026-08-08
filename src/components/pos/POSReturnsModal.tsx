@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { RotateCcw, Search, X } from 'lucide-react';
+import { useAdminInteractions } from '../../context/AdminInteractionContext';
 
 interface Props {
   isOpen: boolean;
@@ -11,6 +12,7 @@ interface Props {
 const authHeaders = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('authToken') || ''}` });
 
 export default function POSReturnsModal({ isOpen, shiftId, onClose, onCompleted }: Props) {
+  const interactions = useAdminInteractions();
   const [receipt, setReceipt] = useState('');
   const [order, setOrder] = useState<any | null>(null);
   const [returned, setReturned] = useState<Record<string, number>>({});
@@ -42,8 +44,8 @@ export default function POSReturnsModal({ isOpen, shiftId, onClose, onCompleted 
       const result = await response.json();
       if (!response.ok && /Manager approval is required/.test(result.error || '') && !approvalId) {
         const amount = Number(String(result.error).match(/\$([0-9.]+)/)?.[1] || 0);
-        const managerEmail = window.prompt('Manager email:');
-        const managerPassword = managerEmail && window.prompt('Manager password:');
+        const managerEmail = await interactions.prompt({ title: 'Manager Refund Approval', help: `Approval is required for this $${amount.toFixed(2)} refund.`, label: 'Manager email', confirmLabel: 'Continue' });
+        const managerPassword = managerEmail && await interactions.prompt({ title: 'Verify Manager', label: 'Manager password', type: 'password', confirmLabel: 'Approve Refund' });
         if (!managerEmail || !managerPassword) throw new Error('Manager approval cancelled.');
         const approvalResponse = await fetch('/api/pos/approvals', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ managerEmail, managerPassword, action: 'REFUND', amount, reason }) });
         const approval = await approvalResponse.json();

@@ -77,6 +77,8 @@ router.post('/change-plan', requireTenantRole(['TENANT_OWNER', 'TENANT_ADMIN']),
     if (!plan || !plan.isActive) {
       return res.status(400).json({ error: 'Selected plan tier does not exist.' });
     }
+    const currentUserCount = await prismaRaw.tenantUser.count({ where: { tenantId } });
+    if (currentUserCount > plan.maxStaff) return res.status(409).json({ error: `Your store has ${currentUserCount} users, but this plan permits ${plan.maxStaff}. Remove users before changing to this plan.` });
 
     const updatedTenant = await prismaRaw.tenant.update({
       where: { id: tenantId },

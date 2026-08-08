@@ -5,6 +5,7 @@ import { PlusCircle, X, Upload, Coins, Boxes, AlertTriangle, CheckCircle, Slider
 import { parseCSVContent, autoMapCSVColumns, processCSVImportData, CSVParseResult, CSVColumnMapping } from '../../utils/csvImporter';
 import { printProductLabelsBatch, generateBarcodeSVG, generateQRCodeSVG } from '../../utils/labelPrinter';
 import BundleBuilderModal from './BundleBuilderModal';
+import { AdminConfirmDialog } from '../ui/AdminUI';
 
 
 interface InventoryProductsProps {
@@ -19,6 +20,7 @@ interface InventoryProductsProps {
 
   categories: string[];
   collections: string[];
+  currentUser?: { role?: string; isSuperAdmin?: boolean } | null;
 }
 
 export default function InventoryProducts({
@@ -30,8 +32,10 @@ export default function InventoryProducts({
   onUpdateStoreSettings,
   storeSettings,
   categories,
-  collections
+  collections,
+  currentUser
 }: InventoryProductsProps) {
+  const canManageProducts = currentUser?.role === 'TENANT_OWNER';
   const apiHeaders = () => ({
     'Content-Type': 'application/json',
     Authorization: `Bearer ${localStorage.getItem('authToken') || ''}`,
@@ -112,6 +116,7 @@ export default function InventoryProducts({
   // Barcode / QR Label Printer State
   const [showLabelPrintModal, setShowLabelPrintModal] = useState(false);
   const [labelPrintProduct, setLabelPrintProduct] = useState<Product | null>(null);
+  const [labelCategoryFilter, setLabelCategoryFilter] = useState('All');
   const [labelPrintCount, setLabelPrintCount] = useState<number>(1);
   const [labelLayout, setLabelLayout] = useState<'thermal_roll_50x25' | 'a4_sheet_21up' | 'a4_sheet_24up'>('thermal_roll_50x25');
   const [labelShowLogo, setLabelShowLogo] = useState(true);
@@ -120,6 +125,10 @@ export default function InventoryProducts({
   const [labelShowCondition, setLabelShowCondition] = useState(true);
   const [labelShowBarcodeNum, setLabelShowBarcodeNum] = useState(true);
   const [labelShowQR, setLabelShowQR] = useState(true);
+  const labelPrinterCategories = Array.from(new Set(products.map(product => product.category).filter(Boolean))).sort((a, b) => a.localeCompare(b));
+  const labelPrinterProducts = labelCategoryFilter === 'All'
+    ? products
+    : products.filter(product => product.category === labelCategoryFilter);
 
   // Multi-Select & Bulk Action State
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
@@ -151,7 +160,7 @@ export default function InventoryProducts({
   const [supplierOrderQty, setSupplierOrderQty] = useState('');
   const [supplierStatusMsg, setSupplierStatusMsg] = useState('');
   const [supplierIsOrdering, setSupplierIsOrdering] = useState(false);
-  const [productToDelete, setProductToDelete] = useState<string | null>(null);
+  const [pendingDeleteIds, setPendingDeleteIds] = useState<string[]>([]);
 
   
   const setLowStockThreshold = (val: number) => {};
@@ -280,6 +289,10 @@ export default function InventoryProducts({
   };
 
   const handleQuickAdjustStock = (id: string, qty: number) => {
+    if (!canManageProducts) {
+      setImageError('Only the tenant store owner can edit products.');
+      return;
+    }
     const prod = products.find(p => p.id === id);
     if(prod) {
       onUpdateProduct({...prod, stock: Math.max(0, prod.stock + qty)});
@@ -287,6 +300,10 @@ export default function InventoryProducts({
   };
 
   const handleStartEditing = (prod: any) => {
+    if (!canManageProducts) {
+      setImageError('Only the tenant store owner can edit products.');
+      return;
+    }
     setEditingProduct(prod);
     setShowAddProduct(true);
     setNewProdName(prod.name);
@@ -305,6 +322,12 @@ export default function InventoryProducts({
     setNewProdCondition(prod.specs?.condition || prod.specs?.Condition || prod.specs?.Grade || '');
     setNewProdBarcode(prod.specs?.barcode || prod.specs?.Barcode || '');
     setNewProdSerialNumbers(prod.serialNumbers || []);
+    window.setTimeout(() => {
+      document.getElementById('create-item-form-panel')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }, 0);
   };
 
   const handleCSVFileSelect = (file: File) => {
@@ -332,7 +355,7 @@ export default function InventoryProducts({
         onAddProduct(row.product);
       }
     });
-    alert(`Successfully imported ${validRows.length} catalog products into inventory!`);
+    setSupplierStatusMsg(`Successfully imported ${validRows.length} catalogue products into inventory.`);
     setShowCSVImportModal(false);
     setCsvRawText('');
     setCsvParseResult(null);
@@ -369,6 +392,10 @@ export default function InventoryProducts({
   
   const handleProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (editingProduct && !canManageProducts) {
+      setImageError('Only the tenant store owner can edit products.');
+      return;
+    }
     if (!newProdName.trim() || !newProdPrice.trim() || !newProdStock.trim()) return;
 
     try {
@@ -396,8 +423,7 @@ export default function InventoryProducts({
       };
 
       let productData: any = null;
-      try {
-        const response = editingProduct
+      const response = editingProduct
           ? await fetch(`/api/products/${editingProduct.id}`, {
               method: 'PUT',
               headers: apiHeaders(),
@@ -409,10 +435,7 @@ export default function InventoryProducts({
               body: JSON.stringify(payload)
             });
 
-        productData = await parseJsonResponse<any>(response);
-      } catch (saveErr) {
-        console.warn('Product API unavailable, saving product locally only.', saveErr);
-      }
+      productData = await parseJsonResponse<any>(response);
 
       const product: Product = {
         id: productData?.id || editingProduct?.id || `PROD-${Date.now()}`,
@@ -450,8 +473,21 @@ export default function InventoryProducts({
     setEditingProduct(null);
   };
 
-  const handleDeleteProduct = (id: string) => {
-    onDeleteProduct(id);
+  const handleDeleteProduct = async (id: string) => {
+    if (!canManageProducts) {
+      setImageError('Only the tenant store owner can delete products.');
+      return;
+    }
+    try {
+      const response = await fetch(`/api/products/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers: apiHeaders(),
+      });
+      await parseJsonResponse<{ ok: boolean }>(response);
+      onDeleteProduct(id);
+    } catch (error) {
+      setImageError(error instanceof Error ? error.message : 'Failed to delete product.');
+    }
   };
 
   const exportInventory = () => {
@@ -562,6 +598,7 @@ export default function InventoryProducts({
 
                 <button
                   onClick={() => {
+                    setLabelCategoryFilter('All');
                     setLabelPrintProduct(products[0] || null);
                     setLabelPrintCount(1);
                     setShowLabelPrintModal(true);
@@ -614,9 +651,14 @@ export default function InventoryProducts({
             {/* Create ITEM Collapsible Form */}
             {showAddProduct && (
               <div className="rounded-none border border-neutral-400 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 p-6 animate-fade-in" id="create-item-form-panel">
-                <h5 className="font-sans text-[10px] font-bold uppercase tracking-widest text-neutral-900 dark:text-neutral-100 mb-4 flex items-center gap-1.5 border-b border-neutral-400/60 dark:border-neutral-700/60 pb-2">
+                <h5 className={`font-sans font-bold uppercase tracking-widest mb-4 flex items-center gap-1.5 border-b border-neutral-400/60 dark:border-neutral-700/60 pb-2 ${editingProduct ? 'text-sm text-blue-700 dark:text-blue-400' : 'text-[10px] text-neutral-900 dark:text-neutral-100'}`}>
                   <Plus className="h-3.5 w-3.5" />
-                  {editingProduct ? `Edit ITEM: ${editingProduct.id}` : 'Initialize Catalog ITEM Record'}
+                  {editingProduct ? (
+                    <>
+                      <span>Edit ITEM:</span>
+                      <span className="text-black dark:text-black">{editingProduct.name}</span>
+                    </>
+                  ) : 'Initialize Catalog ITEM Record'}
                 </h5>
                 <form onSubmit={handleProductSubmit} className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -1397,8 +1439,8 @@ export default function InventoryProducts({
                 </button>
               </div>
             ) : (
-              <div className="overflow-x-auto rounded-none border border-neutral-400 dark:border-neutral-700 bg-white dark:bg-neutral-900 shadow-none">
-                <table className="w-full border-collapse font-sans text-xs text-left">
+              <div className="responsive-table-shell overflow-x-auto rounded-none border border-neutral-400 dark:border-neutral-700 bg-white dark:bg-neutral-900 shadow-none">
+                <table className="responsive-data-table w-full border-collapse font-sans text-xs text-left">
                   <thead className="bg-neutral-300 dark:bg-neutral-800 border-b border-neutral-500 dark:border-neutral-600 font-mono text-[8px] uppercase tracking-widest text-neutral-700 dark:text-neutral-300 font-bold">
                     <tr>
                       <th className="p-4 pl-4 w-10 text-center">
@@ -1436,7 +1478,7 @@ export default function InventoryProducts({
                         }`}>
                           
                           {/* Checkbox Column */}
-                          <td className="p-4 pl-4 text-center">
+                          <td data-label="Select" className="p-4 pl-4 text-center">
                             <input
                               type="checkbox"
                               checked={selectedProductIds.includes(prod.id)}
@@ -1450,7 +1492,7 @@ export default function InventoryProducts({
                           </td>
 
                           {/* Image & Title Column */}
-                          <td className="p-4 pl-2">
+                          <td data-label="Product" className="p-4 pl-2">
                             <div className="flex items-center gap-3">
                               <img
                                 src={prod.image || null}
@@ -1468,19 +1510,19 @@ export default function InventoryProducts({
                           </td>
 
                           {/* Category Badge */}
-                          <td className="p-4">
+                          <td data-label="Category" className="p-4">
                             <span className="rounded-none border border-neutral-400 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-950 px-2.5 py-0.5 font-mono text-[9px] text-neutral-600 dark:text-neutral-400 font-bold uppercase tracking-widest">
                               {prod.category}
                             </span>
                           </td>
 
                           {/* Price Column */}
-                          <td className="p-4 font-mono font-bold text-neutral-900 dark:text-neutral-100">
+                          <td data-label="Unit price" className="p-4 font-mono font-bold text-neutral-900 dark:text-neutral-100">
                             <span>${prod.price.toFixed(2)}</span>
                           </td>
 
                           {/* Stock Level Column */}
-                          <td className="p-4">
+                          <td data-label="Stock" className="p-4">
                             <div className="flex items-center gap-2">
                               <span className={`font-mono font-black ${
                                 isOutOfStock ? 'text-rose-600 dark:text-rose-400' :
@@ -1500,7 +1542,7 @@ export default function InventoryProducts({
                           </td>
 
                           {/* Interactive Quick Refill Column */}
-                          <td className="p-4">
+                          <td data-label="Quick refill" className="p-4">
                             <div className="flex items-center gap-1 font-mono text-[8px] font-bold">
                               <button
                                 onClick={() => handleQuickAdjustStock(prod.id, -5)}
@@ -1538,20 +1580,22 @@ export default function InventoryProducts({
                           </td>
 
                           {/* Action Buttons Column */}
-                          <td className="p-4 text-right pr-6">
+                          <td data-label="Actions" className="p-4 text-right pr-6">
                             <div className="flex items-center justify-end gap-1.5">
                               <button
                                 onClick={() => {
+                                  setLabelCategoryFilter('All');
                                   setLabelPrintProduct(prod);
                                   setLabelPrintCount(prod.stock || 1);
                                   setShowLabelPrintModal(true);
                                 }}
                                 className="rounded-none border border-neutral-400 dark:border-neutral-700 p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors cursor-pointer"
                                 title="Print QR & Barcode sticker labels for this item"
+                                aria-label={`Print labels for ${prod.name}`}
                               >
                                 <Printer className="h-3.5 w-3.5" />
                               </button>
-                              <button
+                              {canManageProducts && <button
                                 onClick={() => handleStartEditing(prod)}
                                 className={`rounded-none border border-neutral-400 dark:border-neutral-700 p-1.5 transition-colors cursor-pointer ${
                                   editingProduct?.id === prod.id 
@@ -1559,18 +1603,20 @@ export default function InventoryProducts({
                                     : 'text-neutral-500 hover:text-neutral-950 dark:hover:text-neutral-100 hover:bg-neutral-50 dark:hover:bg-neutral-850'
                                 }`}
                                 title="Edit product details"
+                                aria-label={`Edit ${prod.name}`}
                                 id={`edit-stock-btn-${prod.id}`}
                               >
                                 <Edit3 className="h-3.5 w-3.5" />
-                              </button>
-                              <button
-                                onClick={() => setProductToDelete(prod.id)}
+                              </button>}
+                              {canManageProducts && <button
+                                onClick={() => setPendingDeleteIds([prod.id])}
                                 className="rounded-none border border-neutral-400 dark:border-neutral-700 p-1.5 text-neutral-400 hover:text-rose-500 hover:bg-neutral-50 dark:hover:bg-neutral-850 transition-colors cursor-pointer"
                                 title="Delete from catalog"
+                                aria-label={`Delete ${prod.name} from catalog`}
                                 id={`delete-product-btn-${prod.id}`}
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
-                              </button>
+                              </button>}
                             </div>
                           </td>
 
@@ -1940,6 +1986,33 @@ export default function InventoryProducts({
                     <div className="space-y-4">
                       <div>
                         <label className="font-mono text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 block mb-1">
+                          Search by Category
+                        </label>
+                        <select
+                          value={labelCategoryFilter}
+                          onChange={(event) => {
+                            const nextCategory = event.target.value;
+                            const matchingProducts = nextCategory === 'All'
+                              ? products
+                              : products.filter(product => product.category === nextCategory);
+                            setLabelCategoryFilter(nextCategory);
+                            const firstMatch = matchingProducts[0] || null;
+                            setLabelPrintProduct(firstMatch);
+                            setLabelPrintCount(firstMatch?.stock || 1);
+                          }}
+                          className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-2.5 font-sans text-xs font-bold text-slate-900 dark:text-white outline-none"
+                        >
+                          <option value="All">All Categories ({products.length})</option>
+                          {labelPrinterCategories.map(category => (
+                            <option key={category} value={category}>
+                              {category} ({products.filter(product => product.category === category).length})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="font-mono text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 block mb-1">
                           Select Product
                         </label>
                         <select
@@ -1953,7 +2026,7 @@ export default function InventoryProducts({
                           }}
                           className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-2.5 font-sans text-xs font-bold text-slate-900 dark:text-white outline-none"
                         >
-                          {products.map(prod => (
+                          {labelPrinterProducts.map(prod => (
                             <option key={prod.id} value={prod.id}>{prod.name} (${prod.price.toFixed(2)})</option>
                           ))}
                         </select>
@@ -2104,6 +2177,7 @@ export default function InventoryProducts({
                     onClick={() => {
                       const selected = products.filter(p => selectedProductIds.includes(p.id));
                       if (selected.length > 0) {
+                        setLabelCategoryFilter('All');
                         setLabelPrintProduct(selected[0]);
                         setLabelPrintCount(selected.length);
                         setShowLabelPrintModal(true);
@@ -2113,35 +2187,30 @@ export default function InventoryProducts({
                   >
                     <Printer className="h-3.5 w-3.5" /> Bulk Print Labels
                   </button>
-                  <button
+                  {canManageProducts && <button
                     onClick={() => setShowBulkCategoryModal(true)}
                     className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center gap-1.5 cursor-pointer border border-slate-700"
                   >
                     <Tag className="h-3.5 w-3.5" /> Reassign Category
-                  </button>
-                  <button
+                  </button>}
+                  {canManageProducts && <button
                     onClick={() => setShowBulkPriceModal(true)}
                     className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-1.5 cursor-pointer shadow-md"
                   >
                     <Coins className="h-3.5 w-3.5" /> Adjust Price
-                  </button>
-                  <button
+                  </button>}
+                  {canManageProducts && <button
                     onClick={() => setShowBulkRefillModal(true)}
                     className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 flex items-center gap-1.5 cursor-pointer shadow-md"
                   >
                     <Boxes className="h-3.5 w-3.5" /> Refill Stock
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (window.confirm(`Are you sure you want to delete ${selectedProductIds.length} selected products from catalog?`)) {
-                        selectedProductIds.forEach(id => onDeleteProduct(id));
-                        setSelectedProductIds([]);
-                      }
-                    }}
+                  </button>}
+                  {canManageProducts && <button
+                    onClick={() => setPendingDeleteIds([...selectedProductIds])}
                     className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white flex items-center gap-1.5 cursor-pointer shadow-md"
                   >
                     <Trash2 className="h-3.5 w-3.5" /> Delete Selected
-                  </button>
+                  </button>}
                 </div>
                 <button
                   onClick={() => setSelectedProductIds([])}
@@ -2232,6 +2301,7 @@ export default function InventoryProducts({
                             </button>
                             <button
                               onClick={() => {
+                                setLabelCategoryFilter('All');
                                 setLabelPrintProduct(match);
                                 setLabelPrintCount(match.stock || 1);
                                 setShowScannerModal(false);
@@ -2386,6 +2456,20 @@ export default function InventoryProducts({
               onClose={() => setShowBundleModal(false)}
               products={products}
               onSaveBundle={onAddProduct}
+            />
+
+            <AdminConfirmDialog
+              open={pendingDeleteIds.length > 0}
+              title={pendingDeleteIds.length > 1 ? `Delete ${pendingDeleteIds.length} Products?` : 'Delete Product?'}
+              message={pendingDeleteIds.length > 1 ? 'The selected products will be permanently removed from the catalogue and storage. This action cannot be undone.' : 'This product will be permanently removed from the catalogue and storage. This action cannot be undone.'}
+              confirmLabel={pendingDeleteIds.length > 1 ? 'Delete Products' : 'Delete Product'}
+              destructive
+              onClose={() => setPendingDeleteIds([])}
+              onConfirm={async () => {
+                await Promise.all(pendingDeleteIds.map(id => handleDeleteProduct(id)));
+                setSelectedProductIds([]);
+                setPendingDeleteIds([]);
+              }}
             />
 
           </div>

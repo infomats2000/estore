@@ -27,6 +27,8 @@ import { SaaSLoginPage } from './components/SaaSLoginPage';
 import { TenantProvider } from './context/TenantContext';
 import { TenantFeatureProvider } from './context/TenantFeatureContext';
 import { ShopByCategoryGrid } from './components/ShopByCategoryGrid';
+import { useStandardNavigationScroll } from './hooks/useStandardNavigationScroll';
+import { useAdminInteractions } from './context/AdminInteractionContext';
 
 
 
@@ -255,6 +257,8 @@ const buildStateRecordMap = (state: Record<string, any>) => {
 };
 
 export default function App() {
+  useStandardNavigationScroll();
+  const interactions = useAdminInteractions();
   const stateHydratedRef = useRef(false);
   const stateSyncTimeoutRef = useRef<number | null>(null);
   const stateRecordHashesRef = useRef<Record<string, string>>({});
@@ -2120,6 +2124,27 @@ export default function App() {
   const directTotal = Math.max(0, directSubtotal + directTax + directShipping - directDiscount);
 
   const handleHardReset = async () => {
+    const token = localStorage.getItem('authToken') || '';
+    const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+    const wipeResponse = await fetch('/api/admin/wipe-store', { method: 'POST', headers });
+    const wipeResult = await wipeResponse.json().catch(() => ({}));
+    if (!wipeResponse.ok) throw new Error(wipeResult.error || 'The server could not wipe store data. No local data was removed.');
+
+    const productsResponse = await fetch('/api/products', { method: 'DELETE', headers });
+    const productsResult = await productsResponse.json().catch(() => ({}));
+    if (!productsResponse.ok) throw new Error(productsResult.error || 'The server could not remove product data.');
+
+    const stateResponse = await fetch('/api/state', {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify({
+        storeSettings: DEFAULT_STORE_SETTINGS,
+        products: [], reviews: [], coupons: [], orders: [], customers: [], financeTransactions: [],
+        users: [], returns: [], categories: [], customerSegments: [], upsellRules: [], collections: []
+      })
+    });
+    if (!stateResponse.ok) throw new Error('Store data was deleted, but the default state could not be initialized. Reload and retry.');
+
     setProducts([]);
     setOrders([]);
     setReviews([]);
@@ -2149,31 +2174,6 @@ export default function App() {
     localStorage.setItem('techseller_reviews_v4', JSON.stringify([]));
     localStorage.setItem('techseller_coupons_v4', JSON.stringify([]));
     localStorage.setItem('techseller_orders_v4', JSON.stringify([]));
-
-    try {
-      await fetch('/api/products', { method: 'DELETE' });
-      await fetch('/api/state', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          storeSettings: DEFAULT_STORE_SETTINGS,
-          products: [],
-          reviews: [],
-          coupons: [],
-          orders: [],
-          customers: [],
-          financeTransactions: [],
-          users: [],
-          returns: [],
-          categories: [],
-          customerSegments: [],
-          upsellRules: [],
-          collections: []
-        })
-      });
-    } catch (e) {
-      console.warn('Could not reset server database state:', e);
-    }
 
     // Hard reload to base URL to clear any memory states
     window.location.href = window.location.origin + window.location.pathname;
@@ -2345,7 +2345,7 @@ export default function App() {
         )}
 
         {/* SAAS PLATFORM CONTROL BAR */}
-        <div className="bg-slate-950 text-slate-200 border-b border-indigo-500/30 px-4 py-2 flex flex-wrap items-center justify-between gap-2 text-xs z-50">
+        {isAdminMode && <div className="bg-slate-950 text-slate-200 border-b border-indigo-500/30 px-4 py-2 flex flex-wrap items-center justify-between gap-2 text-xs z-50">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span className="font-bold text-white uppercase tracking-wider">Powered by Infomats</span>
@@ -2373,7 +2373,7 @@ export default function App() {
               </a>
             )}
           </div>
-        </div>
+        </div>}
 
 
 
@@ -2456,7 +2456,6 @@ export default function App() {
         onOpenTrackOrder={() => setShowTrackOrderModal(true)}
         onOpenCompare={() => setShowCompareModal(true)}
         compareCount={compareList.length}
-        onOpenPOS={() => setShowPOSView(true)}
         onOpenPCBuilder={() => setShowPCBuilderModal(true)}
         onOpenCustomerPortal={() => setShowCustomerPortalModal(true)}
       />
@@ -2483,7 +2482,7 @@ export default function App() {
               </div>
             )}
 
-            <div className="mx-auto w-full max-w-7xl px-4 pt-3 sm:px-6 lg:px-8 flex justify-end" style={{ order: getStorefrontSectionOrder('catalog') }}>
+            {storeSettings.showCatalogSection && storeSettings.showCatalogToolbar && <div className="mx-auto w-full max-w-7xl px-4 pt-3 sm:px-6 lg:px-8 flex justify-end" style={{ order: getStorefrontSectionOrder('catalog') }}>
               <div className="flex flex-wrap items-center gap-6">
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-[9px] uppercase tracking-widest text-neutral-400 font-bold">Sort</span>
@@ -2503,7 +2502,7 @@ export default function App() {
                   Showing <span className="text-neutral-950 dark:text-neutral-100">{filteredProducts.length}</span> Products
                 </div>
               </div>
-            </div>
+            </div>}
 
             {/* DYNAMIC REAL-PHOTO SHOP BY CATEGORY SECTION */}
             {!searchQuery && activeCategory === 'All' && storeSettings.showCategorySection && (
@@ -2515,13 +2514,15 @@ export default function App() {
                   eyebrow={storeSettings.categorySectionEyebrow}
                   title={storeSettings.categorySectionTitle}
                   description={storeSettings.categorySectionDescription}
+                  scrollStyle={storeSettings.categoryNavigationScrollStyle}
+                  customImages={storeSettings.categoryNavigationImages}
                 />
               </div>
             )}
 
             
             {/* PRODUCT CATALOG GRID SECTION */}
-            <section className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8" id="product-catalog-grid" style={{ order: getStorefrontSectionOrder('catalog') }}>
+            <section className={`mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8 ${storeSettings.showCatalogSection ? '' : 'hidden'}`} id="product-catalog-grid" style={{ order: getStorefrontSectionOrder('catalog') }}>
               
               {/* PUBLIC BACK BUTTON */}
               {(activeCategory !== 'All' || searchQuery || activeTagFilter) && (
@@ -2551,9 +2552,9 @@ export default function App() {
                 </div>
               </div>
 
-              <div className={storeSettings.catalogFilterPosition === 'left' ? 'grid items-start gap-6 lg:grid-cols-[240px_minmax(0,1fr)]' : ''}>
+              <div className={storeSettings.showCatalogFilters && storeSettings.catalogFilterPosition === 'left' ? 'grid items-start gap-6 lg:grid-cols-[240px_minmax(0,1fr)]' : ''}>
               {/* TENANT-CONFIGURABLE INTERACTIVE FILTER PILLS */}
-              <div className={`${storeSettings.catalogFilterPosition === 'left' ? 'mb-6 lg:mb-0 lg:sticky lg:top-24' : 'mb-8'} flex flex-col space-y-2.5 bg-slate-50/70 dark:bg-slate-900/60 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800`} id="interactive-filter-pills-row">
+              {storeSettings.showCatalogFilters && <div className={`${storeSettings.catalogFilterPosition === 'left' ? 'mb-6 lg:mb-0 lg:sticky lg:top-24' : 'mb-8'} flex flex-col space-y-2.5 bg-slate-50/70 dark:bg-slate-900/60 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800`} id="interactive-filter-pills-row">
                 <div className={`flex gap-2 ${storeSettings.catalogFilterPosition === 'left' ? 'flex-col items-start' : 'items-center justify-between'}`}>
                   <div className="flex items-center gap-2 font-mono text-[10px] uppercase font-bold tracking-widest text-slate-500 dark:text-slate-400">
                     <SlidersHorizontal className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
@@ -2618,7 +2619,7 @@ export default function App() {
                     );
                   })}
                 </div>
-              </div>
+              </div>}
 
               {/* Grid or empty state */}
               {filteredProducts.length === 0 ? (
@@ -2703,12 +2704,12 @@ export default function App() {
             </section>
 
             {/* BRAND STRIP SECTION */}
-            {!searchQuery && activeCategory === 'All' && storeSettings.showWhyShopSection && (
+            {!searchQuery && activeCategory === 'All' && storeSettings.showBrandSection && (
               <section className="bg-neutral-50 dark:bg-neutral-950/50 py-12 border-y border-neutral-100 dark:border-neutral-900" id="brand-strip" style={{ order: getStorefrontSectionOrder('brands') }}>
                 <div className="mx-auto max-w-7xl px-4 text-center">
-                  <span className="font-mono text-[9px] uppercase tracking-widest text-neutral-400 font-black mb-6 block">Major Brands We Carry</span>
+                  <span className="font-mono text-[9px] uppercase tracking-widest text-neutral-400 font-black mb-6 block">{storeSettings.brandSectionTitle}</span>
                   <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16 opacity-50 grayscale hover:grayscale-0 transition-all">
-                    {['DELL', 'HP', 'LENOVO', 'APPLE', 'CISCO', 'SAMSUNG'].map(brand => (
+                    {(storeSettings.storefrontBrands || []).map(brand => (
                       <span key={brand} className="text-xl md:text-2xl font-black text-neutral-400 dark:text-neutral-600 tracking-tighter">
                         {brand}
                       </span>
@@ -2719,13 +2720,13 @@ export default function App() {
             )}
 
             {/* RECENTLY VIEWED SECTION */}
-            {recentlyViewedProducts.length > 0 && !searchQuery && activeCategory === 'All' && (
+            {storeSettings.showRecentlyViewedSection && recentlyViewedProducts.length > 0 && !searchQuery && activeCategory === 'All' && (
               <section className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8 border-t border-neutral-400" id="recently-viewed-section" style={{ order: getStorefrontSectionOrder('recentlyViewed') }}>
                 <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
                   <div className="text-left">
-                    <span className="font-mono text-[9px] uppercase tracking-widest text-neutral-400 font-bold">History</span>
+                    <span className="font-mono text-[9px] uppercase tracking-widest text-neutral-400 font-bold">{storeSettings.recentlyViewedEyebrow}</span>
                     <h2 className="font-sans text-lg font-extrabold uppercase tracking-widest text-neutral-900">
-                      Recently Viewed
+                      {storeSettings.recentlyViewedTitle}
                     </h2>
                   </div>
                   <button
@@ -2756,6 +2757,31 @@ export default function App() {
                       }}
                     />
                   ))}
+                </div>
+              </section>
+            )}
+
+            {!searchQuery && activeCategory === 'All' && storeSettings.showTrustSection && (
+              <section className="border-y border-neutral-200 bg-white py-12 dark:border-neutral-800 dark:bg-neutral-950" id="shopping-assurance-section" style={{ order: getStorefrontSectionOrder('whyShop') - 0.1 }}>
+                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                  <div className="mb-7 text-center">
+                    <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-emerald-600">{storeSettings.trustSectionEyebrow}</span>
+                    <h2 className="mt-1 text-xl font-black uppercase tracking-tight text-neutral-900 dark:text-white">{storeSettings.trustSectionTitle}</h2>
+                  </div>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    {([
+                      [Package, storeSettings.trustDeliveryTitle, storeSettings.trustDeliveryText],
+                      [RefreshCw, storeSettings.trustReturnsTitle, storeSettings.trustReturnsText],
+                      [ShieldCheck, storeSettings.trustPaymentTitle, storeSettings.trustPaymentText],
+                      [CheckCircle2, storeSettings.trustSupportTitle, storeSettings.trustSupportText],
+                    ] as const).map(([Icon, title, text]) => (
+                      <div key={title} className="rounded-xl border border-neutral-200 bg-neutral-50 p-5 text-left dark:border-neutral-800 dark:bg-neutral-900">
+                        <Icon className="mb-3 h-5 w-5 text-emerald-600" />
+                        <h3 className="text-xs font-black uppercase tracking-wide text-neutral-900 dark:text-white">{title}</h3>
+                        <p className="mt-2 text-xs leading-relaxed text-neutral-600 dark:text-neutral-400">{text}</p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </section>
             )}
@@ -2851,6 +2877,7 @@ export default function App() {
                 onAddCollection={handleAddCollection}
                 onDeleteCollection={handleDeleteCollection}
                 onAddPOSOrder={handleAddPOSOrder}
+                onOpenPOS={() => setShowPOSView(true)}
                 financeTransactions={financeTransactions}
                 onAddTransaction={handleAddTransaction}
                 onDeleteTransaction={handleDeleteTransaction}
@@ -2905,9 +2932,9 @@ export default function App() {
       {!isAdminMode && storeSettings.showStorefrontFooter && <footer className="border-t border-black/10 bg-[#2f2f2f] dark:bg-[#2f2f2f] text-white py-12" id="store-footer">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-10">
           
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-neutral-300 text-xs text-left">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-neutral-300 text-xs text-left">
             {/* Column 1: Brand Info */}
-            <div className="space-y-3">
+            {storeSettings.showFooterBrandColumn && <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <div className="flex h-12 w-12 items-center justify-center bg-white border border-neutral-700 rounded-lg overflow-hidden p-1 shadow-sm shadow-blue-500/10">
                   <img src={storeSettings.logoUrl || '/images/app_logo.jpg'} alt={`${storeSettings.storeName} logo`} className="h-full w-full object-contain" />
@@ -2924,18 +2951,18 @@ export default function App() {
                 <div>Phone: {storeSettings.phone || '1300 000 228'}</div>
                 <div>Email: {storeSettings.email || 'billing@techseller.com.au'}</div>
               </div>
-            </div>
+            </div>}
 
             {/* Column 2: Categories */}
-            <div className="space-y-2">
+            {storeSettings.showFooterCategoriesColumn && <div className="space-y-2">
               <h4 className="font-mono text-xs font-black uppercase text-blue-400 tracking-wider">{storeSettings.footerCategoriesHeading}</h4>
               <ul className="space-y-1.5 font-sans text-xs">
                 {categories.slice(0, 5).map(category => <li key={category}><button onClick={() => { setIsAdminMode(false); setActiveCategory(category); }} className="hover:text-blue-400">{category}</button></li>)}
               </ul>
-            </div>
+            </div>}
 
             {/* Column 3: Customer Care */}
-            <div className="space-y-2">
+            {storeSettings.showFooterCustomerCareColumn && <div className="space-y-2">
               <h4 className="font-mono text-xs font-black uppercase text-blue-400 tracking-wider">{storeSettings.footerCustomerCareHeading}</h4>
               <ul className="space-y-1.5 font-sans text-xs">
                 <li><button onClick={() => setIsAccountOpen(true)} className="hover:text-blue-400">My Account & Orders</button></li>
@@ -2944,7 +2971,7 @@ export default function App() {
                 <li><span className="text-neutral-400">{storeSettings.footerReturnsText}</span></li>
                 <li><span className="text-neutral-400">{storeSettings.footerShippingText}</span></li>
               </ul>
-            </div>
+            </div>}
 
             {/* Column 4: Admin & Controls */}
             {isAdminMode && (
@@ -2968,7 +2995,7 @@ export default function App() {
             )}
           </div>
 
-          <div className="border-t border-[#003C66] pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 font-mono text-[10px] text-neutral-400 uppercase tracking-wider">
+          {storeSettings.showFooterLegalBar && <div className="border-t border-[#003C66] pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 font-mono text-[10px] text-neutral-400 uppercase tracking-wider">
             <div>
               {storeSettings.footerCopyrightText}
             </div>
@@ -2977,7 +3004,15 @@ export default function App() {
               <span>•</span>
               <span>{storeSettings.footerPaymentsText}</span>
             </div>
-          </div>
+          </div>}
+          {storeSettings.showFooterPolicyLinks && (
+            <nav aria-label="Store policies" className="flex flex-wrap justify-center gap-x-5 gap-y-2 border-t border-white/10 pt-5 text-[10px] font-bold uppercase tracking-wider text-neutral-300">
+              <a href={storeSettings.privacyPolicyUrl} className="hover:text-white">Privacy Policy</a>
+              <a href={storeSettings.termsUrl} className="hover:text-white">Terms &amp; Conditions</a>
+              <a href={storeSettings.returnsPolicyUrl} className="hover:text-white">Returns Policy</a>
+              <a href={storeSettings.shippingPolicyUrl} className="hover:text-white">Shipping Policy</a>
+            </nav>
+          )}
         </div>
       </footer>}
 
@@ -3207,9 +3242,9 @@ export default function App() {
               let completed = await response.json();
               if (!response.ok && /Manager approval is required for discounts/.test(completed.error || '')) {
                 const amount = Number(String(completed.error).match(/\$([0-9.]+)/)?.[1] || sale.discount);
-                const managerEmail = window.prompt('Manager email for discount approval:');
-                const managerPassword = managerEmail && window.prompt('Manager password:');
-                const reason = managerPassword && window.prompt('Discount reason:', 'Customer pricing / negotiated discount');
+                const managerEmail = await interactions.prompt({ title: 'Manager Discount Approval', help: `Approval is required for a $${amount.toFixed(2)} discount.`, label: 'Manager email', confirmLabel: 'Continue' });
+                const managerPassword = managerEmail && await interactions.prompt({ title: 'Verify Manager', label: 'Manager password', type: 'password', confirmLabel: 'Continue' });
+                const reason = managerPassword && await interactions.prompt({ title: 'Discount Reason', label: 'Reason for discount', initialValue: 'Customer pricing / negotiated discount', confirmLabel: 'Approve Discount' });
                 if (!managerEmail || !managerPassword || !reason) throw new Error('Manager approval cancelled.');
                 const approvalResponse = await fetch('/api/pos/approvals', { method: 'POST', headers: checkoutHeaders, body: JSON.stringify({ managerEmail, managerPassword, action: 'DISCOUNT', amount, reason }) });
                 const approval = await approvalResponse.json();

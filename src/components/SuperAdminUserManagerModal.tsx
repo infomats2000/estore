@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Users, UserPlus, Key, Trash2, Edit2, Shield, Store, CheckCircle2, AlertTriangle, Loader2, X, Search, Lock } from 'lucide-react';
 import { ContextualHelp } from './ContextualHelp';
+import { useAdminInteractions } from '../context/AdminInteractionContext';
 
 interface SuperAdminUserManagerModalProps {
   onClose: () => void;
@@ -11,6 +12,7 @@ export const SuperAdminUserManagerModal: React.FC<SuperAdminUserManagerModalProp
   onClose,
   onUsersUpdated,
 }) => {
+  const interactions = useAdminInteractions();
   const [users, setUsers] = useState<any[]>([]);
   const [tenants, setTenants] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -217,7 +219,7 @@ export const SuperAdminUserManagerModal: React.FC<SuperAdminUserManagerModalProp
 
   // Action 5: Delete User
   const handleDeleteUser = async (user: any) => {
-    if (!window.confirm(`Are you sure you want to permanently delete user '${user.name}' (${user.email})?`)) {
+    if (!(await interactions.confirm({ title: 'Delete Platform User?', message: `Permanently delete ${user.name} (${user.email})? This action cannot be undone.`, confirmLabel: 'Delete User', destructive: true }))) {
       return;
     }
     setError('');

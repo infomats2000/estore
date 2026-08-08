@@ -4,6 +4,7 @@ import { authMiddleware, requireSuperAdmin } from '../middleware/authMiddleware'
 import { createAuthToken } from '../auth';
 import { ALL_FEATURES } from '../../constants/features';
 import { getPerformanceSnapshot } from '../performanceMetrics';
+import { getTenantUserCapacity } from '../tenantUserCapacity';
 
 const router = Router();
 const validFeatureIds = new Set(ALL_FEATURES.map((feature) => feature.id));
@@ -141,6 +142,11 @@ router.put('/tenants/:id', async (req, res) => {
     const existing = await prismaRaw.tenant.findUnique({ where: { id } });
     if (!existing) {
       return res.status(404).json({ error: 'Tenant not found' });
+    }
+    if (planId) {
+      const targetPlan = await prismaRaw.plan.findUnique({ where: { id: planId }, select: { maxStaff: true } });
+      const capacity = await getTenantUserCapacity(id);
+      if (targetPlan && capacity.used > targetPlan.maxStaff) return res.status(409).json({ error: `This tenant has ${capacity.used} users; the selected plan permits only ${targetPlan.maxStaff}.` });
     }
 
     // Slug Uniqueness Validation if changed
@@ -583,6 +589,8 @@ router.patch('/tenants/:id/plan', async (req, res) => {
     if (!plan) {
       return res.status(400).json({ error: 'Plan not found' });
     }
+    const capacity = await getTenantUserCapacity(id);
+    if (capacity.used > plan.maxStaff) return res.status(409).json({ error: `This tenant already has ${capacity.used} users. Choose a plan allowing at least ${capacity.used} users or remove users first.` });
 
     const updated = await prismaRaw.tenant.update({
       where: { id },
@@ -632,6 +640,8 @@ router.post('/plans', async (req, res) => {
     if (!name || !code) {
       return res.status(400).json({ error: 'Plan name and code are required.' });
     }
+    const parsedMaxStaff = parseInt(maxStaff || '2', 10);
+    if (!Number.isInteger(parsedMaxStaff) || parsedMaxStaff < 1) return res.status(400).json({ error: 'Maximum tenant users must be at least 1.' });
 
     const cleanCode = code.toUpperCase().trim();
     const existing = await prismaRaw.plan.findUnique({ where: { code: cleanCode } });
@@ -649,7 +659,7 @@ router.post('/plans', async (req, res) => {
         priceYearly: parseFloat(priceYearly || '0'),
         maxProducts: parseInt(maxProducts || '100', 10),
         maxOrdersPerMonth: parseInt(maxOrdersPerMonth || '1000', 10),
-        maxStaff: parseInt(maxStaff || '2', 10),
+        maxStaff: parsedMaxStaff,
         customDomainAllowed: JSON.parse(normalizedFeatures).includes('custom_domain'),
         featuresJson: normalizedFeatures,
         isPopular: !!isPopular,
@@ -681,6 +691,13 @@ router.put('/plans/:id', async (req, res) => {
     } = req.body;
 
     const normalizedFeatures = featuresJson !== undefined ? normalizeFeaturesJson(featuresJson) : undefined;
+    const parsedMaxStaff = maxStaff !== undefined ? parseInt(maxStaff, 10) : undefined;
+    if (parsedMaxStaff !== undefined && (!Number.isInteger(parsedMaxStaff) || parsedMaxStaff < 1)) return res.status(400).json({ error: 'Maximum tenant users must be at least 1.' });
+    if (parsedMaxStaff !== undefined) {
+      const assignedTenants = await prismaRaw.tenant.findMany({ where: { planId: id }, select: { name: true, _count: { select: { tenantUsers: true } } } });
+      const overLimit = assignedTenants.find((tenant) => tenant._count.tenantUsers > parsedMaxStaff);
+      if (overLimit) return res.status(409).json({ error: `${overLimit.name} currently has ${overLimit._count.tenantUsers} users. Remove users before lowering this tier below that number.` });
+    }
     const updated = await prismaRaw.plan.update({
       where: { id },
       data: {
@@ -690,7 +707,7 @@ router.put('/plans/:id', async (req, res) => {
         priceYearly: priceYearly !== undefined ? parseFloat(priceYearly) : undefined,
         maxProducts: maxProducts !== undefined ? parseInt(maxProducts, 10) : undefined,
         maxOrdersPerMonth: maxOrdersPerMonth !== undefined ? parseInt(maxOrdersPerMonth, 10) : undefined,
-        maxStaff: maxStaff !== undefined ? parseInt(maxStaff, 10) : undefined,
+        maxStaff: parsedMaxStaff,
         customDomainAllowed: normalizedFeatures !== undefined
           ? JSON.parse(normalizedFeatures).includes('custom_domain')
           : (customDomainAllowed !== undefined ? !!customDomainAllowed : undefined),
@@ -863,6 +880,10 @@ router.post('/users', async (req, res) => {
     if (!name || !email || !password) {
       return res.status(400).json({ error: 'Name, email, and password are required.' });
     }
+    if (tenantId) {
+      const capacity = await getTenantUserCapacity(tenantId);
+      if (capacity.used >= capacity.limit) return res.status(409).json({ error: `Tenant user limit reached (${capacity.used}/${capacity.limit}). The limit includes the owner/admin account.` });
+    }
 
     const cleanEmail = email.toLowerCase().trim();
     const existing = await prismaRaw.user.findUnique({ where: { email: cleanEmail } });
@@ -978,6 +999,11 @@ router.post('/users/:id/tenants', async (req, res) => {
         data: { role },
       });
       return res.json({ success: true, message: 'Store access role updated.', tenantUser: updated });
+    }
+
+    const capacity = await getTenantUserCapacity(tenantId);
+    if (capacity.used >= capacity.limit) {
+      return res.status(409).json({ error: `Tenant user limit reached (${capacity.used}/${capacity.limit}). The limit includes the owner/admin account.` });
     }
 
     const tenantUser = await prismaRaw.tenantUser.create({

@@ -8,6 +8,7 @@ export interface FeatureDefinition {
 
 export const FEATURE_IDS = {
   POS: 'pos',
+  STOREFRONT: 'storefront',
   CUSTOM_DOMAIN: 'custom_domain',
   MARKETING: 'marketing',
   TRADE_ACCOUNTS: 'trade_accounts',
@@ -32,6 +33,13 @@ export const ALL_FEATURES: FeatureDefinition[] = [
     category: 'Sales & In-Store',
     description: 'In-store retail counter cash register with barcode scanner support',
     iconName: 'ShoppingCart',
+  },
+  {
+    id: 'storefront',
+    name: 'Website Storefront',
+    category: 'E-Commerce Tools',
+    description: 'Public product catalogue, storefront design controls, shopping cart, and online customer experience',
+    iconName: 'Store',
   },
   {
     id: 'custom_domain',
@@ -63,7 +71,7 @@ export const ALL_FEATURES: FeatureDefinition[] = [
   },
   {
     id: 'wms_inventory',
-    name: 'Multi-Warehouse & WMS',
+    name: 'Warehouses and Stock',
     category: 'Inventory & Supply Chain',
     description: 'Multi-warehouse stock transfers, bin locations, and stocktakes',
     iconName: 'Package',
@@ -123,10 +131,47 @@ export const DASHBOARD_TAB_FEATURE_MAP: Record<string, string> = {
   stores: 'multi_store', 'master-data': 'master_data',
 };
 
+export const LEGACY_STAFF_FEATURE_MAP: Record<string, string> = {
+  'commercial-sales': 'trade_accounts', 'pricing-matrix': 'trade_accounts', distribution: 'trade_accounts',
+  'massive-inventory': 'wms_inventory', wms: 'wms_inventory', 'logistics-dispatch': 'wms_inventory',
+  procurement: 'procurement', suppliers: 'procurement', bi: 'analytics_reports', reports: 'analytics_reports',
+  finance: 'finance_ledger', payroll: 'payroll_hr', automation: 'workflow_automation', ebay: 'api_access',
+  stores: 'multi_store', users: 'staff_rbac',
+};
+
+export const normalizeStaffFeatureIds = (features: string[]): string[] =>
+  [...new Set(features.map((feature) => LEGACY_STAFF_FEATURE_MAP[feature] || feature))];
+
+export const STANDARD_PLAN_CODES = ['FREE', 'STARTER', 'GROWTH', 'ENTERPRISE'] as const;
+
+// Core ERP workspace granted to every standard billing tier. Plans created by a
+// platform administrator use their explicitly selected features instead.
+export const STANDARD_TENANT_FEATURES = [
+  'pos',
+  'trade_accounts',
+  'procurement',
+  'wms_inventory',
+  'repair_jobs',
+  'finance_ledger',
+  'analytics_reports',
+  'payroll_hr',
+  'staff_rbac',
+  'master_data',
+] as const;
+
+export const isStandardBillingPlan = (planCode?: string | null): boolean =>
+  STANDARD_PLAN_CODES.includes(String(planCode || '').toUpperCase() as typeof STANDARD_PLAN_CODES[number]);
+
+export const resolvePlanFeatureIds = (planCode: string | null | undefined, storedFeatures: string[]): string[] =>
+  [...new Set([
+    ...storedFeatures,
+    ...(isStandardBillingPlan(planCode) ? STANDARD_TENANT_FEATURES : []),
+  ])];
+
 // Default Plan Feature Mappings
 export const DEFAULT_PLAN_FEATURES: Record<string, string[]> = {
-  FREE: ['pos'],
-  STARTER: ['pos', 'marketing', 'pc_builder'],
-  GROWTH: ['pos', 'custom_domain', 'marketing', 'trade_accounts', 'procurement', 'wms_inventory', 'pc_builder', 'analytics_reports', 'staff_rbac', 'master_data'],
+  FREE: [...STANDARD_TENANT_FEATURES],
+  STARTER: [...new Set([...STANDARD_TENANT_FEATURES, 'storefront', 'marketing', 'pc_builder'])],
+  GROWTH: [...new Set([...STANDARD_TENANT_FEATURES, 'storefront', 'custom_domain', 'marketing', 'pc_builder'])],
   ENTERPRISE: ALL_FEATURES.map((feature) => feature.id),
 };

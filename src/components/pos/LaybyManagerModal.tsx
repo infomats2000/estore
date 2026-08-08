@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, Calendar, DollarSign, Clock, CheckCircle2, User, Printer, Layers } from 'lucide-react';
 import { LaybyOrder, StoreSettings } from '../../types';
+import { useAdminInteractions } from '../../context/AdminInteractionContext';
 
 interface LaybyManagerModalProps {
   isOpen: boolean;
@@ -21,6 +22,7 @@ export default function LaybyManagerModal({
   storeSettings,
   shiftId
 }: LaybyManagerModalProps) {
+  const interactions = useAdminInteractions();
   const [selectedLayby, setSelectedLayby] = useState<LaybyOrder | null>(null);
   const [installmentAmount, setInstallmentAmount] = useState('');
   const [installmentMethod, setInstallmentMethod] = useState<'Cash' | 'EFTPOS Card' | 'EFT Bank Deposit'>('Cash');
@@ -30,7 +32,7 @@ export default function LaybyManagerModal({
   const loadLaybys = async () => {
     const response = await fetch('/api/pos/laybys', { headers: authHeaders() });
     const result = await response.json();
-    if (response.ok) setPersistedLaybys(result.laybys || []); else setError(result.error || 'Unable to load lay-bys.');
+    if (response.ok) setPersistedLaybys(result.laybys || []); else setError(result.error || 'Unable to load reservations.');
   };
   useEffect(() => { if (isOpen) void loadLaybys(); }, [isOpen]);
 
@@ -58,13 +60,13 @@ export default function LaybyManagerModal({
     }
 
     const method = installmentMethod === 'Cash' ? 'CASH' : installmentMethod === 'EFTPOS Card' ? 'EFTPOS' : 'BANK_TRANSFER';
-    const reference = method === 'CASH' ? undefined : window.prompt('Enter the approved terminal/bank reference:') || undefined;
+    const reference = method === 'CASH' ? undefined : await interactions.prompt({ title: 'Payment Reference', help: 'Enter the approved terminal or bank reference for this instalment.', label: 'Provider reference', confirmLabel: 'Record Payment' }) || undefined;
     if (method !== 'CASH' && !reference) { setError('A provider reference is required for non-cash installments.'); return; }
     const response = await fetch(`/api/pos/laybys/${selectedLayby.id}/payments`, { method: 'POST', headers: authHeaders(), body: JSON.stringify({ amount: amt, method, shiftId, reference }) });
     const result = await response.json();
     if (!response.ok) { setError(result.error || 'Unable to record installment.'); return; }
     onAddInstallment(selectedLayby.laybyNumber, amt, installmentMethod);
-    onShowAlert?.('Installment Received', `Received $${amt.toFixed(2)} payment for Lay-by #${selectedLayby.laybyNumber}.`, 'success');
+    onShowAlert?.('Instalment Received', `Received $${amt.toFixed(2)} payment for reservation #${selectedLayby.laybyNumber}.`, 'success');
     await loadLaybys();
     setInstallmentAmount('');
     setSelectedLayby(null);
@@ -78,8 +80,8 @@ export default function LaybyManagerModal({
           <div className="flex items-center gap-2">
             <Clock className="w-5 h-5 text-blue-400" />
             <div>
-              <h3 className="font-bold text-sm">Lay-by &amp; Deposit Installment Manager</h3>
-              <p className="text-[11px] text-slate-400">Track active customer lay-by tickets, milestone deposits, and stock release</p>
+              <h3 className="font-bold text-sm">Reserve &amp; Deposit Manager</h3>
+              <p className="text-[11px] text-slate-400">Track active customer reservations, instalment deposits, and stock release</p>
             </div>
           </div>
           <button type="button" onClick={onClose} className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors">
@@ -92,18 +94,18 @@ export default function LaybyManagerModal({
           {/* Active Lay-bys List */}
           {error && <div className="rounded border border-rose-300 bg-rose-50 p-3 text-xs font-bold text-rose-700">{error}</div>}
           <div className="space-y-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Active Customer Lay-by Tickets ({activeOrders.length})</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Active Customer Reservations ({activeOrders.length})</span>
             
             <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
               {activeOrders.length === 0 ? (
                 <div className="p-8 text-center text-xs text-slate-400 italic">
-                  No active customer lay-by orders found.
+                  No active customer reservations found.
                 </div>
               ) : (
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-100 dark:bg-slate-900 font-mono text-[10px] uppercase text-slate-500">
                     <tr>
-                      <th className="p-3">Lay-by #</th>
+                      <th className="p-3">Reservation #</th>
                       <th className="p-3">Customer</th>
                       <th className="p-3 text-right">Total ($)</th>
                       <th className="p-3 text-right">Paid ($)</th>
@@ -143,7 +145,7 @@ export default function LaybyManagerModal({
             <form onSubmit={handleProcessInstallment} className="bg-blue-50 dark:bg-blue-950/40 p-4 rounded-xl border border-blue-200 dark:border-blue-900/50 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300">
-                  Record Installment for Lay-by #{selectedLayby.laybyNumber}
+                  Record Instalment for Reservation #{selectedLayby.laybyNumber}
                 </span>
                 <button type="button" onClick={() => setSelectedLayby(null)} className="text-slate-400 hover:text-slate-600 text-xs">
                   Cancel

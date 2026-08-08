@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Supplier } from '../../types';
 import { Building2, Plus, Edit2, Trash2, Search, Phone, Mail, MapPin, CheckCircle, Clock, ShieldCheck, ShoppingCart } from 'lucide-react';
+import { useAdminInteractions } from '../../context/AdminInteractionContext';
 
 interface SuppliersManagerProps {
   suppliers: Supplier[];
@@ -15,6 +16,7 @@ export default function SuppliersManager({
   categories,
   onTriggerReorder
 }: SuppliersManagerProps) {
+  const interactions = useAdminInteractions();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('All');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -114,12 +116,12 @@ export default function SuppliersManager({
     setEditingSupplier(null);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (suppliers.length <= 1) {
-      alert('You must have at least one supplier configured.');
+      await interactions.notify({ title: 'Supplier Required', message: 'You must keep at least one supplier configured.' });
       return;
     }
-    if (window.confirm('Delete this supplier record?')) {
+    if (await interactions.confirm({ title: 'Delete Supplier?', message: 'This supplier record will be permanently removed.', confirmLabel: 'Delete Supplier', destructive: true })) {
       const updated = suppliers.filter((s) => s.id !== id);
       setSuppliers(updated);
       try {
@@ -337,7 +339,7 @@ export default function SuppliersManager({
                   if (onTriggerReorder) {
                     onTriggerReorder(sup.name);
                   } else {
-                    alert(`Initiating Purchase Order workflow with ${sup.name}...`);
+                    void interactions.notify({ title: 'Purchase Order', message: `Starting the purchase-order workflow with ${sup.name}.` });
                   }
                 }}
                 className="flex-1 px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:hover:bg-neutral-200 text-white dark:text-neutral-900 rounded text-xs font-mono uppercase font-bold tracking-wider transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
@@ -351,6 +353,7 @@ export default function SuppliersManager({
                   onClick={() => openEditForm(sup)}
                   className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300 rounded transition-colors"
                   title="Edit supplier"
+                  aria-label="Edit supplier"
                 >
                   <Edit2 className="h-3.5 w-3.5" />
                 </button>
@@ -358,6 +361,7 @@ export default function SuppliersManager({
                   onClick={() => handleDelete(sup.id)}
                   className="p-1.5 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-neutral-400 hover:text-rose-500 rounded transition-colors"
                   title="Delete supplier"
+                  aria-label="Delete supplier"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>

@@ -23,6 +23,7 @@ import {
   Check
 } from 'lucide-react';
 import { StaffMember, PayrollRun, LeaveRequest, TimesheetEntry, Order } from '../../types';
+import { useAdminInteractions } from '../../context/AdminInteractionContext';
 import { 
   INITIAL_STAFF_MEMBERS, 
   calculatePAYGWithholding, 
@@ -38,6 +39,7 @@ interface HRStaffPayrollManagerProps {
 }
 
 export default function HRStaffPayrollManager({ orders = [], onShowAlert }: HRStaffPayrollManagerProps) {
+  const interactions = useAdminInteractions();
   const [activeTab, setActiveTab] = useState<'directory' | 'payroll' | 'leave' | 'timesheets' | 'commission' | 'performance'>('payroll');
   const [staffList, setStaffList] = useState<StaffMember[]>(INITIAL_STAFF_MEMBERS);
 
@@ -219,8 +221,8 @@ export default function HRStaffPayrollManager({ orders = [], onShowAlert }: HRSt
     onShowAlert?.(`Exported Pay Run ${run.id} disbursement CSV file.`, 'info');
   };
 
-  const handleDeletePayRun = (id: string) => {
-    if (!window.confirm(`Delete Pay Run ${id}?`)) return;
+  const handleDeletePayRun = async (id: string) => {
+    if (!(await interactions.confirm({ title: 'Delete Pay Run?', message: `Pay Run ${id} will be permanently removed.`, confirmLabel: 'Delete Pay Run', destructive: true }))) return;
     setPayRuns(prev => prev.filter(p => p.id !== id));
     onShowAlert?.(`Pay Run ${id} removed.`, 'info');
   };
@@ -287,8 +289,8 @@ export default function HRStaffPayrollManager({ orders = [], onShowAlert }: HRSt
     setShowAddStaffModal(false);
   };
 
-  const handleDeleteStaff = (id: string) => {
-    if (!window.confirm('Are you sure you want to remove this employee from HR records?')) return;
+  const handleDeleteStaff = async (id: string) => {
+    if (!(await interactions.confirm({ title: 'Remove Employee Record?', message: 'This employee will be removed from the HR directory. This action cannot be undone.', confirmLabel: 'Remove Employee', destructive: true }))) return;
     setStaffList(prev => prev.filter(s => s.id !== id));
     onShowAlert?.('Employee record removed.', 'info');
   };
@@ -489,6 +491,7 @@ export default function HRStaffPayrollManager({ orders = [], onShowAlert }: HRSt
                       onClick={() => handleDeletePayRun(run.id)}
                       className="p-1.5 bg-rose-50 text-rose-600 dark:bg-rose-950 dark:text-rose-400 hover:bg-rose-100 rounded-lg border border-rose-200 dark:border-rose-900 cursor-pointer"
                       title="Delete Pay Run"
+                      aria-label="Delete pay run"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -577,6 +580,7 @@ export default function HRStaffPayrollManager({ orders = [], onShowAlert }: HRSt
                       onClick={() => handleOpenEditStaff(emp)}
                       className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-blue-600 border border-slate-200 dark:border-slate-700 cursor-pointer"
                       title="Edit Staff Member"
+                      aria-label="Edit staff member"
                     >
                       <Edit3 className="w-3.5 h-3.5" />
                     </button>

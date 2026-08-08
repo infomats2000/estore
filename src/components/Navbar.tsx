@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShoppingCart, ShieldCheck, Search, Phone, Mail, Truck, Shield, Laptop, LogIn, Headphones, Cpu, User, Lock, Globe } from 'lucide-react';
+import { ShoppingCart, ShieldCheck, Search, Phone, Mail, Truck, Shield, Laptop, LogIn, Headphones, Cpu, User, Globe } from 'lucide-react';
 
 import { Product, StoreSettings } from '../types';
 import { UserAccountDropdown } from './UserAccountDropdown';
@@ -35,7 +35,6 @@ interface NavbarProps {
   compareCount?: number;
   onOpenPCBuilder?: () => void;
   onOpenCustomerPortal?: () => void;
-  onOpenPOS?: () => void;
   currentUser?: any;
   onLogoutAccount?: () => void;
 }
@@ -69,11 +68,10 @@ export default function Navbar({
   compareCount = 0,
   onOpenPCBuilder,
   onOpenCustomerPortal,
-  onOpenPOS,
   currentUser,
   onLogoutAccount,
 }: NavbarProps) {
-  const { hasFeature, openFeatureGate } = useTenantFeatures();
+  const { hasFeature } = useTenantFeatures();
   const allCategories = ['All', ...categories];
   const [showSearchMobile, setShowSearchMobile] = useState(false);
 
@@ -121,7 +119,7 @@ export default function Navbar({
       )}
 
       {/* Main Branding & Action Header */}
-      <div className="bg-[#2f2f2f] border-b border-black/10 text-white transition-colors" id="storefront-main-header">
+      <div className={`bg-[#2f2f2f] border-b border-black/10 text-white transition-colors ${!isAdminMode && storeSettings?.showStorefrontHeader === false ? 'hidden' : ''}`} id="storefront-main-header">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8 gap-4">
           
           <div className="flex shrink-0 items-center gap-3">
@@ -136,8 +134,8 @@ export default function Navbar({
           >
             <div className="flex h-12 w-12 items-center justify-center bg-white rounded-lg p-1 shadow-sm transition-transform group-hover:scale-105 overflow-hidden">
               <img 
-                src="/images/app_logo.jpg" 
-                alt="INFOMAT Logo" 
+                src={storeSettings?.logoUrl || '/images/app_logo.jpg'}
+                alt={`${storeSettings?.storeName || 'Store'} logo`}
                 className="h-full w-full object-contain"
                 decoding="async"
                 fetchPriority="high"
@@ -151,24 +149,10 @@ export default function Navbar({
             </div>
           </button>
 
-          {isAdminMode && onOpenPOS && (
-            <button
-              type="button"
-              onClick={() => {
-                if (hasFeature('pos')) onOpenPOS();
-                else openFeatureGate('pos');
-              }}
-              className={`flex h-8 items-center whitespace-nowrap rounded-md border border-[#8f0000] bg-[#b30000] px-2.5 font-sans text-[10px] font-medium uppercase tracking-wide text-white shadow-sm transition-colors hover:bg-[#990000] ${hasFeature('pos') ? '' : 'opacity-70'}`}
-              title={hasFeature('pos') ? 'Launch retail in-store counter cash register (POS)' : 'POS feature locked—click to review plan access'}
-            >
-              {!hasFeature('pos') && <Lock className="mr-1 h-3 w-3 shrink-0" />}
-              Cash Register (POS)
-            </button>
-          )}
           </div>
 
           {/* Middle Search Bar (hidden in admin mode) */}
-          {!isAdminMode ? (
+          {!isAdminMode && storeSettings?.showStorefrontSearch !== false ? (
             <div className="hidden md:block flex-1 min-w-[260px] max-w-lg mx-4" id="desktop-search-container">
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-neutral-400 dark:text-neutral-500">
@@ -258,7 +242,7 @@ export default function Navbar({
           <div className="flex min-w-0 items-center gap-2 lg:gap-3" id="nav-actions">
             
             {/* Mobile search toggle */}
-            {!isAdminMode && (
+            {!isAdminMode && storeSettings?.showStorefrontSearch !== false && (
               <button
                 onClick={() => setShowSearchMobile(!showSearchMobile)}
                 className="flex md:hidden h-10 w-10 items-center justify-center text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
@@ -284,7 +268,7 @@ export default function Navbar({
             )}
 
             {/* Customer Portal Button */}
-            {!isAdminMode && onOpenCustomerPortal && (
+            {!isAdminMode && storeSettings?.showStorefrontAccount !== false && onOpenCustomerPortal && (
               <a
                 href="#customer-portal"
                 onClick={(event) => { event.preventDefault(); onOpenCustomerPortal(); }}
@@ -296,7 +280,7 @@ export default function Navbar({
                 <span>MY ACCOUNT &amp; ORDERS</span>
               </a>
             )}
-            {!isAdminMode && (
+            {!isAdminMode && storeSettings?.showStorefrontCart !== false && (
               <a
                 href="#cart"
                 onClick={(event) => { event.preventDefault(); onOpenCart(); }}
@@ -317,7 +301,7 @@ export default function Navbar({
             )}
 
             {/* Compare Button */}
-            {!isAdminMode && onOpenCompare && (
+            {!isAdminMode && storeSettings?.showStorefrontCompare !== false && onOpenCompare && (
               <a
                 href="#compare"
                 onClick={(event) => { event.preventDefault(); onOpenCompare(); }}
@@ -334,7 +318,7 @@ export default function Navbar({
             )}
 
             {/* Custom PC Builder Button */}
-            {!isAdminMode && onOpenPCBuilder && (
+            {!isAdminMode && storeSettings?.showStorefrontPcBuilder !== false && onOpenPCBuilder && (
               <a
                 href="#pc-builder"
                 onClick={(event) => { event.preventDefault(); onOpenPCBuilder(); }}
@@ -347,7 +331,7 @@ export default function Navbar({
             )}
 
             {/* Track Order Button */}
-            {!isAdminMode && onOpenTrackOrder && (
+            {!isAdminMode && storeSettings?.showStorefrontTracking !== false && onOpenTrackOrder && (
               <a
                 href="#track-order"
                 onClick={(event) => { event.preventDefault(); onOpenTrackOrder(); }}
@@ -360,7 +344,7 @@ export default function Navbar({
             )}
 
             {/* View Public Storefront Button in Store Admin Navbar */}
-            {isAdminMode && (
+            {isAdminMode && hasFeature('storefront') && (
               <a
                 href="/?mode=store&view=public"
                 target="_blank"
@@ -418,7 +402,7 @@ export default function Navbar({
                   }}
                 />
               </div>
-            ) : (
+            ) : storeSettings?.showStorefrontAdminLogin !== false ? (
               <a
                 href="#"
                 onClick={(e) => {
@@ -433,14 +417,14 @@ export default function Navbar({
                 <LogIn className="h-3 w-3" />
                 <span className="hidden sm:inline">STAFF / ADMIN LOGIN</span>
               </a>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
 
 
       {/* Main Categories Navigation Bar (ACT Deep Navy Blue Menu) */}
-      {!isAdminMode && (
+      {!isAdminMode && storeSettings?.showStorefrontCategoryNav !== false && (
         <div className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white border-b border-slate-200 dark:border-slate-800" id="desktop-category-nav">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
             <nav className="flex flex-1 items-center gap-1 overflow-x-auto py-1 scrollbar-none">
@@ -491,7 +475,7 @@ export default function Navbar({
       )}
 
       {/* Mobile Search Expandable (hidden in admin mode) */}
-      {!isAdminMode && showSearchMobile && (
+      {!isAdminMode && storeSettings?.showStorefrontSearch !== false && showSearchMobile && (
         <div className="md:hidden border-t border-neutral-400 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-3" id="mobile-search-bar">
           <div className="relative">
             <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-neutral-400">

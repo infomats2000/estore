@@ -14,13 +14,13 @@ import {
   Zap, 
   Eye, 
   Award,
-  ChevronRight
+  ChevronRight,
+  Trash2
 } from 'lucide-react';
 import { StaffUserProfile, StaffUserRole } from '../../types';
-import { 
-  ALL_ERP_FEATURE_PERMISSIONS, 
-  getRoleTemplatePermissions 
-} from '../../utils/staffPermissionEngine';
+import { ALL_FEATURES, DASHBOARD_TAB_FEATURE_MAP } from '../../constants/features';
+import { useTenantFeatures } from '../../context/TenantFeatureContext';
+import { useAdminInteractions } from '../../context/AdminInteractionContext';
 
 interface StaffManagementSuiteProps {
   onShowAlert?: (msg: string, type?: 'success' | 'info' | 'error') => void;
@@ -29,10 +29,12 @@ interface StaffManagementSuiteProps {
 export default function StaffManagementSuite({
   onShowAlert
 }: StaffManagementSuiteProps) {
+  const interactions = useAdminInteractions();
   const [staffUsers, setStaffUsers] = useState<StaffUserProfile[]>([]);
   const [activeTab, setActiveTab] = useState<'users' | 'permission_matrix' | 'simulator'>('users');
   const [selectedStaff, setSelectedStaff] = useState<StaffUserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [capacity, setCapacity] = useState({ used: 0, limit: 1, remaining: 1 });
 
   // Modal State for New Staff User
   const [showAddUserModal, setShowAddUserModal] = useState(false);
@@ -40,7 +42,25 @@ export default function StaffManagementSuite({
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newRole, setNewRole] = useState<StaffUserRole>('Sales Executive');
-  const [newAllowedFeatures, setNewAllowedFeatures] = useState<string[]>(getRoleTemplatePermissions('Sales Executive'));
+  const [newAllowedFeatures, setNewAllowedFeatures] = useState<string[]>([]);
+  const { hasFeature } = useTenantFeatures();
+  const dashboardFeatureIds = new Set(Object.values(DASHBOARD_TAB_FEATURE_MAP));
+  const permittedFeaturePermissions = ALL_FEATURES
+    .filter((feature) => dashboardFeatureIds.has(feature.id) && hasFeature(feature.id))
+    .map((feature) => ({ featureKey: feature.id, label: feature.name, category: feature.category, description: feature.description }));
+
+  const roleTemplatePermissions = (role: StaffUserRole) => {
+    const templates: Record<StaffUserRole, string[]> = {
+      Admin: permittedFeaturePermissions.map((feature) => feature.featureKey),
+      'Sales Executive': ['pos', 'trade_accounts', 'marketing'],
+      'Warehouse Manager': ['pos', 'wms_inventory', 'repair_jobs'],
+      'Procurement Officer': ['pos', 'procurement', 'wms_inventory'],
+      Accountant: ['pos', 'finance_ledger', 'analytics_reports', 'payroll_hr'],
+      'Custom Staff': [],
+    };
+    const permitted = new Set(permittedFeaturePermissions.map((feature) => feature.featureKey));
+    return (templates[role] || []).filter((feature) => permitted.has(feature));
+  };
 
   const request = async (path: string, options?: RequestInit) => {
     const token = localStorage.getItem('authToken') || '';
@@ -58,6 +78,7 @@ export default function StaffManagementSuite({
       setLoading(true);
       const data = await request('/');
       const users = data.staff || [];
+      if (data.capacity) setCapacity(data.capacity);
       setStaffUsers(users);
       setSelectedStaff(current => users.find((user: StaffUserProfile) => user.id === current?.id) || users[0] || null);
     } catch (error: any) {
@@ -90,6 +111,21 @@ export default function StaffManagementSuite({
     }
   };
 
+  const handleDeleteStaff = async (staffId: string) => {
+    const staff = staffUsers.find((user) => user.id === staffId);
+    if (!staff?.canManage || !(await interactions.confirm({ title: 'Delete Staff Login?', message: `Delete the login account for ${staff.name}? The user will no longer be able to sign in, and this cannot be undone.`, confirmLabel: 'Delete Login', destructive: true }))) return;
+    try {
+      await request(`/${staffId}`, { method: 'DELETE' });
+      const remaining = staffUsers.filter((user) => user.id !== staffId);
+      setStaffUsers(remaining);
+      setCapacity((current) => ({ ...current, used: Math.max(0, current.used - 1), remaining: current.remaining + 1 }));
+      setSelectedStaff(remaining[0] || null);
+      onShowAlert?.('Staff login account deleted.', 'info');
+    } catch (error: any) {
+      onShowAlert?.(error.message, 'error');
+    }
+  };
+
   const handleToggleFeaturePermission = async (staffId: string, featureKey: string) => {
     const staff = staffUsers.find(user => user.id === staffId);
     if (!staff || staff.role === 'Admin') return;
@@ -105,7 +141,7 @@ export default function StaffManagementSuite({
   };
 
   const handleApplyRoleTemplate = async (staffId: string, role: StaffUserRole) => {
-    const defaultPerms = getRoleTemplatePermissions(role);
+    const defaultPerms = roleTemplatePermissions(role);
     try {
       await saveStaff(staffId, { role, allowedFeatures: defaultPerms });
       onShowAlert?.(`Role template "${role}" permissions applied.`, 'success');
@@ -125,6 +161,7 @@ export default function StaffManagementSuite({
         body: JSON.stringify({ name: newName, email: newEmail, password: newPassword, role: newRole, allowedFeatures: newAllowedFeatures }),
       });
       setStaffUsers(current => [...current, data.staff]);
+      setCapacity((current) => ({ ...current, used: current.used + 1, remaining: Math.max(0, current.remaining - 1) }));
       setSelectedStaff(data.staff);
       setShowAddUserModal(false);
       setNewName('');
@@ -150,12 +187,15 @@ export default function StaffManagementSuite({
             </span>
             <h2 className="text-xl font-black tracking-tight mt-1 text-slate-900 dark:text-white">Staff User Management &amp; Feature Access Matrix</h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">Admin holds super-user rights &bull; Grant/revoke feature access to staff user dashboards</p>
+            <p className={`mt-1 text-xs font-bold ${capacity.remaining === 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{capacity.used} of {capacity.limit} tenant users used, including owner/admin.</p>
           </div>
         </div>
 
         <button
           onClick={() => setShowAddUserModal(true)}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-lg shadow-blue-600/20 flex items-center gap-2 font-mono"
+          disabled={capacity.remaining === 0}
+          title={capacity.remaining === 0 ? 'Billing tier user limit reached' : 'Create a staff login'}
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-lg shadow-blue-600/20 flex items-center gap-2 font-mono disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Plus className="w-4 h-4" /> Create New Staff User
         </button>
@@ -232,7 +272,7 @@ export default function StaffManagementSuite({
                     <span className="text-xs text-slate-500 dark:text-slate-400">{selectedStaff.email} &bull; Joined: {selectedStaff.createdAt}</span>
                   </div>
 
-                  <div className="flex gap-2 font-sans">
+                  {selectedStaff.canManage !== false ? <div className="flex gap-2 font-sans">
                     <button
                       onClick={() => handleToggleStaffStatus(selectedStaff.id)}
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
@@ -241,11 +281,14 @@ export default function StaffManagementSuite({
                     >
                       {selectedStaff.active ? 'Deactivate Staff User' : 'Activate Staff User'}
                     </button>
-                  </div>
+                    <button onClick={() => void handleDeleteStaff(selectedStaff.id)} className="flex items-center gap-1 rounded-xl border border-rose-200 bg-white px-3 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-50">
+                      <Trash2 className="h-3.5 w-3.5" /> Delete Staff User
+                    </button>
+                  </div> : <span className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-[10px] font-bold uppercase text-amber-700">Protected tenant administrator</span>}
                 </div>
 
                 {/* Role Template Presets */}
-                <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+                {selectedStaff.canManage !== false && <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
                   <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold block font-sans">1-Click Role Template Preset Assignment</span>
                   <div className="flex flex-wrap gap-2">
                     {(['Admin', 'Sales Executive', 'Warehouse Manager', 'Procurement Officer', 'Accountant'] as StaffUserRole[]).map(role => (
@@ -258,19 +301,19 @@ export default function StaffManagementSuite({
                       </button>
                     ))}
                   </div>
-                </div>
+                </div>}
 
                 {/* Granted Feature List */}
                 <div className="space-y-3">
                   <h4 className="font-bold uppercase text-slate-500 dark:text-slate-400 text-[10px] font-sans">Authorized Feature Dashboard Modules ({selectedStaff.allowedFeatures.length})</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {ALL_ERP_FEATURE_PERMISSIONS.map(feat => {
+                    {permittedFeaturePermissions.map(feat => {
                       const isGranted = selectedStaff.role === 'Admin' || selectedStaff.allowedFeatures.includes(feat.featureKey);
                       return (
                         <div
                           key={feat.featureKey}
-                          onClick={() => selectedStaff.role !== 'Admin' && handleToggleFeaturePermission(selectedStaff.id, feat.featureKey)}
-                          className={`p-3 rounded-2xl border flex items-center justify-between transition-all cursor-pointer ${
+                          onClick={() => selectedStaff.canManage !== false && selectedStaff.role !== 'Admin' && handleToggleFeaturePermission(selectedStaff.id, feat.featureKey)}
+                          className={`p-3 rounded-2xl border flex items-center justify-between transition-all ${selectedStaff.canManage !== false && selectedStaff.role !== 'Admin' ? 'cursor-pointer' : 'cursor-default'} ${
                             isGranted ? 'bg-slate-50 dark:bg-slate-950 border-emerald-500/50 text-slate-900 dark:text-slate-200' : 'bg-slate-50/40 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500'
                           }`}
                         >
@@ -311,7 +354,7 @@ export default function StaffManagementSuite({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60 text-slate-700 dark:text-slate-300">
-                {ALL_ERP_FEATURE_PERMISSIONS.map(feat => (
+                {permittedFeaturePermissions.map(feat => (
                   <tr key={feat.featureKey}>
                     <td className="p-3 font-bold text-slate-900 dark:text-slate-100 font-sans">{feat.label}</td>
                     <td className="p-3 text-purple-600 dark:text-purple-300">{feat.category}</td>
@@ -383,7 +426,7 @@ export default function StaffManagementSuite({
                   onChange={e => {
                     const role = e.target.value as StaffUserRole;
                     setNewRole(role);
-                    setNewAllowedFeatures(getRoleTemplatePermissions(role));
+                    setNewAllowedFeatures(roleTemplatePermissions(role));
                   }}
                   className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-3 py-2 rounded-xl text-slate-900 dark:text-slate-200"
                 >
@@ -398,7 +441,7 @@ export default function StaffManagementSuite({
               <div className="space-y-2">
                 <span className="text-slate-500 dark:text-slate-400 uppercase text-[10px] font-bold block">Feature Access</span>
                 <div className="grid grid-cols-1 gap-1.5 max-h-52 overflow-y-auto pr-1">
-                  {ALL_ERP_FEATURE_PERMISSIONS.map(feature => {
+                  {permittedFeaturePermissions.map(feature => {
                     const granted = newRole === 'Admin' || newAllowedFeatures.includes(feature.featureKey);
                     return (
                       <label key={feature.featureKey} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 dark:border-slate-800 p-2 cursor-pointer">

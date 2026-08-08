@@ -64,7 +64,7 @@ export default function WMSSystemManager({ onShowAlert }: WMSSystemManagerProps)
           </div>
           <div>
             <span className="px-2.5 py-0.5 text-[10px] font-mono font-bold uppercase tracking-widest bg-emerald-50 text-emerald-700 rounded border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800">
-              ENTERPRISE WAREHOUSE MANAGEMENT SYSTEM (WMS)
+              WAREHOUSES AND STOCK
             </span>
             <h2 className="text-xl font-black tracking-tight mt-1 text-slate-900 dark:text-white">Pick, Pack, Ship, Wave Picking &amp; Mobile Floor App</h2>
             <p className="text-xs text-slate-600 dark:text-slate-400">Receiving, AI Put-Away, 2D Zone Maps, Bin Slotting Optimization &amp; Cycle Counting</p>
@@ -74,7 +74,7 @@ export default function WMSSystemManager({ onShowAlert }: WMSSystemManagerProps)
 
       {/* 14 WMS Features Ribbon */}
       <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-wrap items-center gap-2 font-mono text-[11px]">
-        <span className="text-slate-600 dark:text-slate-400 font-bold uppercase text-[10px] mr-2">WMS Capabilities:</span>
+        <span className="text-slate-600 dark:text-slate-400 font-bold uppercase text-[10px] mr-2">Warehouse Capabilities:</span>
         {[
           'Receiving', 'AI Put-Away', 'Picking', 'Packing', 'Shipping', 
           'Wave Picking', 'Zone Picking', 'Batch Picking', 'Bin Optimization', 
@@ -139,7 +139,7 @@ export default function WMSSystemManager({ onShowAlert }: WMSSystemManagerProps)
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 font-mono text-xs">
           {/* Left Column: Tasks Directory */}
           <div className="space-y-3">
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 font-sans font-bold">WMS Pick Tasks</h3>
+            <h3 className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 font-sans font-bold">Warehouse Pick Tasks</h3>
             <div className="space-y-3">
               {tasks.map(t => (
                 <div

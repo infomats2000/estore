@@ -60,10 +60,13 @@ export async function authMiddleware(req: AuthenticatedRequest, res: Response, n
       if (!isSuperAdmin) {
         const membership = await prismaRaw.tenantUser.findUnique({
           where: { tenantId_userId: { tenantId: authenticatedTenantId, userId: userId || '' } },
-          select: { role: true },
+          select: { role: true, isActive: true },
         });
         if (!membership) {
           return res.status(403).json({ error: 'Forbidden', message: 'User is no longer assigned to this tenant.' });
+        }
+        if (!membership.isActive) {
+          return res.status(403).json({ error: 'Account Deactivated', message: 'This staff account has been suspended by the tenant administrator.' });
         }
         req.user.role = membership.role;
       }
@@ -130,4 +133,19 @@ export function requireTenantRole(allowedRoles: string[]) {
 
     next();
   };
+}
+
+export function requireTenantOwner(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  if (req.user.isSuperAdmin || req.user.role !== 'TENANT_OWNER') {
+    return res.status(403).json({
+      error: 'Forbidden',
+      message: 'Only the tenant store owner can perform this operation.',
+    });
+  }
+
+  next();
 }

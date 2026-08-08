@@ -11,6 +11,7 @@ import ConsignmentPayoutManager from './ConsignmentPayoutManager';
 import { Package, Layers, Sparkles, Truck, BarChart2, TrendingUp, ClipboardCheck, Coins } from 'lucide-react';
 
 interface InventoryModuleProps {
+  currentUser?: { role?: string; isSuperAdmin?: boolean } | null;
   products: Product[];
   onAddProduct: (product: Product) => void;
   onUpdateProduct: (product: Product) => void;
@@ -41,6 +42,7 @@ interface InventoryModuleProps {
 }
 
 export default function InventoryModule({
+  currentUser,
   products,
   onAddProduct,
   onUpdateProduct,
@@ -98,6 +100,9 @@ export default function InventoryModule({
 
   return (
     <div className="space-y-6 animate-fade-in">
+      <nav aria-label="Inventory breadcrumb" className="flex items-center gap-1 text-[10px] font-semibold text-slate-400">
+        <span>Admin</span><span aria-hidden="true">›</span><span>Inventory</span><span aria-hidden="true">›</span><span className="text-slate-600 dark:text-slate-300">{navItems.find(item => item.id === activeSubTab)?.label}</span>
+      </nav>
       {/* Sub-navigation */}
       <div className="bg-white dark:bg-neutral-900 p-2 rounded-2xl shadow-sm border border-neutral-200 dark:border-neutral-800 flex flex-wrap gap-2">
         {navItems.map((item) => {
@@ -132,6 +137,7 @@ export default function InventoryModule({
             storeSettings={storeSettings}
             categories={categories} 
             collections={collections} 
+            currentUser={currentUser}
           />
         )}
         {activeSubTab === 'categories' && (

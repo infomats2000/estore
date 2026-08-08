@@ -1,5 +1,5 @@
 import React from 'react';
-import { Product } from '../types';
+import { Product, StoreSettings } from '../types';
 import { getCategoryHardwareInfo, HARDWARE_CATEGORY_CATALOG } from '../constants/categoryImages';
 import { ArrowLeft, ArrowRight, Layers } from 'lucide-react';
 
@@ -10,6 +10,8 @@ interface ShopByCategoryGridProps {
   eyebrow?: string;
   title?: string;
   description?: string;
+  scrollStyle?: 'manual' | 'auto-left';
+  customImages?: StoreSettings['categoryNavigationImages'];
 }
 
 export const ShopByCategoryGrid: React.FC<ShopByCategoryGridProps> = ({
@@ -19,6 +21,8 @@ export const ShopByCategoryGrid: React.FC<ShopByCategoryGridProps> = ({
   eyebrow = 'Quick Navigation',
   title = 'Shop by Category',
   description = 'Real-time dynamic category catalog mapped to store inventory',
+  scrollStyle = 'auto-left',
+  customImages = [],
 }) => {
   const categoryRailRef = React.useRef<HTMLDivElement>(null);
   const [hasOverflow, setHasOverflow] = React.useState(false);
@@ -47,15 +51,18 @@ export const ShopByCategoryGrid: React.FC<ShopByCategoryGridProps> = ({
     return allCatNames
       .map((catName) => {
         const info = getCategoryHardwareInfo(catName);
+        const customImage = customImages.find((item) => item.category.toLowerCase() === catName.toLowerCase());
         const count = categoryCounts[catName] || 0;
         return {
           ...info,
+          image: customImage?.imageUrl || info.image,
+          imageAlt: customImage?.altText || info.label,
           count,
         };
       })
       // Show only categories that are present in the tenant's inventory (or top hardware categories if loading)
       .filter((cat) => cat.count > 0 || presentCategoryNames.length === 0);
-  }, [categoryCounts]);
+  }, [categoryCounts, customImages]);
 
   React.useEffect(() => {
     const rail = categoryRailRef.current;
@@ -70,7 +77,7 @@ export const ShopByCategoryGrid: React.FC<ShopByCategoryGridProps> = ({
 
   React.useEffect(() => {
     const rail = categoryRailRef.current;
-    if (!rail || !hasOverflow || isAutoScrollPaused || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (!rail || scrollStyle !== 'auto-left' || !hasOverflow || isAutoScrollPaused || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
     let animationFrame = 0;
     let previousTime = performance.now();
@@ -87,7 +94,7 @@ export const ShopByCategoryGrid: React.FC<ShopByCategoryGridProps> = ({
     };
     animationFrame = requestAnimationFrame(moveRightToLeft);
     return () => cancelAnimationFrame(animationFrame);
-  }, [hasOverflow, isAutoScrollPaused, availableCategories.length]);
+  }, [hasOverflow, isAutoScrollPaused, availableCategories.length, scrollStyle]);
 
   const scrollCategories = (direction: -1 | 1) => {
     categoryRailRef.current?.scrollBy({ left: direction * 420, behavior: 'smooth' });
@@ -154,7 +161,7 @@ export const ShopByCategoryGrid: React.FC<ShopByCategoryGridProps> = ({
               <div className="absolute inset-0 bg-neutral-900 z-0">
                 <img
                   src={cat.image}
-                  alt={cat.label}
+                  alt={cat.imageAlt}
                   className="w-full h-full object-cover object-center group-hover:scale-110 transition-transform duration-700 ease-out"
                   loading="lazy"
                 />

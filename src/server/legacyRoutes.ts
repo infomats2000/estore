@@ -10,7 +10,7 @@ import { saveImageFromBase64, deleteImageIfExists } from './uploads';
 import { readAppStateStore, readAdminExtrasStore, writeAdminExtrasStore } from './stateStore';
 import { normalizeProductForDb, serializeProductForResponse } from './products';
 import { seedMasterData } from './masterDataSeeder';
-import { authMiddleware } from './middleware/authMiddleware';
+import { authMiddleware, requireTenantOwner, requireTenantRole } from './middleware/authMiddleware';
 import { requirePlanFeature } from './middleware/featureEnforcer';
 import { getActiveTenantId } from './tenantContext';
 
@@ -323,7 +323,7 @@ router.post('/api/products/resolve', authMiddleware, async (req, res) => {
   }
 });
 
-router.put('/api/products/:id', authMiddleware, async (req, res) => {
+router.put('/api/products/:id', authMiddleware, requireTenantOwner, async (req, res) => {
   try {
     const parsed = productSchema.safeParse(req.body);
     if (!parsed.success) throw new AppError('Invalid product payload', 400);
@@ -357,7 +357,7 @@ router.put('/api/products/:id', authMiddleware, async (req, res) => {
   }
 });
 
-router.delete('/api/products', authMiddleware, async (_req, res) => {
+router.delete('/api/products', authMiddleware, requireTenantOwner, async (_req, res) => {
   try {
     const existingProducts = await prisma.product.findMany();
     await prisma.product.deleteMany({});
@@ -372,7 +372,7 @@ router.delete('/api/products', authMiddleware, async (_req, res) => {
   }
 });
 
-router.delete('/api/products/:id', authMiddleware, async (req, res) => {
+router.delete('/api/products/:id', authMiddleware, requireTenantOwner, async (req, res) => {
   try {
     const existing = await prisma.product.findUnique({ where: { id: req.params.id } });
     if (!existing) throw new AppError('Product not found', 404);
@@ -380,6 +380,40 @@ router.delete('/api/products/:id', authMiddleware, async (req, res) => {
     await prisma.product.delete({ where: { id: req.params.id } });
     const serialized = serializeProductForResponse(existing);
     await Promise.all([serialized.image, ...Object.values(serialized.imageVariants ?? {}), ...(serialized.additionalImages ?? [])].map((imagePath) => deleteTrackedImage(imagePath as string)));
+    res.json({ ok: true });
+  } catch (err) {
+    handleError(err, res);
+  }
+});
+
+router.post('/api/admin/wipe-store', authMiddleware, requireTenantRole(['TENANT_OWNER', 'TENANT_ADMIN']), async (_req, res) => {
+  try {
+    await (prisma as any).$transaction([
+      (prisma as any).posReturnItem.deleteMany({}),
+      (prisma as any).posReturn.deleteMany({}),
+      (prisma as any).posLaybyPayment.deleteMany({}),
+      (prisma as any).posLaybyItem.deleteMany({}),
+      (prisma as any).posLayby.deleteMany({}),
+      (prisma as any).posPayment.deleteMany({}),
+      (prisma as any).posCashMovement.deleteMany({}),
+      (prisma as any).posRegisterShift.deleteMany({}),
+      (prisma as any).posManagerApproval.deleteMany({}),
+      (prisma as any).posPaymentAuthorization.deleteMany({}),
+      (prisma as any).inventoryMovement.deleteMany({}),
+      (prisma as any).goodsReceipt.deleteMany({}),
+      (prisma as any).inboundJobStep.deleteMany({}),
+      (prisma as any).inboundJobItem.deleteMany({}),
+      (prisma as any).inboundJob.deleteMany({}),
+      (prisma as any).orderItem.deleteMany({}),
+      (prisma as any).order.deleteMany({}),
+      (prisma as any).address.deleteMany({}),
+      (prisma as any).customer.deleteMany({}),
+      (prisma as any).coupon.deleteMany({}),
+      (prisma as any).activityLog.deleteMany({}),
+      (prisma as any).tenantStateRecord.deleteMany({}),
+      (prisma as any).tenantStateSlice.deleteMany({}),
+      (prisma as any).storeSettings.deleteMany({}),
+    ]);
     res.json({ ok: true });
   } catch (err) {
     handleError(err, res);

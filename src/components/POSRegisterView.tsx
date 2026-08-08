@@ -1,12 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, ShoppingCart, Plus, Minus, Trash2, Printer, Check, DollarSign, CreditCard, RotateCcw, X, Scan, Sparkles, Building2, Monitor, Clock, Layers, Eye } from 'lucide-react';
+import { Search, ShoppingCart, Plus, Minus, Trash2, Printer, Check, DollarSign, CreditCard, X, Scan, Sparkles, Building2, Monitor, Clock, Layers, Eye } from 'lucide-react';
 import { Product, StoreSettings, CartItem, Invoice, CustomerProfile, PaymentSplitLine, LaybyOrder } from '../types';
 import { convertOrderToInvoice, printInvoiceDirect } from '../utils/invoicePrinter';
 import { calculateEffectivePrice, getAvailableCredit, isCreditHold } from '../utils/pricing';
-import { kickCashDrawerHardware } from '../utils/cashDrawerPrinter';
 import LaybyManagerModal from './pos/LaybyManagerModal';
 import POSReturnsModal from './pos/POSReturnsModal';
 import POSReportsModal from './pos/POSReportsModal';
+import { AdminButton, AdminConfirmDialog, AdminInputDialog } from './ui/AdminUI';
 
 type POSPaymentMethod = 'Cash' | 'EFTPOS Card' | 'On Account / Trade Credit' | 'Split Payment' | 'Lay-by Deposit';
 
@@ -64,6 +64,10 @@ export default function POSRegisterView({
   const [showReturns, setShowReturns] = useState(false);
   const [showReports, setShowReports] = useState(false);
   const [detailProduct, setDetailProduct] = useState<Product | null>(null);
+  const [inputDialog, setInputDialog] = useState<'open-shift' | 'close-count' | 'close-reason' | 'reserve-deposit' | null>(null);
+  const [inputDialogValue, setInputDialogValue] = useState('');
+  const [pendingCountedCash, setPendingCountedCash] = useState<number | null>(null);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   // Multi-Tender Split Payment State
   const [splitLines, setSplitLines] = useState<PaymentSplitLine[]>([]);
@@ -107,11 +111,15 @@ export default function POSRegisterView({
 
   useEffect(() => { void loadActiveShift(); }, []);
 
-  const handleOpenShift = async () => {
-    const value = window.prompt('Opening cash float:', '200.00');
-    if (value === null) return;
-    const openingFloat = Number(value);
+  const handleOpenShift = () => {
+    setInputDialogValue('200.00');
+    setInputDialog('open-shift');
+  };
+
+  const submitOpenShift = async () => {
+    const openingFloat = Number(inputDialogValue);
     if (!Number.isFinite(openingFloat) || openingFloat < 0) return setCheckoutError('Enter a valid opening float.');
+    setInputDialog(null);
     setShiftBusy(true);
     try {
       const response = await fetch('/api/pos/shifts/open', { method: 'POST', headers: posAuthHeaders(), body: JSON.stringify({ registerId: 'REGISTER-01', openingFloat }) });
@@ -139,13 +147,25 @@ export default function POSRegisterView({
     return shift;
   };
 
-  const handleCloseShift = async () => {
+  const handleCloseShift = () => {
     if (!activeShift) return;
-    const value = window.prompt('Count all cash in the drawer:', String(activeShift.openingFloat || 0));
-    if (value === null) return;
-    const countedCash = Number(value);
+    setInputDialogValue(String(activeShift.openingFloat || 0));
+    setInputDialog('close-count');
+  };
+
+  const submitCloseCount = () => {
+    const countedCash = Number(inputDialogValue);
     if (!Number.isFinite(countedCash) || countedCash < 0) return setCheckoutError('Enter a valid drawer count.');
-    const varianceReason = window.prompt('Variance reason (required if the count differs):', '') || '';
+    setPendingCountedCash(countedCash);
+    setInputDialogValue('');
+    setInputDialog('close-reason');
+  };
+
+  const submitCloseShift = async () => {
+    if (!activeShift || pendingCountedCash === null) return;
+    const countedCash = pendingCountedCash;
+    const varianceReason = inputDialogValue.trim();
+    setInputDialog(null);
     setShiftBusy(true);
     try {
       const response = await fetch(`/api/pos/shifts/${activeShift.id}/close`, { method: 'POST', headers: posAuthHeaders(), body: JSON.stringify({ countedCash, varianceReason }) });
@@ -157,18 +177,23 @@ export default function POSRegisterView({
     finally { setShiftBusy(false); }
   };
 
-  const handleCreateLayby = async () => {
-    if (!activeShift) return setCheckoutError('Open the register before creating a lay-by.');
-    if (!selectedCustomerId) return setCheckoutError('Select a registered customer for the lay-by.');
-    if (!cart.length) return setCheckoutError('Add at least one product to the lay-by.');
+  const handleCreateLayby = () => {
+    if (!activeShift) return setCheckoutError('Open the register before creating a reservation.');
+    if (!selectedCustomerId) return setCheckoutError('Select a registered customer for the reservation.');
+    if (!cart.length) return setCheckoutError('Add at least one product to the reservation.');
     for (const item of cart) {
       if ((item.product.serialNumbers || []).length && (selectedSerials[item.product.id] || []).length !== item.quantity) return setCheckoutError(`Select ${item.quantity} serial number(s) for ${item.product.name}.`);
     }
     const suggestedDeposit = Math.round(total * 20) / 100;
-    const rawDeposit = window.prompt(`Lay-by deposit amount (total $${total.toFixed(2)}):`, Math.max(1, suggestedDeposit).toFixed(2));
-    if (rawDeposit === null) return;
-    const deposit = Number(rawDeposit);
+    setInputDialogValue(Math.max(1, suggestedDeposit).toFixed(2));
+    setInputDialog('reserve-deposit');
+  };
+
+  const submitReservation = async () => {
+    if (!activeShift) return;
+    const deposit = Number(inputDialogValue);
     if (!Number.isFinite(deposit) || deposit <= 0 || deposit >= total) return setCheckoutError('Deposit must be greater than zero and less than the full total.');
+    setInputDialog(null);
     setIsCheckingOut(true); setCheckoutError('');
     try {
       const response = await fetch('/api/pos/laybys', { method: 'POST', headers: posAuthHeaders(), body: JSON.stringify({
@@ -181,24 +206,8 @@ export default function POSRegisterView({
       handleNewSale();
       setCheckoutError(`${result.layby.laybyNumber} created with $${deposit.toFixed(2)} deposit.`);
       setIsLaybyModalOpen(true);
-    } catch (error: any) { setCheckoutError(error.message || 'Unable to create lay-by.'); }
+    } catch (error: any) { setCheckoutError(error.message || 'Unable to create reservation.'); }
     finally { setIsCheckingOut(false); }
-  };
-
-  const handleOpenDrawer = async () => {
-    if (!activeShift) return setCheckoutError('Open a shift before opening the cash drawer.');
-    const managerEmail = window.prompt('Manager email:');
-    const managerPassword = managerEmail && window.prompt('Manager password:');
-    const reason = managerPassword && window.prompt('Reason for opening drawer without a sale:');
-    if (!managerEmail || !managerPassword || !reason) return;
-    try {
-      const approvalResponse = await fetch('/api/pos/approvals', { method: 'POST', headers: posAuthHeaders(), body: JSON.stringify({ managerEmail, managerPassword, action: 'OPEN_DRAWER', reason }) });
-      const approval = await approvalResponse.json();
-      if (!approvalResponse.ok) throw new Error(approval.error);
-      const movementResponse = await fetch(`/api/pos/shifts/${activeShift.id}/cash-movements`, { method: 'POST', headers: posAuthHeaders(), body: JSON.stringify({ type: 'NO_SALE', amount: 0, reason, approvalId: approval.approval.id }) });
-      if (!movementResponse.ok) throw new Error((await movementResponse.json()).error);
-      kickCashDrawerHardware();
-    } catch (error: any) { setCheckoutError(error.message || 'Drawer approval failed.'); }
   };
 
   // Sync to Dual-Monitor Customer Facing Display window via BroadcastChannel
@@ -499,44 +508,24 @@ export default function POSRegisterView({
 
           <button
             type="button"
-            onClick={() => void handleOpenDrawer()}
-            className="flex items-center gap-1.5 bg-amber-900/80 hover:bg-amber-800 border border-amber-700 text-amber-200 px-3 py-2 font-mono text-xs uppercase font-bold transition-colors cursor-pointer"
-            title="Trigger ESC/POS Hardware Cash Drawer Kick Signal"
-          >
-            <DollarSign className="h-4 w-4 text-amber-400" />
-            <span>Open Drawer</span>
-          </button>
-
-          <button
-            type="button"
             onClick={() => setIsLaybyModalOpen(true)}
             className="flex items-center gap-1.5 bg-purple-900/80 hover:bg-purple-800 border border-purple-700 text-purple-200 px-3 py-2 font-mono text-xs uppercase font-bold transition-colors cursor-pointer"
-            title="Manage Customer Lay-by Tickets & Installment Deposits"
+            title="Manage customer reservations and instalment deposits"
           >
             <Clock className="h-4 w-4 text-purple-400" />
-            <span>Lay-by Manager ({laybyOrders.filter(l => l.status === 'Active').length})</span>
+            <span>Reserve Manager ({laybyOrders.filter(l => l.status === 'Active').length})</span>
           </button>
 
-          <button
-            onClick={() => {
-              if (cart.length === 0 || window.confirm('Discard the current sale and start a new transaction?')) {
-                handleNewSale();
-              }
-            }}
-            className="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white px-4 py-2 font-mono text-xs uppercase font-bold transition-colors cursor-pointer"
-          >
-            <RotateCcw className="h-4 w-4" />
-            <span>New Transaction</span>
-          </button>
           {onClose && (
-            <button
+            <AdminButton
               onClick={onClose}
-              className="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-neutral-400 hover:text-white px-4 py-2 font-mono text-xs uppercase font-bold transition-colors cursor-pointer"
+              variant="danger"
+              className="font-mono uppercase"
               id="pos-close-btn"
             >
               <X className="h-4 w-4" />
               <span>Close POS</span>
-            </button>
+            </AdminButton>
           )}
         </div>
       </div>
@@ -656,7 +645,20 @@ export default function POSRegisterView({
 
           <div className="p-3 bg-neutral-50 border-b border-neutral-300 font-mono text-xs uppercase font-bold text-neutral-900 flex justify-between items-center">
             <span>Register Receipt Cart</span>
-            <span className="bg-blue-600 text-white px-2 py-0.5 text-[10px]">{cart.length} ITEMS</span>
+            <div className="flex items-center gap-3">
+              <span className="bg-blue-600 text-white px-2 py-0.5 text-[10px]">{cart.length} ITEMS</span>
+              <button
+                type="button"
+                onClick={() => {
+                  if (cart.length === 0) handleNewSale();
+                  else setShowResetConfirm(true);
+                }}
+                className="text-[10px] font-bold uppercase text-red-600 underline underline-offset-2 transition-colors hover:text-red-800"
+                title="Reset the current POS transaction"
+              >
+                Reset
+              </button>
+            </div>
           </div>
 
           {/* Cart Item List */}
@@ -851,7 +853,7 @@ export default function POSRegisterView({
                   onClick={() => void handleCreateLayby()}
                   className="col-span-2 py-2 font-mono text-[10px] font-bold uppercase border bg-purple-50 border-purple-300 text-purple-800"
                 >
-                  <Clock className="inline h-3.5 w-3.5 mr-1" /> Reserve as Lay-by & Take Deposit
+                  <Clock className="inline h-3.5 w-3.5 mr-1" /> Reserve Product &amp; Take Deposit
                 </button>
               </div>
 
@@ -977,20 +979,20 @@ export default function POSRegisterView({
 
                   if (paymentMethod === 'On Account / Trade Credit') {
                     if (!selCust?.tradeAccount) {
-                      alert('Please select a customer with an active B2B Trade Account to charge on account.');
+                      setCheckoutError('Please select a customer with an active B2B Trade Account to charge on account.');
                       return;
                     }
                     if (isCreditHold(selCust)) {
-                      alert('This account is on Credit Hold due to past-due invoices. Cannot complete sale on account.');
+                      setCheckoutError('This account is on Credit Hold due to past-due invoices. Cannot complete sale on account.');
                       return;
                     }
                     const avail = getAvailableCredit(selCust);
                     if (total > avail) {
-                      alert(`Sale total ($${total.toFixed(2)}) exceeds available trade credit limit ($${avail.toFixed(2)}).`);
+                      setCheckoutError(`Sale total ($${total.toFixed(2)}) exceeds available trade credit limit ($${avail.toFixed(2)}).`);
                       return;
                     }
                     if (selCust.tradeAccount.poRequired && !posPoNumber.trim()) {
-                      alert('PO Number is required for this trade account.');
+                      setCheckoutError('PO Number is required for this trade account.');
                       return;
                     }
 
@@ -1078,6 +1080,12 @@ export default function POSRegisterView({
         onCompleted={(message) => { setCheckoutError(message); void loadActiveShift(); }}
       />
       <POSReportsModal isOpen={showReports} onClose={() => setShowReports(false)} />
+
+      <AdminInputDialog open={inputDialog === 'open-shift'} title="Open Register Shift" help="Enter the cash float placed in the drawer at the start of this shift." label="Opening cash float" type="number" min={0} value={inputDialogValue} onChange={setInputDialogValue} onClose={() => setInputDialog(null)} onConfirm={submitOpenShift} confirmLabel="Open Shift" />
+      <AdminInputDialog open={inputDialog === 'close-count'} title="Count Register Cash" help="Count all cash currently in the drawer before closing the shift." label="Counted cash" type="number" min={0} value={inputDialogValue} onChange={setInputDialogValue} onClose={() => setInputDialog(null)} onConfirm={submitCloseCount} confirmLabel="Continue" />
+      <AdminInputDialog open={inputDialog === 'close-reason'} title="Close Register Shift" help="Add a variance explanation when the drawer count differs. Leave blank when no explanation is required." label="Variance reason" required={false} value={inputDialogValue} onChange={setInputDialogValue} onClose={() => setInputDialog(null)} onConfirm={submitCloseShift} confirmLabel="Close Shift" />
+      <AdminInputDialog open={inputDialog === 'reserve-deposit'} title="Reserve Products" help={`Enter the deposit to reserve this order. The order total is $${total.toFixed(2)}.`} label="Reservation deposit" type="number" min={0.01} value={inputDialogValue} onChange={setInputDialogValue} onClose={() => setInputDialog(null)} onConfirm={submitReservation} confirmLabel="Create Reservation" />
+      <AdminConfirmDialog open={showResetConfirm} title="Reset Current Sale?" message="This removes every item and payment entry from the current cart. This action cannot be undone." confirmLabel="Reset Sale" destructive onClose={() => setShowResetConfirm(false)} onConfirm={() => { handleNewSale(); setShowResetConfirm(false); }} />
 
       {detailProduct && (
         <div
