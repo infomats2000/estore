@@ -21,6 +21,7 @@ import { Product, Order, Coupon, ReturnRequest, Review, CustomerSegment, UpsellR
 import { useTenantFeatures } from '../context/TenantFeatureContext';
 import { DASHBOARD_TAB_FEATURE_MAP } from '../constants/features';
 import { useFocusTrap } from '../hooks/useFocusTrap';
+import { AdminHelpAssistant } from './AdminHelpAssistant';
 
 const FinanceManager = lazy(() => import('./FinanceManager'));
 const UserManager = lazy(() => import('./UserManager'));
@@ -2088,6 +2089,11 @@ export default function DashboardView({
   const hasInventoryMenuLinks = ['massive-inventory', 'wms', 'logistics-dispatch', 'warehouses', 'stock-units', 'inventory', 'refurb', 'products'].some(isTabVisible);
   const hasProcurementMenuLinks = ['procurement', 'suppliers', 'purchase-orders', 'inbound-jobs'].some(isTabVisible);
   const hasIntelligenceMenuLinks = ['bi', 'reports', 'finance', 'payroll', 'automation', 'repairs', 'ebay', 'stores', 'reviews', 'users'].some(isTabVisible);
+  const assistantModules = [
+    ...VISIBLE_TABS.map(tab => ({ id: tab.id, label: tab.label, group: tab.group, summary: TAB_HELP[tab.id].summary, action: TAB_HELP[tab.id].action })),
+    ...(currentUser?.role !== 'TENANT_STAFF' ? [{ id: 'settings', label: 'Settings', group: 'Core', summary: 'Manage tenant, store, invoice, backup and permitted storefront configuration.', action: 'Open the appropriate settings section and review changes before saving.' }] : []),
+    ...(onOpenPOS && hasFeature('pos') && isStaffAllowed('pos') ? [{ id: 'pos', label: 'POS Cash Register', group: 'Sales', summary: 'Process counter sales, payments, receipts, reservations and returns.', action: 'Open POS to begin or continue a register transaction.' }] : []),
+  ];
   const mobileNavigationRef = useFocusTrap<HTMLDivElement>(showMobileNavigation, () => setShowMobileNavigation(false));
 
   const handlePrimaryMenuKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -7805,6 +7811,16 @@ export default function DashboardView({
         onConfirm={() => {
           adminConfirmation?.onConfirm();
           setAdminConfirmation(null);
+        }}
+      />
+
+      <AdminHelpAssistant
+        modules={assistantModules}
+        currentModuleId={activeTab}
+        onNavigate={(destination) => {
+          if (destination === 'settings') onOpenSettings?.('general');
+          else if (destination === 'pos') onOpenPOS?.();
+          else requestTab(destination);
         }}
       />
 
